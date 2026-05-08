@@ -76,6 +76,56 @@ describe('game controller visual cues', () => {
     expect(controller.getViewState().audioCue).toMatchObject({ type: 'reward' });
   });
 
+  test('in-game power-up purchase spends coins before falling back to ads', async () => {
+    let adCalls = 0;
+    const platform = mockPlatform({
+      storedSave: {
+        ...createDefaultSave(),
+        coins: 120,
+      },
+    });
+    platform.showRewardedAd = async () => {
+      adCalls += 1;
+      return { status: 'success' };
+    };
+    const controller = new GameController(platform);
+
+    await controller.dispatch({ type: 'start' });
+    await controller.dispatch({ type: 'beginLevel' });
+    await controller.dispatch({ type: 'usePowerUp', item: 'bomb' });
+
+    expect(adCalls).toBe(0);
+    expect(controller.getViewState().adPrompt).toBeNull();
+    expect(controller.getViewState().save.coins).toBe(0);
+    expect(controller.getViewState().save.items.bomb).toBe(1);
+    expect(controller.getViewState().activePowerUp).toBe('bomb');
+  });
+
+  test('in-game power-up acquisition asks for ad when coins are insufficient', async () => {
+    let adCalls = 0;
+    const platform = mockPlatform({
+      storedSave: {
+        ...createDefaultSave(),
+        coins: 119,
+      },
+    });
+    platform.showRewardedAd = async () => {
+      adCalls += 1;
+      return { status: 'success' };
+    };
+    const controller = new GameController(platform);
+
+    await controller.dispatch({ type: 'start' });
+    await controller.dispatch({ type: 'beginLevel' });
+    await controller.dispatch({ type: 'usePowerUp', item: 'bomb' });
+
+    expect(adCalls).toBe(0);
+    expect(controller.getViewState().save.coins).toBe(119);
+    expect(controller.getViewState().adPrompt).toMatchObject({
+      title: '观看视频领取炸开道具',
+    });
+  });
+
   test('logs in-game rewarded power-up flow for device debugging', async () => {
     const info = vi.spyOn(console, 'info').mockImplementation(() => undefined);
     const controller = new GameController(mockPlatform({ ad: { status: 'success' } }));

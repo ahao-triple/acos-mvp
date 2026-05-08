@@ -102,6 +102,22 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
     expect(ctx.rotations).not.toContain(Math.PI / 2);
   });
 
+  test('shows coin costs on missing power-up buttons', async () => {
+    const { canvas, ctx } = createRecordingCanvas();
+    const controller = new GameController(mockPlatform());
+    const renderer = new CanvasRenderer(canvas, controller);
+    renderer.resize(750, 1334, 1);
+
+    forcePrivateSession(controller, createPlayingSession(normalBoard('cost')));
+
+    renderer.render();
+
+    const text = renderedText(ctx);
+    expect(text).toContain('120币炸开');
+    expect(text).toContain('150币吸走');
+    expect(text).toContain('100币重排');
+  });
+
   test('delays win result while board presentation is still playing', async () => {
     const now = vi.spyOn(performance, 'now').mockReturnValue(100);
     const { canvas, ctx } = createRecordingCanvas();

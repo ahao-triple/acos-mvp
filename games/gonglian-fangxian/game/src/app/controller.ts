@@ -1,4 +1,5 @@
 import { levels } from '../config/levels';
+import { POWER_UP_COIN_COSTS } from '../config/economy';
 import { applyMove, applyPowerUp, createSession } from '../core/session';
 import type { GameSession, LevelConfig, NodeReward, Position, PowerUpType } from '../core/types';
 import type { PlatformAdapter } from '../platform/types';
@@ -392,11 +393,42 @@ export class GameController {
     }
 
     if (this.save.items[item] <= 0) {
+      if (this.purchasePowerUpWithCoins(item)) {
+        this.activateOwnedPowerUp(item, false);
+        return;
+      }
+
+      const shortage = POWER_UP_COIN_COSTS[item] - this.save.coins;
+      this.feedback = `金币不足，还差 ${shortage} 金币。`;
       this.openRewardedAdPrompt({ type: 'powerUpItem', item });
       return;
     }
 
     this.activateOwnedPowerUp(item, false);
+  }
+
+  private purchasePowerUpWithCoins(item: PowerUpType): boolean {
+    const cost = POWER_UP_COIN_COSTS[item];
+    if (this.save.coins < cost) {
+      return false;
+    }
+
+    this.updateSave({
+      ...this.save,
+      coins: this.save.coins - cost,
+      items: {
+        ...this.save.items,
+        [item]: this.save.items[item] + 1,
+      },
+    });
+    debugLog('power_up_coin_purchase', {
+      item,
+      cost,
+      coins: this.save.coins,
+      available: this.save.items[item],
+      levelId: this.session?.levelId ?? null,
+    });
+    return true;
   }
 
   private async claimPowerUpItemFromAd(item: PowerUpType): Promise<void> {

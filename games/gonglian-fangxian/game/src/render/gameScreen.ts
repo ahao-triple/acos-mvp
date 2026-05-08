@@ -1,4 +1,5 @@
 import type { AppAction, AppViewState } from '../app/controller';
+import { POWER_UP_COIN_COSTS } from '../config/economy';
 import type { Board, BoardCell, PieceKind, Position } from '../core/types';
 import type { EffectsModel } from './effects';
 import { pieceColors, targetProgressText } from './theme';
@@ -38,9 +39,9 @@ export function drawGameScreen(context: GameScreenRenderContext, view: AppViewSt
   context.handleVisualCue(view, context.nowMs);
   drawBoard(context, session);
   context.drawEffects(context.nowMs);
-  drawPowerUpButton(context.ui, 60, 1148, 190, 70, '炸开', view.save.items.bomb, view.activePowerUp === 'bomb', { type: 'usePowerUp', item: 'bomb' });
-  drawPowerUpButton(context.ui, 280, 1148, 190, 70, '吸走', view.save.items.suck, view.activePowerUp === 'suck', { type: 'usePowerUp', item: 'suck' });
-  drawPowerUpButton(context.ui, 500, 1148, 190, 70, '重排', view.save.items.shuffle, false, { type: 'usePowerUp', item: 'shuffle' });
+  drawPowerUpButton(context.ui, 60, 1148, 190, 70, '炸开', view.save.items.bomb, POWER_UP_COIN_COSTS.bomb, view.activePowerUp === 'bomb', { type: 'usePowerUp', item: 'bomb' });
+  drawPowerUpButton(context.ui, 280, 1148, 190, 70, '吸走', view.save.items.suck, POWER_UP_COIN_COSTS.suck, view.activePowerUp === 'suck', { type: 'usePowerUp', item: 'suck' });
+  drawPowerUpButton(context.ui, 500, 1148, 190, 70, '重排', view.save.items.shuffle, POWER_UP_COIN_COSTS.shuffle, false, { type: 'usePowerUp', item: 'shuffle' });
 }
 
 export function cellAt(x: number, y: number): Position | null {
@@ -65,13 +66,13 @@ function drawTargets(ui: UiRenderContext, session: NonNullable<AppViewState['ses
   drawText(ui.ctx, text, 375, 202, 24, '#d1fae5', 'center');
 }
 
-function drawPowerUpButton(ui: UiRenderContext, x: number, y: number, width: number, height: number, name: string, count: number, active: boolean, action: AppAction): void {
+function drawPowerUpButton(ui: UiRenderContext, x: number, y: number, width: number, height: number, name: string, count: number, cost: number, active: boolean, action: AppAction): void {
   if (count > 0) {
     drawButton(ui, x, y, width, height, `${active ? '>' : ''}${name} ${count}`, action);
     return;
   }
 
-  drawButton(ui, x, y, width, height, `获得${name}`, action);
+  drawButton(ui, x, y, width, height, `${cost}币${name}`, action);
 }
 
 function drawBoard(context: GameScreenRenderContext, session: NonNullable<AppViewState['session']>): void {
