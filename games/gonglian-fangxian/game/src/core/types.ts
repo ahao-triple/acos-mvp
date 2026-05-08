@@ -1,4 +1,4 @@
-export type PieceKind = 'shield' | 'ammo' | 'radar' | 'medal' | 'wrench';
+export type PieceKind = 'shield' | 'ammo' | 'radar' | 'medal' | 'wrench' | 'energy';
 
 export type SpecialKind = 'horizontalRocket' | 'verticalFlare' | 'areaBomb';
 

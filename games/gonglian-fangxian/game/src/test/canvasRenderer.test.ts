@@ -275,7 +275,9 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
 
   test('formats level targets with player-facing Chinese labels', () => {
     expect(targetLabel('shield')).toBe('护盾');
+    expect(targetLabel('energy')).toBe('能量');
     expect(targetProgressText({ type: 'collect', kind: 'shield', count: 8 }, { shield: 3 })).toBe('护盾 3/8');
+    expect(targetProgressText({ type: 'collect', kind: 'energy', count: 6 }, { energy: 2 })).toBe('能量 2/6');
     expect(targetProgressText({ type: 'clearBlocker', kind: 'sandbag', count: 4 }, { sandbag: 1 })).toBe('沙袋 1/4');
   });
 

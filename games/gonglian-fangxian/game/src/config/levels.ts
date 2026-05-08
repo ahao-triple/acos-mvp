@@ -1,6 +1,6 @@
 import type { LevelConfig, NodeReward, PieceKind } from '../core/types';
 
-const allPieces: PieceKind[] = ['shield', 'ammo', 'radar', 'medal', 'wrench'];
+const allPieces: PieceKind[] = ['shield', 'ammo', 'radar', 'medal', 'wrench', 'energy'];
 
 export const CHAPTERS = [
   { id: 1, title: '前线集结', startLevel: 1, endLevel: 10 },

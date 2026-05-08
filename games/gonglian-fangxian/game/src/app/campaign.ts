@@ -17,6 +17,7 @@ const targetLabels: Record<TargetConfig['kind'], string> = {
   radar: '雷达',
   medal: '勋章',
   wrench: '扳手',
+  energy: '能量',
   sandbag: '沙袋',
   brokenDefense: '破损防线',
 };

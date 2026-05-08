@@ -6,6 +6,7 @@ export const pieceColors: Record<PieceKind, string> = {
   radar: '#9b51e0',
   medal: '#f2c94c',
   wrench: '#eb5757',
+  energy: '#06b6d4',
 };
 
 export const targetLabels: Record<PieceKind | BlockerKind, string> = {
@@ -14,6 +15,7 @@ export const targetLabels: Record<PieceKind | BlockerKind, string> = {
   radar: '雷达',
   medal: '勋章',
   wrench: '扳手',
+  energy: '能量',
   sandbag: '沙袋',
   brokenDefense: '破损防线',
 };

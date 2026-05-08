@@ -9,6 +9,11 @@ describe('campaign helpers', () => {
     expect(levelById(999).id).toBe(1);
   });
 
+  test('includes the sixth energy piece in every level pool', () => {
+    expect(levels).toHaveLength(30);
+    expect(levels.every((level) => level.piecePool.includes('energy'))).toBe(true);
+  });
+
   test('computes per-chapter progress from highest unlocked level', () => {
     expect(chapterProgressForSave(12)).toEqual([
       { id: 1, title: '前线集结', startLevel: 1, endLevel: 10, unlockedCount: 10, completedCount: 10, current: false },

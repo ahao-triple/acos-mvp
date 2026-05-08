@@ -187,13 +187,24 @@ function drawPieceIcon(ctx: CanvasRenderingContext2D, kind: PieceKind, cx: numbe
     drawStar(ctx, cx, cy, s);
     ctx.fill();
     ctx.stroke();
-  } else {
+  } else if (kind === 'wrench') {
     ctx.beginPath();
     ctx.moveTo(cx - s * 0.8, cy + s * 0.7);
     ctx.lineTo(cx + s * 0.55, cy - s * 0.65);
     ctx.stroke();
     ctx.beginPath();
     ctx.arc(cx + s * 0.62, cy - s * 0.72, s * 0.34, 0, Math.PI * 2);
+    ctx.stroke();
+  } else {
+    ctx.beginPath();
+    ctx.moveTo(cx + s * 0.2, cy - s);
+    ctx.lineTo(cx - s * 0.65, cy + s * 0.15);
+    ctx.lineTo(cx - s * 0.05, cy + s * 0.15);
+    ctx.lineTo(cx - s * 0.35, cy + s);
+    ctx.lineTo(cx + s * 0.7, cy - s * 0.25);
+    ctx.lineTo(cx + s * 0.1, cy - s * 0.25);
+    ctx.closePath();
+    ctx.fill();
     ctx.stroke();
   }
 }
