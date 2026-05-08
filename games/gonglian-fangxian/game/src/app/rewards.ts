@@ -195,16 +195,16 @@ export async function claimSidebarReward(save: SaveData, platform: PlatformAdapt
 }
 
 function adFeedback(result: PlatformResult): string {
+  if (result.status === 'cancelled') {
+    return '未完整观看，暂未获得奖励。';
+  }
+
   if (result.message) {
     return result.message;
   }
 
   if (result.status === 'unsupported') {
     return '当前环境暂不支持广告，稍后再试。';
-  }
-
-  if (result.status === 'cancelled') {
-    return '未完整观看，暂未获得奖励。';
   }
 
   return '广告暂时不可用，稍后再试。';

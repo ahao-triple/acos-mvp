@@ -81,6 +81,17 @@ describe('reward flows', () => {
     expect(outcome.feedback).toContain('未完整观看');
   });
 
+  test('cancelled double reward video ignores custom message for incomplete feedback', async () => {
+    const save = createDefaultSave();
+    save.coins = 100;
+
+    const outcome = await claimDoubleCoinsReward(save, 80, platform({ ad: { status: 'cancelled', message: '用户关闭' } }));
+
+    expect(outcome.granted).toBe(false);
+    expect(outcome.save.coins).toBe(100);
+    expect(outcome.feedback).toContain('未完整观看');
+  });
+
   test('failed double reward video grants fallback coins', async () => {
     const save = createDefaultSave();
     save.coins = 100;
