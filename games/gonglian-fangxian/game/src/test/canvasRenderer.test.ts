@@ -56,6 +56,53 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
     expect(text).toContain('看广告奖励翻倍');
   });
 
+  test('win result blocks hidden gameplay hit areas', async () => {
+    const { canvas } = createRecordingCanvas();
+    const controller = new GameController(mockPlatform());
+    const renderer = new CanvasRenderer(canvas, controller);
+    renderer.resize(750, 1334, 1);
+
+    await controller.dispatch({ type: 'start' });
+    await controller.dispatch({ type: 'beginLevel' });
+    forcePrivateWinSummary(controller, {
+      levelId: 1,
+      chapterTitle: '前线集结',
+      baseCoins: 70,
+      nodeReward: null,
+      nextLevelId: 2,
+      doubled: false,
+    });
+
+    renderer.render();
+    await handlePointer(renderer, { clientX: 625, clientY: 157 });
+
+    expect(controller.getViewState().screen).toBe('won');
+  });
+
+  test('win result keeps coin doubling action interactive', async () => {
+    const { canvas } = createRecordingCanvas();
+    const controller = new GameController(mockPlatform());
+    const renderer = new CanvasRenderer(canvas, controller);
+    renderer.resize(750, 1334, 1);
+
+    await controller.dispatch({ type: 'start' });
+    await controller.dispatch({ type: 'beginLevel' });
+    forcePrivateWinSummary(controller, {
+      levelId: 1,
+      chapterTitle: '前线集结',
+      baseCoins: 70,
+      nodeReward: null,
+      nextLevelId: 2,
+      doubled: false,
+    });
+
+    renderer.render();
+    await handlePointer(renderer, { clientX: 375, clientY: 705 });
+
+    expect(controller.getViewState().screen).toBe('won');
+    expect(controller.getViewState().winSummary?.doubled).toBe(true);
+  });
+
   test('renders the campaign briefing after start', async () => {
     const { canvas, ctx } = createRecordingCanvas();
     const controller = new GameController(mockPlatform());
@@ -258,6 +305,7 @@ function createRecordingContext(): RecordingContext {
     moveTo() {},
     lineTo() {},
     arc() {},
+    ellipse() {},
     arcTo() {},
     bezierCurveTo() {},
     closePath() {},

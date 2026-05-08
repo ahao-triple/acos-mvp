@@ -7,7 +7,7 @@ import { drawLevelsScreen } from './levelsScreen';
 import { drawMenuScreen, drawSuppliesScreen } from './menuScreen';
 import { drawLostResult, drawPausedResult, drawWinResult } from './resultScreen';
 import { coverRect, fitLogicalCanvas, LOGICAL_HEIGHT, LOGICAL_WIDTH, toLogicalPoint, type CanvasFit } from './scaler';
-import { actionKey, drawButton, drawPanel, drawText, roundRect, type HitArea, type PressedButton } from './uiPrimitives';
+import { actionKey, drawButton, drawPanel, drawText, roundRect, type HitArea, type PressedButton, type UiRenderContext } from './uiPrimitives';
 import { VisualBoardModel } from './visualBoard';
 
 interface BoardPresentation {
@@ -88,7 +88,7 @@ export class CanvasRenderer {
       this.drawSettings(view);
     } else if (view.screen === 'playing' || view.screen === 'paused' || view.screen === 'won' || view.screen === 'lost') {
       drawGameScreen({
-        ui: this.ui(),
+        ui: view.screen === 'playing' ? this.ui() : this.nonInteractiveUi(),
         nowMs,
         visualBoard: this.visualBoard,
         effects: this.effects,
@@ -245,10 +245,18 @@ export class CanvasRenderer {
     drawText(this.ctx, subtitle, 375, 184, 28, '#d1fae5', 'center');
   }
 
-  private ui() {
+  private ui(): UiRenderContext {
     return {
       ctx: this.ctx,
       hitAreas: this.hitAreas,
+      pressedButton: this.pressedButton,
+    };
+  }
+
+  private nonInteractiveUi(): UiRenderContext {
+    return {
+      ctx: this.ctx,
+      hitAreas: [],
       pressedButton: this.pressedButton,
     };
   }
