@@ -236,6 +236,62 @@ describe('game controller campaign progress', () => {
     expect(storedSave.completedLevelCount).toBe(30);
     expect(storedSave.highestUnlockedLevel).toBe(30);
   });
+
+  test('chapter finale grants node reward when won', () => {
+    const controller = new GameController(mockPlatform());
+
+    completeLevel(controller, 10);
+
+    expect(controller.getViewState().screen).toBe('won');
+    expect(controller.getViewState().save.items.bomb).toBe(1);
+    expect(controller.getViewState().winSummary).toMatchObject({
+      levelId: 10,
+      chapterTitle: '前线集结',
+      baseCoins: levels[9].rewards.coins,
+      nodeReward: { bomb: 1 },
+      nextLevelId: 11,
+      doubled: false,
+    });
+  });
+
+  test('double win reward can only be claimed once', async () => {
+    const controller = new GameController(mockPlatform({ ad: { status: 'success' } }));
+
+    forcePrivateWinSummary(controller, {
+      levelId: 1,
+      chapterTitle: '前线集结',
+      baseCoins: 70,
+      nodeReward: null,
+      nextLevelId: 2,
+      doubled: false,
+    });
+    await controller.dispatch({ type: 'doubleWinReward' });
+    const afterFirst = controller.getViewState().save.coins;
+    await controller.dispatch({ type: 'doubleWinReward' });
+
+    expect(afterFirst).toBe(70);
+    expect(controller.getViewState().save.coins).toBe(afterFirst);
+    expect(controller.getViewState().feedback).toContain('已领取');
+    expect(controller.getViewState().winSummary?.doubled).toBe(true);
+  });
+
+  test('cancelled double win reward does not mark reward doubled', async () => {
+    const controller = new GameController(mockPlatform({ ad: { status: 'cancelled' } }));
+
+    forcePrivateWinSummary(controller, {
+      levelId: 1,
+      chapterTitle: '前线集结',
+      baseCoins: 70,
+      nodeReward: null,
+      nextLevelId: 2,
+      doubled: false,
+    });
+    await controller.dispatch({ type: 'doubleWinReward' });
+
+    expect(controller.getViewState().save.coins).toBe(0);
+    expect(controller.getViewState().feedback).toContain('未完整观看');
+    expect(controller.getViewState().winSummary?.doubled).toBe(false);
+  });
 });
 
 function mockPlatform(
@@ -276,6 +332,11 @@ function mockPlatform(
 
 function completeLevel(controller: GameController, levelId: number): void {
   (controller as unknown as { handleWin(session: GameSession): void }).handleWin(createWonSession(levelId));
+}
+
+function forcePrivateWinSummary(controller: GameController, summary: unknown): void {
+  (controller as unknown as { winSummary: unknown; screen: string }).winSummary = summary;
+  (controller as unknown as { screen: string }).screen = 'won';
 }
 
 function createWonSession(levelId: number): GameSession {

@@ -5,7 +5,7 @@ import type { PlatformAdapter } from '../platform/types';
 import type { AudioCue, AudioCueType } from '../audio/soundEngine';
 import { debugLog } from './debugLog';
 import { createDefaultSave, loadSave, type SaveData, writeSave } from './save';
-import { claimAdItemReward, claimDesktopReward, claimFavoriteReward, claimSidebarReward, requestExtraMoves, type InventoryItem } from './rewards';
+import { claimAdItemReward, claimDesktopReward, claimDoubleCoinsReward, claimFavoriteReward, claimSidebarReward, requestExtraMoves, type InventoryItem } from './rewards';
 import { chapterProgressForSave, levelById, type ChapterProgress } from './campaign';
 
 export type Screen = 'menu' | 'levels' | 'briefing' | 'playing' | 'paused' | 'won' | 'lost' | 'settings' | 'supplies';
@@ -30,6 +30,7 @@ export type AppAction =
   | { type: 'desktopReward' }
   | { type: 'favoriteReward' }
   | { type: 'sidebarReward' }
+  | { type: 'doubleWinReward' }
   | { type: 'toggleSound' }
   | { type: 'toggleMusic' };
 
@@ -170,6 +171,9 @@ export class GameController {
       case 'sidebarReward':
         await this.claimSidebarReward();
         break;
+      case 'doubleWinReward':
+        await this.doubleWinReward();
+        break;
       case 'toggleSound':
         this.updateSave({ ...this.save, soundEnabled: !this.save.soundEnabled });
         break;
@@ -260,15 +264,46 @@ export class GameController {
   }
 
   private handleWin(session: GameSession): void {
-    const level = levels.find((candidate) => candidate.id === session.levelId);
+    const level = levelById(session.levelId);
+    const baseCoins = level.rewards.coins;
     const nextHighest = Math.min(levels.length, Math.max(this.save.highestUnlockedLevel, session.levelId + 1));
-    this.updateSave({
-      ...this.save,
-      highestUnlockedLevel: nextHighest,
-      completedLevelCount: Math.min(levels.length, Math.max(this.save.completedLevelCount, session.levelId)),
-      coins: this.save.coins + (level?.rewards.coins ?? 0),
-    });
+    const nextLevelId = session.levelId < levels.length ? session.levelId + 1 : null;
+    const rewardSave = this.addNodeReward(
+      {
+        ...this.save,
+        highestUnlockedLevel: nextHighest,
+        completedLevelCount: Math.min(levels.length, Math.max(this.save.completedLevelCount, session.levelId)),
+        coins: this.save.coins + baseCoins,
+      },
+      level.nodeReward,
+    );
+
+    this.updateSave(rewardSave);
+    this.winSummary = {
+      levelId: session.levelId,
+      chapterTitle: level.chapterTitle,
+      baseCoins,
+      nodeReward: level.nodeReward ?? null,
+      nextLevelId,
+      doubled: false,
+    };
     this.screen = 'won';
+  }
+
+  private addNodeReward(save: SaveData, reward: NodeReward | undefined): SaveData {
+    if (!reward) {
+      return save;
+    }
+
+    return {
+      ...save,
+      items: {
+        ...save.items,
+        bomb: save.items.bomb + (reward.bomb ?? 0),
+        suck: save.items.suck + (reward.suck ?? 0),
+        shuffle: save.items.shuffle + (reward.shuffle ?? 0),
+      },
+    };
   }
 
   private async requestExtraMoves(): Promise<void> {
@@ -413,6 +448,28 @@ export class GameController {
     this.updateSave(outcome.save);
     this.feedback = outcome.feedback;
     this.emitAudio(outcome.granted ? 'reward' : 'invalid');
+  }
+
+  private async doubleWinReward(): Promise<void> {
+    if (!this.winSummary || this.screen !== 'won') {
+      this.feedback = '通关后才能领取翻倍奖励。';
+      this.emitAudio('invalid');
+      return;
+    }
+
+    if (this.winSummary.doubled) {
+      this.feedback = '翻倍奖励已领取。';
+      this.emitAudio('invalid');
+      return;
+    }
+
+    const outcome = await claimDoubleCoinsReward(this.save, this.winSummary.baseCoins, this.platform);
+    this.feedback = outcome.feedback;
+    this.emitAudio(outcome.granted ? 'reward' : 'invalid');
+    if (outcome.granted) {
+      this.updateSave(outcome.save);
+      this.winSummary = { ...this.winSummary, doubled: true };
+    }
   }
 
   private updateSave(save: SaveData): void {

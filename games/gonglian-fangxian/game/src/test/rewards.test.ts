@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import { createDefaultSave } from '../app/save';
-import { claimAdItemReward, claimDesktopReward, claimFavoriteReward, claimSidebarReward, requestExtraMoves } from '../app/rewards';
+import { claimAdItemReward, claimDesktopReward, claimDoubleCoinsReward, claimFavoriteReward, claimSidebarReward, requestExtraMoves } from '../app/rewards';
 import type { PlatformAdapter, PlatformResult } from '../platform/types';
 import type { GameSession } from '../core/types';
 
@@ -56,6 +56,39 @@ describe('reward flows', () => {
 
     expect(outcome.granted).toBe(true);
     expect(outcome.save.items.bomb).toBe(1);
+    expect(outcome.feedback).toContain('已直接发放');
+  });
+
+  test('completed rewarded video doubles win coins', async () => {
+    const save = createDefaultSave();
+    save.coins = 100;
+
+    const outcome = await claimDoubleCoinsReward(save, 80, platform({ ad: { status: 'success' } }));
+
+    expect(outcome.granted).toBe(true);
+    expect(outcome.save.coins).toBe(180);
+    expect(outcome.feedback).toContain('奖励已翻倍');
+  });
+
+  test('cancelled double reward video does not add coins', async () => {
+    const save = createDefaultSave();
+    save.coins = 100;
+
+    const outcome = await claimDoubleCoinsReward(save, 80, platform({ ad: { status: 'cancelled' } }));
+
+    expect(outcome.granted).toBe(false);
+    expect(outcome.save.coins).toBe(100);
+    expect(outcome.feedback).toContain('未完整观看');
+  });
+
+  test('failed double reward video grants fallback coins', async () => {
+    const save = createDefaultSave();
+    save.coins = 100;
+
+    const outcome = await claimDoubleCoinsReward(save, 80, platform({ ad: { status: 'failed' } }));
+
+    expect(outcome.granted).toBe(true);
+    expect(outcome.save.coins).toBe(180);
     expect(outcome.feedback).toContain('已直接发放');
   });
 
