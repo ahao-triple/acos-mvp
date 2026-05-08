@@ -128,6 +128,14 @@ export function createMiniPackSoundOptions(runtime: MiniPackGameRuntime): SoundE
         await runtime.audio.playSfx(asset.type);
       },
     }),
+    createMusicPlayer: () => ({
+      async play() {
+        await runtime.audio.playMusic('bgm', true);
+      },
+      pause() {
+        runtime.audio.stopMusic();
+      },
+    }),
   };
 }
 

@@ -9,6 +9,12 @@ export interface SoundAsset {
   volume: number;
 }
 
+export interface MusicAsset {
+  src: string;
+  volume: number;
+  loop: boolean;
+}
+
 export const SOUND_ASSET_BUDGET_BYTES = 900_000;
 
 export const SOUND_ASSETS: Record<AudioCueType, SoundAsset> = {
@@ -23,6 +29,12 @@ export const SOUND_ASSETS: Record<AudioCueType, SoundAsset> = {
 };
 
 export const INITIAL_SOUND_ASSET_TYPES: AudioCueType[] = ['button', 'select', 'invalid', 'match'];
+
+export const MUSIC_ASSET: MusicAsset = {
+  src: '/audio/bgm.mp3',
+  volume: 0.22,
+  loop: true,
+};
 
 export function soundAssetForCue(type: AudioCueType): SoundAsset {
   return SOUND_ASSETS[type];
