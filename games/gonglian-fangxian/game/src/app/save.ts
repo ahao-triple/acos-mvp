@@ -1,3 +1,5 @@
+import { LEVEL_COUNT } from '../config/levels';
+
 export const SAVE_KEY = 'gonglian-fangxian-save';
 
 export interface SaveData {
@@ -69,7 +71,7 @@ export function repairSaveData(input: unknown): SaveData {
 
   return {
     version: 1,
-    highestUnlockedLevel: readNumber(input.highestUnlockedLevel, defaults.highestUnlockedLevel, 1, 10),
+    highestUnlockedLevel: readNumber(input.highestUnlockedLevel, defaults.highestUnlockedLevel, 1, LEVEL_COUNT),
     coins: readNumber(input.coins, defaults.coins, 0),
     items: {
       extraMoves: readNumber(items.extraMoves, defaults.items.extraMoves, 0),

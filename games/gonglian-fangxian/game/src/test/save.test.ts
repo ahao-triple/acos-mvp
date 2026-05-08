@@ -38,6 +38,14 @@ describe('save data', () => {
     expect(save.favoriteRewardClaimed).toBe(false);
   });
 
+  test('repairs highest unlocked level up to campaign level count', () => {
+    const save = repairSaveData({
+      highestUnlockedLevel: 30,
+    });
+
+    expect(save.highestUnlockedLevel).toBe(30);
+  });
+
   test('loads and writes save data through storage', () => {
     const storage = new MemoryStorage();
     const save = createDefaultSave();
