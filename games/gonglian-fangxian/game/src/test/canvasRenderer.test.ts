@@ -1,12 +1,61 @@
 import { describe, expect, test } from 'vitest';
 
-import { GameController } from '../app/controller';
+import { GameController, type WinSummary } from '../app/controller';
 import type { PlatformAdapter } from '../platform/types';
 import { CanvasRenderer } from '../render/canvasRenderer';
 import { targetLabel, targetProgressText } from '../render/theme';
 import { drawAdButton, drawButton } from '../render/uiPrimitives';
 
 describe('CanvasRenderer mini game canvas compatibility', () => {
+  test('renders campaign home progress text', () => {
+    const { canvas, ctx } = createRecordingCanvas();
+    const controller = new GameController(mockPlatform());
+    const renderer = new CanvasRenderer(canvas, controller);
+
+    renderer.render();
+
+    const text = ctx.fillTexts.map((entry) => entry.text).join('\n');
+    expect(text).toContain('前线集结');
+    expect(text).toContain('1/30');
+    expect(text).toContain('继续作战');
+  });
+
+  test('renders briefing screen with objective and start action', async () => {
+    const { canvas, ctx } = createRecordingCanvas();
+    const controller = new GameController(mockPlatform());
+    const renderer = new CanvasRenderer(canvas, controller);
+
+    await controller.dispatch({ type: 'start' });
+    renderer.render();
+
+    const text = ctx.fillTexts.map((entry) => entry.text).join('\n');
+    expect(text).toContain('作战简报');
+    expect(text).toContain('开始作战');
+    expect(text).toContain('护盾 0/8');
+  });
+
+  test('renders win result with coin doubling action', async () => {
+    const { canvas, ctx } = createRecordingCanvas();
+    const controller = new GameController(mockPlatform());
+    const renderer = new CanvasRenderer(canvas, controller);
+
+    forcePrivateWinSummary(controller, {
+      levelId: 1,
+      chapterTitle: '前线集结',
+      baseCoins: 70,
+      nodeReward: null,
+      nextLevelId: 2,
+      doubled: false,
+    });
+
+    renderer.render();
+
+    const text = ctx.fillTexts.map((entry) => entry.text).join('\n');
+    expect(text).toContain('防线推进');
+    expect(text).toContain('获得金币 70');
+    expect(text).toContain('看广告奖励翻倍');
+  });
+
   test('renders the campaign briefing after start', async () => {
     const { canvas, ctx } = createRecordingCanvas();
     const controller = new GameController(mockPlatform());
@@ -29,7 +78,7 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
 
     await controller.dispatch({ type: 'start' });
     renderer.render();
-    await handlePointer(renderer, { clientX: 375, clientY: 969 });
+    await handlePointer(renderer, { clientX: 375, clientY: 1049 });
 
     expect(controller.getViewState().screen).toBe('playing');
   });
@@ -59,7 +108,7 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
     const text = renderedText(ctx);
     expect(text).toContain('补给');
 
-    await handlePointer(renderer, { clientX: 375, clientY: 581 });
+    await handlePointer(renderer, { clientX: 375, clientY: 661 });
 
     expect(controller.getViewState().screen).toBe('supplies');
   });
@@ -135,6 +184,12 @@ function createMiniGameCanvas(): HTMLCanvasElement & { width: number; height: nu
 
 function handlePointer(renderer: CanvasRenderer, event: unknown): Promise<void> {
   return (renderer as unknown as { handlePointer(event: unknown): Promise<void> }).handlePointer(event);
+}
+
+function forcePrivateWinSummary(controller: GameController, summary: WinSummary): void {
+  const writableController = controller as unknown as { screen: 'won'; winSummary: WinSummary };
+  writableController.screen = 'won';
+  writableController.winSummary = summary;
 }
 
 function renderedText(ctx: RecordingContext): string {

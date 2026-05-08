@@ -1,11 +1,14 @@
-import type { GameController, AppAction, AppViewState } from '../app/controller';
-import { describeNodeReward } from '../app/campaign';
-import type { Board, BoardCell, PieceKind, Position, SessionEvent } from '../core/types';
+import type { GameController, AppViewState } from '../app/controller';
+import type { Board, SessionEvent } from '../core/types';
+import { drawBriefingScreen } from './briefingScreen';
 import { EffectsModel, type FloatingText, type Particle } from './effects';
+import { BOARD_CELL_SIZE, BOARD_GAP, BOARD_START_X, BOARD_START_Y, cellAt, drawGameScreen } from './gameScreen';
+import { drawLevelsScreen } from './levelsScreen';
+import { drawMenuScreen, drawSuppliesScreen } from './menuScreen';
+import { drawLostResult, drawPausedResult, drawWinResult } from './resultScreen';
 import { coverRect, fitLogicalCanvas, LOGICAL_HEIGHT, LOGICAL_WIDTH, toLogicalPoint, type CanvasFit } from './scaler';
-import { pieceColors, targetLabel, targetProgressText } from './theme';
-import { actionKey, drawAdButton, drawButton, drawPanel, drawSmallText, drawText, roundRect, type HitArea, type PressedButton } from './uiPrimitives';
-import { VisualBoardModel, type VisualTile } from './visualBoard';
+import { actionKey, drawButton, drawPanel, drawText, roundRect, type HitArea, type PressedButton } from './uiPrimitives';
+import { VisualBoardModel } from './visualBoard';
 
 interface BoardPresentation {
   key: string;
@@ -13,11 +16,6 @@ interface BoardPresentation {
   index: number;
   stepStartedMs: number;
 }
-
-const BOARD_CELL_SIZE = 86;
-const BOARD_GAP = 8;
-const BOARD_START_X = 57;
-const BOARD_START_Y = 300;
 
 export class CanvasRenderer {
   private readonly ctx: CanvasRenderingContext2D;
@@ -34,8 +32,6 @@ export class CanvasRenderer {
   private pressedButton: PressedButton | null = null;
   private lastFeedback: string | null = null;
   private feedbackSinceMs = 0;
-  private lastScreen: string | null = null;
-  private screenSinceMs = 0;
   private presentation: BoardPresentation | null = null;
   private handledPresentationKey: string | null = null;
 
@@ -81,38 +77,34 @@ export class CanvasRenderer {
     this.drawBackground(view, nowMs);
 
     if (view.screen === 'menu') {
-      this.drawMenu(view);
+      drawMenuScreen(this.ui(), view);
     } else if (view.screen === 'levels') {
-      this.drawLevels(view);
+      drawLevelsScreen(this.ui(), view);
     } else if (view.screen === 'briefing') {
-      this.drawBriefing(view);
+      drawBriefingScreen(this.ui(), view);
     } else if (view.screen === 'supplies') {
-      this.drawSupplies(view);
-    } else if (view.screen === 'playing' || view.screen === 'paused' || view.screen === 'won' || view.screen === 'lost') {
-      this.drawGame(view, nowMs);
-      if (view.screen === 'paused') {
-        this.drawModal('暂停', nowMs, [
-          ['继续', { type: 'resume' }],
-          ['重玩', { type: 'retry' }],
-          ['返回首页', { type: 'home' }],
-        ]);
-      }
-      if (view.screen === 'won') {
-        this.drawModal('胜利', nowMs, [
-          ['下一关', { type: 'nextLevel' }],
-          ['重玩', { type: 'retry' }],
-          ['返回主菜单', { type: 'closeModal' }],
-        ]);
-      }
-      if (view.screen === 'lost') {
-        this.drawModal('失败', nowMs, [
-          ['看广告加 5 步', { type: 'extraMovesAd' }],
-          ['重玩', { type: 'retry' }],
-          ['返回主菜单', { type: 'closeModal' }],
-        ]);
-      }
+      drawSuppliesScreen(this.ui(), view);
     } else if (view.screen === 'settings') {
       this.drawSettings(view);
+    } else if (view.screen === 'playing' || view.screen === 'paused' || view.screen === 'won' || view.screen === 'lost') {
+      drawGameScreen({
+        ui: this.ui(),
+        nowMs,
+        visualBoard: this.visualBoard,
+        effects: this.effects,
+        presentedBoard: (session, time) => this.presentedBoard(session, time),
+        handleVisualCue: (state, time) => this.handleVisualCue(state, time),
+        drawEffects: (time) => this.drawEffects(time),
+      }, view);
+      if (view.screen === 'paused') {
+        drawPausedResult(this.ui());
+      }
+      if (view.screen === 'won') {
+        drawWinResult(this.ui(), view);
+      }
+      if (view.screen === 'lost') {
+        drawLostResult(this.ui(), view);
+      }
     }
 
     if (view.feedback) {
@@ -123,10 +115,6 @@ export class CanvasRenderer {
   }
 
   private trackViewTiming(view: AppViewState, nowMs: number): void {
-    if (this.lastScreen !== view.screen) {
-      this.lastScreen = view.screen;
-      this.screenSinceMs = nowMs;
-    }
     if (this.lastFeedback !== view.feedback) {
       this.lastFeedback = view.feedback;
       this.feedbackSinceMs = nowMs;
@@ -150,7 +138,7 @@ export class CanvasRenderer {
       return;
     }
 
-    const cell = this.cellAt(point.x, point.y);
+    const cell = cellAt(point.x, point.y);
     if (cell) {
       const nowMs = performance.now();
       if (this.visualBoard.isBusy(nowMs) || this.presentation) {
@@ -204,125 +192,12 @@ export class CanvasRenderer {
     this.drawParticles(this.effects.backgroundParticles(LOGICAL_WIDTH, LOGICAL_HEIGHT, nowMs, 18));
   }
 
-  private drawMenu(view: AppViewState): void {
-    this.drawTitle('共联防线', '调度资源，修复防线，守住前线');
-    drawPanel(this.ctx, 80, 260, 590, 780);
-    drawButton(this.ui(), 150, 330, 450, 78, '继续作战', { type: 'start' });
-    drawButton(this.ui(), 150, 436, 450, 78, '关卡选择', { type: 'openLevels' });
-    drawButton(this.ui(), 150, 542, 450, 78, '补给', { type: 'openSupplies' });
-    drawButton(this.ui(), 150, 648, 450, 78, '设置', { type: 'openSettings' });
-    drawSmallText(this.ctx, `金币 ${view.save.coins}  最高关卡 ${view.highestLevel}`, 375, 1000);
-  }
-
-  private drawLevels(view: AppViewState): void {
-    this.drawTitle('关卡选择', '完成关卡可解锁下一关');
-    drawPanel(this.ctx, 62, 220, 626, 820);
-    for (let index = 0; index < view.levelCount; index += 1) {
-      const levelId = index + 1;
-      const col = index % 2;
-      const row = Math.floor(index / 2);
-      const x = 110 + col * 280;
-      const y = 270 + row * 125;
-      const unlocked = levelId <= view.highestLevel;
-      drawButton(this.ui(), x, y, 250, 82, unlocked ? `第 ${levelId} 关` : `第 ${levelId} 关 未解锁`, unlocked ? { type: 'selectLevel', levelId } : { type: 'openLevels' });
-    }
-    drawButton(this.ui(), 190, 920, 370, 78, '返回', { type: 'closeModal' });
-  }
-
-  private drawBriefing(view: AppViewState): void {
-    const level = view.pendingLevel;
-    this.drawTitle('作战简报', level ? `${level.chapterTitle} · 第 ${level.id} 关` : '选择关卡后开始作战');
-    drawPanel(this.ctx, 62, 238, 626, 790);
-
-    if (!level) {
-      drawText(this.ctx, '暂无待命关卡', 375, 470, 34, '#ffffff', 'center');
-      drawButton(this.ui(), 190, 930, 370, 78, '返回', { type: 'home' });
-      return;
-    }
-
-    const targetText = level.targets.map((target) => `${targetLabel(target.kind)} x${target.count}`).join('  ');
-    const nodeReward = describeNodeReward(level.nodeReward);
-    drawText(this.ctx, `${level.chapterTitle} / 第 ${level.id} 关`, 112, 315, 30, '#ffffff', 'left');
-    drawText(this.ctx, level.briefing, 112, 385, 26, '#f8fafc', 'left');
-    drawText(this.ctx, `步数：${level.moves}`, 112, 465, 26, '#fef3c7', 'left');
-    drawText(this.ctx, `目标：${targetText}`, 112, 535, 24, '#d1fae5', 'left');
-    drawText(this.ctx, `奖励：金币 ${level.rewards.coins}`, 112, 605, 24, '#fde68a', 'left');
-    drawText(this.ctx, `节点奖励：${nodeReward || '无'}`, 112, 675, 24, '#dbeafe', 'left');
-    drawButton(this.ui(), 150, 930, 450, 78, '开始作战', { type: 'beginLevel' });
-    drawButton(this.ui(), 190, 1035, 370, 78, '返回', { type: 'home' });
-  }
-
-  private drawSupplies(view: AppViewState): void {
-    this.drawTitle('补给', '领取平台补给并查看当前资源');
-    drawPanel(this.ctx, 80, 260, 590, 760);
-    drawText(this.ctx, `金币 ${view.save.coins}`, 375, 335, 36, '#ffffff', 'center');
-    drawText(this.ctx, `道具 炸开 ${view.save.items.bomb}  吸走 ${view.save.items.suck}  重排 ${view.save.items.shuffle}`, 375, 395, 24, '#d1fae5', 'center');
-    drawButton(this.ui(), 150, 470, 450, 78, '添加到桌面领奖', { type: 'desktopReward' });
-    drawButton(this.ui(), 150, 576, 450, 78, '添加到常用领奖', { type: 'favoriteReward' });
-    drawButton(this.ui(), 150, 682, 450, 78, '侧边栏入口奖励', { type: 'sidebarReward' });
-    drawButton(this.ui(), 190, 900, 370, 78, '返回', { type: 'closeModal' });
-  }
-
-  private drawGame(view: AppViewState, nowMs: number): void {
-    const session = view.session;
-    if (!session) {
-      this.drawMenu(view);
-      return;
-    }
-
-    drawPanel(this.ctx, 36, 36, 678, 180);
-    drawText(this.ctx, `第 ${session.levelId} 关`, 70, 92, 34, '#ffffff', 'left');
-    drawText(this.ctx, `步数 ${session.movesLeft}`, 70, 146, 30, '#fef3c7', 'left');
-    drawText(this.ctx, `金币 ${view.save.coins}`, 430, 92, 28, '#ffffff', 'left');
-    drawButton(this.ui(), 570, 130, 110, 54, '暂停', { type: 'pause' });
-    this.drawTargets(session);
-    this.handleVisualCue(view, nowMs);
-    this.drawBoard(session, nowMs);
-    this.drawEffects(nowMs);
-    this.drawPowerUpButton(60, 1148, 190, 70, '炸开', view.save.items.bomb, view.activePowerUp === 'bomb', { type: 'usePowerUp', item: 'bomb' });
-    this.drawPowerUpButton(280, 1148, 190, 70, '吸走', view.save.items.suck, view.activePowerUp === 'suck', { type: 'usePowerUp', item: 'suck' });
-    this.drawPowerUpButton(500, 1148, 190, 70, '重排', view.save.items.shuffle, false, { type: 'usePowerUp', item: 'shuffle' });
-  }
-
   private drawSettings(view: AppViewState): void {
     this.drawTitle('设置', '音频开关会保存到本地');
     drawPanel(this.ctx, 100, 300, 550, 500);
     drawButton(this.ui(), 160, 380, 430, 86, `音效：${view.save.soundEnabled ? '开' : '关'}`, { type: 'toggleSound' });
     drawButton(this.ui(), 160, 500, 430, 86, `音乐：${view.save.musicEnabled ? '开' : '关'}`, { type: 'toggleMusic' });
     drawButton(this.ui(), 160, 620, 430, 86, '返回', { type: 'closeModal' });
-  }
-
-  private drawTargets(session: AppViewState['session']): void {
-    if (!session) return;
-    const text = session.targets.map((target) => targetProgressText(target, session.targetProgress)).join('  ');
-    drawText(this.ctx, text, 375, 198, 24, '#d1fae5', 'center');
-  }
-
-  private drawBoard(session: NonNullable<AppViewState['session']>, nowMs: number): void {
-    const board = this.presentedBoard(session, nowMs);
-    drawPanel(this.ctx, 34, 276, 682, 682);
-
-    for (let row = 0; row < board.length; row += 1) {
-      for (let col = 0; col < board[row].length; col += 1) {
-        const x = BOARD_START_X + col * (BOARD_CELL_SIZE + BOARD_GAP);
-        const y = BOARD_START_Y + row * (BOARD_CELL_SIZE + BOARD_GAP);
-        const selected = session.selectedCell?.row === row && session.selectedCell.col === col;
-        this.drawCellSlot(x, y, BOARD_CELL_SIZE, selected, nowMs);
-      }
-    }
-
-    const changes = this.visualBoard.sync(board, nowMs);
-    for (const tile of changes.removed) {
-      this.effects.burst(tile.x + BOARD_CELL_SIZE / 2, tile.y + BOARD_CELL_SIZE / 2, colorForCell(tile.cell), nowMs, 7);
-    }
-    if (changes.removed.length >= 4) {
-      const center = averageTiles(changes.removed);
-      this.effects.floatText(`${changes.removed.length} 连消`, center.x, center.y, '#ffd166', nowMs);
-    }
-
-    for (const tile of this.visualBoard.tilesAt(nowMs)) {
-      this.drawVisualTile(tile, BOARD_CELL_SIZE, session.selectedCell);
-    }
   }
 
   private presentedBoard(session: NonNullable<AppViewState['session']>, nowMs: number): Board {
@@ -365,98 +240,6 @@ export class CanvasRenderer {
     return currentStep.board;
   }
 
-  private drawCellSlot(x: number, y: number, size: number, selected: boolean, nowMs: number): void {
-    const pulse = selected ? 0.5 + Math.sin(nowMs / 120) * 0.5 : 0;
-    this.ctx.fillStyle = selected ? `rgba(254,243,199,${0.88 + pulse * 0.08})` : 'rgba(255,255,255,0.12)';
-    roundRect(this.ctx, x, y, size, size, 8);
-    this.ctx.fill();
-    this.ctx.strokeStyle = selected ? '#f59e0b' : 'rgba(255,255,255,0.18)';
-    this.ctx.lineWidth = selected ? 5 : 2;
-    this.ctx.stroke();
-  }
-
-  private drawVisualTile(tile: VisualTile, size: number, selectedCell: Position | null): void {
-    const selected = selectedCell?.row === tile.row && selectedCell.col === tile.col;
-
-    this.ctx.save();
-    this.ctx.globalAlpha = tile.alpha;
-    this.ctx.translate(tile.x + size / 2, tile.y + size / 2);
-    this.ctx.scale(tile.scale * (selected ? 1.05 : 1), tile.scale * (selected ? 1.05 : 1));
-    this.ctx.translate(-size / 2, -size / 2);
-
-    if (tile.cell.kind === 'blocker') {
-      const color = tile.cell.blockerKind === 'sandbag' ? '#9b6a3a' : '#6b7280';
-      drawGlowBox(this.ctx, 4, 4, size - 8, size - 8, color);
-      this.ctx.fillStyle = color;
-      roundRect(this.ctx, 15, 18, size - 30, size - 36, 8);
-      this.ctx.fill();
-      drawText(this.ctx, tile.cell.blockerKind === 'sandbag' ? '沙' : '损', size / 2, size / 2 + 10, 32, '#ffffff', 'center');
-      this.ctx.restore();
-      return;
-    }
-
-    if (tile.cell.kind === 'normal' || tile.cell.kind === 'special') {
-      const color = pieceColors[tile.cell.pieceKind];
-      drawGlowBox(this.ctx, 4, 4, size - 8, size - 8, color);
-      this.ctx.strokeStyle = 'rgba(255,255,255,0.52)';
-      this.ctx.lineWidth = 1.4;
-      roundRect(this.ctx, 12, 12, size - 24, size - 24, 8);
-      this.ctx.stroke();
-      this.ctx.fillStyle = color;
-      this.ctx.beginPath();
-      this.ctx.arc(size / 2, size / 2, 28, 0, Math.PI * 2);
-      this.ctx.fill();
-      this.ctx.fillStyle = 'rgba(255,255,255,0.22)';
-      this.ctx.beginPath();
-      this.ctx.ellipse(size / 2 - 8, size / 2 - 10, 15, 8, -0.4, 0, Math.PI * 2);
-      this.ctx.fill();
-      this.drawPieceIcon(tile.cell.pieceKind, size / 2, size / 2, color);
-      if (tile.cell.kind === 'special') {
-        drawText(this.ctx, tile.cell.specialKind === 'areaBomb' ? '爆' : tile.cell.specialKind === 'horizontalRocket' ? '横' : '竖', size / 2, size - 16, 18, '#ffffff', 'center');
-      }
-    }
-
-    this.ctx.restore();
-  }
-
-  private cellAt(x: number, y: number): Position | null {
-    if (x < BOARD_START_X || y < BOARD_START_Y) {
-      return null;
-    }
-
-    const col = Math.floor((x - BOARD_START_X) / (BOARD_CELL_SIZE + BOARD_GAP));
-    const row = Math.floor((y - BOARD_START_Y) / (BOARD_CELL_SIZE + BOARD_GAP));
-    const insideX = (x - BOARD_START_X) % (BOARD_CELL_SIZE + BOARD_GAP) <= BOARD_CELL_SIZE;
-    const insideY = (y - BOARD_START_Y) % (BOARD_CELL_SIZE + BOARD_GAP) <= BOARD_CELL_SIZE;
-
-    if (row >= 0 && row < 7 && col >= 0 && col < 7 && insideX && insideY) {
-      return { row, col };
-    }
-
-    return null;
-  }
-
-  private drawModal(title: string, nowMs: number, buttons: Array<[string, AppAction]>): void {
-    const progress = Math.min(1, (nowMs - this.screenSinceMs) / 220);
-    const scale = 0.88 + progress * 0.12;
-    this.ctx.fillStyle = 'rgba(0,0,0,0.55)';
-    this.ctx.fillRect(0, 0, LOGICAL_WIDTH, LOGICAL_HEIGHT);
-    this.ctx.save();
-    this.ctx.translate(375, 585);
-    this.ctx.scale(scale, scale);
-    this.ctx.translate(-375, -585);
-    drawPanel(this.ctx, 105, 350, 540, 470);
-    drawText(this.ctx, title, 375, 430, 56, '#ffffff', 'center');
-    buttons.forEach(([label, action], index) => {
-      if (action.type === 'extraMovesAd') {
-        drawAdButton(this.ui(), 175, 500 + index * 100, 400, 74, label, action);
-      } else {
-        drawButton(this.ui(), 175, 500 + index * 100, 400, 74, label, action);
-      }
-    });
-    this.ctx.restore();
-  }
-
   private drawTitle(title: string, subtitle: string): void {
     drawText(this.ctx, title, 375, 126, 72, '#ffffff', 'center');
     drawText(this.ctx, subtitle, 375, 184, 28, '#d1fae5', 'center');
@@ -468,15 +251,6 @@ export class CanvasRenderer {
       hitAreas: this.hitAreas,
       pressedButton: this.pressedButton,
     };
-  }
-
-  private drawPowerUpButton(x: number, y: number, width: number, height: number, name: string, count: number, active: boolean, action: AppAction): void {
-    if (count > 0) {
-      drawButton(this.ui(), x, y, width, height, `${active ? '>' : ''}${name} ${count}`, action);
-      return;
-    }
-
-    drawAdButton(this.ui(), x, y, width, height, `${active ? '>' : ''}看广告${name}`, action);
   }
 
   private drawToast(message: string, nowMs: number): void {
@@ -539,53 +313,6 @@ export class CanvasRenderer {
     this.ctx.scale(text.scale, text.scale);
     drawText(this.ctx, text.text, 0, 0, 34, text.color, 'center');
     this.ctx.restore();
-  }
-
-  private drawPieceIcon(kind: PieceKind, cx: number, cy: number, color: string): void {
-    this.ctx.strokeStyle = '#ffffff';
-    this.ctx.fillStyle = withAlpha(color, 0.45);
-    this.ctx.lineWidth = 3;
-    const s = 18;
-
-    if (kind === 'shield') {
-      this.ctx.beginPath();
-      this.ctx.moveTo(cx, cy - s);
-      this.ctx.lineTo(cx + s * 0.8, cy - s * 0.45);
-      this.ctx.lineTo(cx + s * 0.55, cy + s * 0.85);
-      this.ctx.lineTo(cx, cy + s);
-      this.ctx.lineTo(cx - s * 0.55, cy + s * 0.85);
-      this.ctx.lineTo(cx - s * 0.8, cy - s * 0.45);
-      this.ctx.closePath();
-      this.ctx.fill();
-      this.ctx.stroke();
-    } else if (kind === 'ammo') {
-      roundRect(this.ctx, cx - s * 0.65, cy - s * 0.8, s * 1.3, s * 1.6, 4);
-      this.ctx.fill();
-      this.ctx.stroke();
-    } else if (kind === 'radar') {
-      this.ctx.beginPath();
-      this.ctx.arc(cx, cy, s, 0, Math.PI * 2);
-      this.ctx.stroke();
-      this.ctx.beginPath();
-      this.ctx.arc(cx, cy, s * 0.45, 0, Math.PI * 2);
-      this.ctx.stroke();
-      this.ctx.beginPath();
-      this.ctx.moveTo(cx, cy);
-      this.ctx.lineTo(cx + s * 0.9, cy - s * 0.45);
-      this.ctx.stroke();
-    } else if (kind === 'medal') {
-      drawStar(this.ctx, cx, cy, s);
-      this.ctx.fill();
-      this.ctx.stroke();
-    } else {
-      this.ctx.beginPath();
-      this.ctx.moveTo(cx - s * 0.8, cy + s * 0.7);
-      this.ctx.lineTo(cx + s * 0.55, cy - s * 0.65);
-      this.ctx.stroke();
-      this.ctx.beginPath();
-      this.ctx.arc(cx + s * 0.62, cy - s * 0.72, s * 0.34, 0, Math.PI * 2);
-      this.ctx.stroke();
-    }
   }
 
 }
@@ -666,69 +393,4 @@ function boardSignature(board: Board): string {
         .join(','),
     )
     .join('/');
-}
-
-function colorForCell(cell: BoardCell): string {
-  if (cell.kind === 'normal' || cell.kind === 'special') {
-    return pieceColors[cell.pieceKind];
-  }
-  if (cell.kind === 'blocker') {
-    return cell.blockerKind === 'sandbag' ? '#9b6a3a' : '#6b7280';
-  }
-  return '#ffffff';
-}
-
-function averageTiles(tiles: VisualTile[]): { x: number; y: number } {
-  const total = tiles.reduce(
-    (sum, tile) => ({
-      x: sum.x + tile.x + BOARD_CELL_SIZE / 2,
-      y: sum.y + tile.y + BOARD_CELL_SIZE / 2,
-    }),
-    { x: 0, y: 0 },
-  );
-
-  return {
-    x: total.x / tiles.length,
-    y: total.y / tiles.length,
-  };
-}
-
-function drawGlowBox(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, color: string): void {
-  ctx.fillStyle = withAlpha(color, 0.1);
-  roundRect(ctx, x - 7, y - 7, width + 14, height + 14, 14);
-  ctx.fill();
-  ctx.fillStyle = withAlpha(color, 0.18);
-  roundRect(ctx, x - 3, y - 3, width + 6, height + 6, 12);
-  ctx.fill();
-  ctx.fillStyle = '#101827';
-  roundRect(ctx, x, y, width, height, 10);
-  ctx.fill();
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 3;
-  roundRect(ctx, x + 1.5, y + 1.5, width - 3, height - 3, 9);
-  ctx.stroke();
-  ctx.fillStyle = 'rgba(255,255,255,0.13)';
-  roundRect(ctx, x + 8, y + 9, width - 16, height * 0.34, 7);
-  ctx.fill();
-}
-
-function withAlpha(hex: string, alpha: number): string {
-  const clean = hex.replace('#', '');
-  const r = Number.parseInt(clean.slice(0, 2), 16);
-  const g = Number.parseInt(clean.slice(2, 4), 16);
-  const b = Number.parseInt(clean.slice(4, 6), 16);
-  return `rgba(${r},${g},${b},${alpha})`;
-}
-
-function drawStar(ctx: CanvasRenderingContext2D, cx: number, cy: number, radius: number): void {
-  ctx.beginPath();
-  for (let i = 0; i < 10; i += 1) {
-    const r = i % 2 === 0 ? radius : radius * 0.42;
-    const angle = -Math.PI / 2 + (i * Math.PI) / 5;
-    const x = cx + Math.cos(angle) * r;
-    const y = cy + Math.sin(angle) * r;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
-  ctx.closePath();
 }
