@@ -1,0 +1,380 @@
+import { levels } from '../config/levels';
+import { applyMove, applyPowerUp, createSession } from '../core/session';
+import type { GameSession, Position, PowerUpType } from '../core/types';
+import type { PlatformAdapter } from '../platform/types';
+import type { AudioCue, AudioCueType } from '../audio/soundEngine';
+import { debugLog } from './debugLog';
+import { createDefaultSave, loadSave, type SaveData, writeSave } from './save';
+import { claimAdItemReward, claimDesktopReward, claimFavoriteReward, claimSidebarReward, requestExtraMoves, type InventoryItem } from './rewards';
+
+export type Screen = 'menu' | 'levels' | 'playing' | 'paused' | 'won' | 'lost' | 'settings';
+
+export type AppAction =
+  | { type: 'start' }
+  | { type: 'openLevels' }
+  | { type: 'openSettings' }
+  | { type: 'closeModal' }
+  | { type: 'selectLevel'; levelId: number }
+  | { type: 'tapCell'; position: Position }
+  | { type: 'pause' }
+  | { type: 'resume' }
+  | { type: 'home' }
+  | { type: 'retry' }
+  | { type: 'nextLevel' }
+  | { type: 'extraMovesAd' }
+  | { type: 'claimAdItemReward'; item: InventoryItem }
+  | { type: 'usePowerUp'; item: PowerUpType }
+  | { type: 'desktopReward' }
+  | { type: 'favoriteReward' }
+  | { type: 'sidebarReward' }
+  | { type: 'toggleSound' }
+  | { type: 'toggleMusic' };
+
+export interface AppViewState {
+  screen: Screen;
+  save: SaveData;
+  session: GameSession | null;
+  feedback: string | null;
+  visualCue: VisualCue | null;
+  audioCue: AudioCue | null;
+  highestLevel: number;
+  levelCount: number;
+  activePowerUp: PowerUpType | null;
+}
+
+export type VisualCue =
+  | { type: 'swapRejected'; from: Position; to: Position; id: number }
+  | { type: 'combo'; combo: number; id: number };
+
+export class GameController {
+  private save: SaveData;
+  private session: GameSession | null = null;
+  private screen: Screen = 'menu';
+  private feedback: string | null = null;
+  private visualCue: VisualCue | null = null;
+  private audioCue: AudioCue | null = null;
+  private activePowerUp: PowerUpType | null = null;
+  private cueId = 0;
+  private audioCueId = 0;
+  private seed = 1000;
+
+  constructor(private readonly platform: PlatformAdapter) {
+    this.save = loadSave(platform.storage);
+  }
+
+  getViewState(): AppViewState {
+    return {
+      screen: this.screen,
+      save: this.save,
+      session: this.session,
+      feedback: this.feedback,
+      visualCue: this.visualCue,
+      audioCue: this.audioCue,
+      highestLevel: this.save.highestUnlockedLevel,
+      levelCount: levels.length,
+      activePowerUp: this.activePowerUp,
+    };
+  }
+
+  async dispatch(action: AppAction): Promise<void> {
+    this.feedback = null;
+    this.visualCue = null;
+    this.audioCue = null;
+    if (action.type !== 'tapCell') {
+      this.emitAudio('button');
+    }
+
+    switch (action.type) {
+      case 'start':
+        this.startLevel(this.save.highestUnlockedLevel);
+        break;
+      case 'openLevels':
+        this.screen = 'levels';
+        break;
+      case 'openSettings':
+        this.screen = 'settings';
+        break;
+      case 'closeModal':
+        this.screen = this.session?.status === 'playing' ? 'playing' : 'menu';
+        break;
+      case 'selectLevel':
+        this.startLevel(action.levelId);
+        break;
+      case 'tapCell':
+        this.tapCell(action.position);
+        break;
+      case 'pause':
+        this.screen = 'paused';
+        break;
+      case 'resume':
+        this.screen = 'playing';
+        break;
+      case 'home':
+        debugLog('navigation_home', {
+          from: this.screen,
+          levelId: this.session?.levelId ?? null,
+        });
+        this.session = null;
+        this.activePowerUp = null;
+        this.screen = 'menu';
+        break;
+      case 'retry':
+        this.startLevel(this.session?.levelId ?? this.save.highestUnlockedLevel);
+        break;
+      case 'nextLevel':
+        this.startLevel(Math.min(levels.length, (this.session?.levelId ?? 1) + 1));
+        break;
+      case 'extraMovesAd':
+        await this.requestExtraMoves();
+        break;
+      case 'claimAdItemReward':
+        await this.claimAdItemReward(action.item);
+        break;
+      case 'usePowerUp':
+        await this.usePowerUp(action.item);
+        break;
+      case 'desktopReward':
+        await this.claimDesktopReward();
+        break;
+      case 'favoriteReward':
+        await this.claimFavoriteReward();
+        break;
+      case 'sidebarReward':
+        await this.claimSidebarReward();
+        break;
+      case 'toggleSound':
+        this.updateSave({ ...this.save, soundEnabled: !this.save.soundEnabled });
+        break;
+      case 'toggleMusic':
+        this.updateSave({ ...this.save, musicEnabled: !this.save.musicEnabled });
+        break;
+    }
+  }
+
+  private startLevel(levelId: number): void {
+    const level = levels.find((candidate) => candidate.id === levelId) ?? levels[0];
+    this.seed += 1;
+    this.session = createSession(level, this.seed);
+    this.screen = 'playing';
+  }
+
+  private tapCell(position: Position): void {
+    if (!this.session || this.screen !== 'playing') {
+      return;
+    }
+
+    if (this.activePowerUp) {
+      this.applyActivePowerUp(position);
+      return;
+    }
+
+    if (!this.session.selectedCell) {
+      this.session = { ...this.session, selectedCell: position };
+      this.emitAudio('select');
+      return;
+    }
+
+    const previous = this.session.selectedCell;
+    const previousMoves = this.session.movesLeft;
+    try {
+      const next = applyMove(this.session, previous, position, this.seed);
+      this.seed += 1;
+      this.session = next;
+
+      if (next.lastEvents.length === 0 && next.movesLeft === previousMoves) {
+        this.feedback = '未形成消除。';
+        this.visualCue = { type: 'swapRejected', from: previous, to: position, id: ++this.cueId };
+        this.emitAudio('invalid');
+      }
+
+      if (next.status === 'won') {
+        this.handleWin(next);
+        this.emitAudio('win');
+      } else if (next.status === 'lost') {
+        this.screen = 'lost';
+        this.emitAudio('lose');
+      } else if (next.comboCount >= 2) {
+        this.emitAudio('combo', next.comboCount);
+      } else if (next.lastEvents.length > 0) {
+        this.emitAudio('match');
+      }
+      if (next.comboCount >= 2) {
+        this.visualCue = { type: 'combo', combo: next.comboCount, id: ++this.cueId };
+      }
+    } catch (error) {
+      this.session = { ...this.session, selectedCell: position };
+      this.feedback = error instanceof Error ? error.message : '该位置无法交换。';
+      this.visualCue = { type: 'swapRejected', from: previous, to: position, id: ++this.cueId };
+      this.emitAudio('invalid');
+    }
+  }
+
+  private handleWin(session: GameSession): void {
+    const level = levels.find((candidate) => candidate.id === session.levelId);
+    const nextHighest = Math.min(levels.length, Math.max(this.save.highestUnlockedLevel, session.levelId + 1));
+    this.updateSave({
+      ...this.save,
+      highestUnlockedLevel: nextHighest,
+      coins: this.save.coins + (level?.rewards.coins ?? 0),
+    });
+    this.screen = 'won';
+  }
+
+  private async requestExtraMoves(): Promise<void> {
+    if (!this.session) {
+      return;
+    }
+
+    const outcome = await requestExtraMoves(this.session, this.platform);
+    this.session = outcome.session;
+    this.feedback = outcome.feedback;
+    this.emitAudio(outcome.granted ? 'reward' : 'invalid');
+    if (outcome.granted) {
+      this.screen = 'playing';
+    }
+  }
+
+  private async claimAdItemReward(item: InventoryItem): Promise<void> {
+    const outcome = await claimAdItemReward(this.save, item, this.platform);
+    this.updateSave(outcome.save);
+    this.feedback = outcome.feedback;
+    this.emitAudio(outcome.granted ? 'reward' : 'invalid');
+  }
+
+  private async usePowerUp(item: PowerUpType): Promise<void> {
+    if (!this.session || this.screen !== 'playing') {
+      this.feedback = '进入关卡后才能使用道具。';
+      this.emitAudio('invalid');
+      debugLog('power_up_rejected', { item, screen: this.screen });
+      return;
+    }
+
+    let watchedAd = false;
+    if (this.save.items[item] <= 0) {
+      debugLog('power_up_ad_request', {
+        item,
+        available: this.save.items[item],
+        levelId: this.session.levelId,
+      });
+      const outcome = await claimAdItemReward(this.save, item, this.platform);
+      this.updateSave(outcome.save);
+      debugLog('power_up_ad_outcome', {
+        item,
+        granted: outcome.granted,
+        available: this.save.items[item],
+        feedback: outcome.feedback,
+      });
+      if (!outcome.granted) {
+        this.feedback = outcome.feedback;
+        this.emitAudio('invalid');
+        return;
+      }
+      watchedAd = true;
+    }
+
+    if (item === 'shuffle') {
+      this.session = applyPowerUp(this.session, item, { row: 0, col: 0 }, this.seed);
+      this.seed += 1;
+      this.updateSave({
+        ...this.save,
+        items: {
+          ...this.save.items,
+          shuffle: this.save.items.shuffle - 1,
+        },
+      });
+      this.feedback = '已重排防线。';
+      this.emitAudio('reward');
+      debugLog('power_up_apply', {
+        item,
+        fromAd: watchedAd,
+        remaining: this.save.items.shuffle,
+        levelId: this.session.levelId,
+      });
+      return;
+    }
+
+    this.activePowerUp = this.activePowerUp === item ? null : item;
+    if (this.activePowerUp === item) {
+      const prefix = watchedAd ? '广告已完成，' : '';
+      this.feedback = item === 'bomb' ? `${prefix}选择一个格子炸开周围区域。` : `${prefix}选择一个格子吸走同类资源。`;
+      debugLog('power_up_activate', {
+        item,
+        fromAd: watchedAd,
+        available: this.save.items[item],
+        levelId: this.session.levelId,
+      });
+    } else {
+      this.feedback = null;
+      debugLog('power_up_cancel', {
+        item,
+        available: this.save.items[item],
+        levelId: this.session.levelId,
+      });
+    }
+    if (this.activePowerUp === item) {
+      this.emitAudio('reward');
+    }
+  }
+
+  private applyActivePowerUp(position: Position): void {
+    if (!this.session || !this.activePowerUp) {
+      return;
+    }
+
+    const item = this.activePowerUp;
+    this.session = applyPowerUp(this.session, item, position, this.seed);
+    this.seed += 1;
+    this.activePowerUp = null;
+    this.updateSave({
+      ...this.save,
+      items: {
+        ...this.save.items,
+        [item]: this.save.items[item] - 1,
+      },
+    });
+    this.feedback = item === 'bomb' ? '已使用炸开道具。' : '已使用吸走道具。';
+    this.emitAudio('reward');
+    debugLog('power_up_apply', {
+      item,
+      row: position.row,
+      col: position.col,
+      remaining: this.save.items[item],
+      levelId: this.session.levelId,
+    });
+  }
+
+  private async claimDesktopReward(): Promise<void> {
+    const outcome = await claimDesktopReward(this.save, this.platform);
+    this.updateSave(outcome.save);
+    this.feedback = outcome.feedback;
+    this.emitAudio(outcome.granted ? 'reward' : 'invalid');
+  }
+
+  private async claimFavoriteReward(): Promise<void> {
+    const outcome = await claimFavoriteReward(this.save, this.platform);
+    this.updateSave(outcome.save);
+    this.feedback = outcome.feedback;
+    this.emitAudio(outcome.granted ? 'reward' : 'invalid');
+  }
+
+  private async claimSidebarReward(): Promise<void> {
+    const outcome = await claimSidebarReward(this.save, this.platform);
+    this.updateSave(outcome.save);
+    this.feedback = outcome.feedback;
+    this.emitAudio(outcome.granted ? 'reward' : 'invalid');
+  }
+
+  private updateSave(save: SaveData): void {
+    this.save = createDefaultSave();
+    this.save = { ...this.save, ...save, items: { ...this.save.items, ...save.items } };
+    writeSave(this.platform.storage, this.save);
+  }
+
+  private emitAudio(type: AudioCueType, intensity = 1): void {
+    this.audioCue = {
+      type,
+      intensity,
+      id: ++this.audioCueId,
+    };
+  }
+}

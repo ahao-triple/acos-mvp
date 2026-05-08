@@ -1,0 +1,47 @@
+{
+  "project": "gonglian-fangxian",
+  "title": "共联防线",
+  "theme": "military-defense",
+  "targetPlatform": "douyin-minigame",
+  "assetPolicy": {
+    "raw": "assets/raw",
+    "processed": "assets/processed",
+    "generated": "assets/generated",
+    "runtimePublic": "game/public",
+    "douyinMaterials": "platform/douyin/materials"
+  },
+  "requiredMvpAssets": {
+    "pieces": [
+      "shield",
+      "ammo-box",
+      "radar",
+      "medal",
+      "wrench"
+    ],
+    "specialPieces": [
+      "horizontal-rocket",
+      "vertical-flare",
+      "area-bomb"
+    ],
+    "blockers": [
+      "sandbag",
+      "broken-defense"
+    ],
+    "sfx": [
+      "click",
+      "swap",
+      "match",
+      "chain",
+      "bomb",
+      "win",
+      "lose",
+      "reward"
+    ],
+    "douyinMaterials": [
+      "icon-600x600.png",
+      "share-4x3.png",
+      "description.md"
+    ]
+  }
+}
+

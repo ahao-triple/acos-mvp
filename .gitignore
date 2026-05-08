@@ -1,0 +1,26 @@
+.DS_Store
+
+# Dependencies
+node_modules/
+
+# Build outputs
+build/
+builds/
+dist/
+mini-pack/dist/
+games/*/game/dist/
+
+# Local environment
+.env
+games/*/.env
+
+# Tool caches and temporary files
+.vite/
+.vite-temp/
+coverage/
+tmp/
+temp/
+mini-pack/tests/tmp/
+
+# Local reference projects
+example/
