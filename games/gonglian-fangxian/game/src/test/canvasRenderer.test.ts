@@ -138,7 +138,7 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
     }
   });
 
-  test('emits presentation audio for cascaded clears after falling pieces settle', async () => {
+  test('emits presentation impact for cascaded clears after falling pieces settle', async () => {
     let currentNow = 0;
     const now = vi.spyOn(performance, 'now').mockImplementation(() => currentNow);
     const { canvas } = createRecordingCanvas();
@@ -150,12 +150,49 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
 
     try {
       renderer.render();
-      expect(consumeRendererAudio(renderer)).toMatchObject({ type: 'match' });
-      expect(consumeRendererAudio(renderer)).toBeNull();
+      expect(consumeRendererImpact(renderer)).toMatchObject({
+        level: 1,
+        source: 'match',
+        sound: 'match',
+        haptic: 'short',
+      });
+      expect(consumeRendererImpact(renderer)).toBeNull();
 
       currentNow = 330;
       renderer.render();
-      expect(consumeRendererAudio(renderer)).toMatchObject({ type: 'combo', intensity: 2 });
+      expect(consumeRendererImpact(renderer)).toMatchObject({
+        level: 6,
+        source: 'cascade',
+        sound: 'combo',
+        haptic: 'long',
+      });
+    } finally {
+      now.mockRestore();
+    }
+  });
+
+  test('applies screen shake without changing board hit testing', () => {
+    let currentNow = 100;
+    const now = vi.spyOn(performance, 'now').mockImplementation(() => currentNow);
+    const { canvas, ctx } = createRecordingCanvas();
+    const controller = new GameController(mockPlatform());
+    const renderer = new CanvasRenderer(canvas, controller);
+    renderer.resize(750, 1334, 1);
+
+    try {
+      renderer.applyImpact({
+        id: 99,
+        level: 9,
+        source: 'winFinale',
+        sound: 'win',
+        haptic: 'long',
+        shake: { amplitude: 10, durationMs: 280 },
+      });
+      currentNow = 120;
+      renderer.render();
+
+      expect(ctx.translates.some((entry) => Math.abs(entry.x) > 0.1 || Math.abs(entry.y) > 0.1)).toBe(true);
+      expect(cellAt(BOARD_START_X + 4, BOARD_START_Y + 4)).toEqual({ row: 0, col: 0 });
     } finally {
       now.mockRestore();
     }
@@ -378,8 +415,8 @@ function handlePointer(renderer: CanvasRenderer, event: unknown): Promise<void> 
   return (renderer as unknown as { handlePointer(event: unknown): Promise<void> }).handlePointer(event);
 }
 
-function consumeRendererAudio(renderer: CanvasRenderer): unknown {
-  return (renderer as unknown as { consumeAudioCue(): unknown }).consumeAudioCue();
+function consumeRendererImpact(renderer: CanvasRenderer): unknown {
+  return (renderer as unknown as { consumeImpactCue(): unknown }).consumeImpactCue();
 }
 
 function wait(ms: number): Promise<void> {
@@ -463,13 +500,19 @@ function createCascadeAnimatedSession(): GameSession {
     ...createPlayingSession(final),
     comboCount: 2,
     lastEvents: [
-      { type: 'clear', board: clearOne, phaseDurationMs: 100 },
+      { type: 'match', kind: 'shield', count: 3, cells: clearCells(3, 0) },
+      { type: 'clear', cells: clearCells(3, 0), board: clearOne, phaseDurationMs: 100 },
       { type: 'fall', board: fallOne, phaseDurationMs: 100 },
       { type: 'refill', board: refillOne, phaseDurationMs: 100 },
-      { type: 'clear', board: clearTwo, phaseDurationMs: 100 },
+      { type: 'match', kind: 'ammo', count: 4, cells: clearCells(4, 1) },
+      { type: 'clear', cells: clearCells(4, 1), board: clearTwo, phaseDurationMs: 100 },
       { type: 'fall', board: final, phaseDurationMs: 100 },
     ],
   };
+}
+
+function clearCells(count: number, row: number): Array<{ row: number; col: number }> {
+  return Array.from({ length: count }, (_, col) => ({ row, col }));
 }
 
 function specialBoard(): Board {

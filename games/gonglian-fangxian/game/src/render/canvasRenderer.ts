@@ -1,6 +1,7 @@
 import type { GameController, AppViewState } from '../app/controller';
-import type { AudioCue } from '../audio/soundEngine';
 import type { Board, BoardCell, SessionEvent } from '../core/types';
+import { impactForClearStep, impactForWinFinale, type ImpactDescriptor, type ImpactEvent } from '../feedback/impact';
+import { clamp01, easeOutCubic } from './animation';
 import { drawBriefingScreen } from './briefingScreen';
 import { EffectsModel, type FloatingText, type Particle } from './effects';
 import { BOARD_CELL_SIZE, BOARD_GAP, BOARD_START_X, BOARD_START_Y, cellAt, drawGameScreen } from './gameScreen';
@@ -21,8 +22,16 @@ interface BoardPresentation {
 
 interface PresentationStep {
   type: SessionEvent['type'];
+  eventIndex: number;
   board: Board;
   durationMs: number;
+}
+
+interface ScreenShake {
+  startedMs: number;
+  amplitude: number;
+  durationMs: number;
+  seed: number;
 }
 
 type ResultRevealPhase = 'waiting' | 'finale';
@@ -52,9 +61,11 @@ export class CanvasRenderer {
   private feedbackSinceMs = 0;
   private presentation: BoardPresentation | null = null;
   private handledPresentationKey: string | null = null;
-  private presentationAudioCue: AudioCue | null = null;
-  private presentationAudioCueId = 10_000;
-  private handledPresentationAudioKey: string | null = null;
+  private impactCue: ImpactEvent | null = null;
+  private impactCueId = 20_000;
+  private handledImpactKey: string | null = null;
+  private screenShake: ScreenShake | null = null;
+  private shakeSeed = 0;
   private resultReveal: ResultReveal | null = null;
 
   constructor(
@@ -96,6 +107,8 @@ export class CanvasRenderer {
     this.ctx.save();
     this.ctx.translate(this.fit.offsetX, this.fit.offsetY);
     this.ctx.scale(this.fit.scale, this.fit.scale);
+    const shake = this.screenShakeOffset(nowMs);
+    this.ctx.translate(shake.x, shake.y);
     this.drawBackground(view, nowMs);
 
     if (view.screen !== 'won' && view.screen !== 'lost') {
@@ -146,10 +159,32 @@ export class CanvasRenderer {
     this.ctx.restore();
   }
 
-  consumeAudioCue(): AudioCue | null {
-    const cue = this.presentationAudioCue;
-    this.presentationAudioCue = null;
+  consumeImpactCue(): ImpactEvent | null {
+    const cue = this.impactCue;
+    this.impactCue = null;
     return cue;
+  }
+
+  consumeAudioCue(): { type: ImpactEvent['sound']; id: number } | null {
+    const cue = this.consumeImpactCue();
+    if (!cue) {
+      return null;
+    }
+
+    return { type: cue.sound, id: cue.id };
+  }
+
+  applyImpact(impact: ImpactEvent, nowMs = performance.now()): void {
+    if (impact.shake.amplitude <= 0 || impact.shake.durationMs <= 0) {
+      return;
+    }
+
+    this.screenShake = {
+      startedMs: nowMs,
+      amplitude: impact.shake.amplitude,
+      durationMs: impact.shake.durationMs,
+      seed: ++this.shakeSeed,
+    };
   }
 
   private trackViewTiming(view: AppViewState, nowMs: number): void {
@@ -279,6 +314,7 @@ export class CanvasRenderer {
       this.effects.burst(tile.x + BOARD_CELL_SIZE / 2, tile.y + BOARD_CELL_SIZE / 2, colorForPresentationCell(tile.cell), nowMs, 10);
     }
     this.effects.floatText('防线推进', 375, 640, '#ffd166', nowMs);
+    this.queueImpact(`win-finale:${Math.round(nowMs)}`, impactForWinFinale());
   }
 
   private presentedBoard(session: NonNullable<AppViewState['session']>, nowMs: number): Board {
@@ -296,7 +332,7 @@ export class CanvasRenderer {
         index: 0,
         stepStartedMs: nowMs,
       };
-      this.emitPresentationStepAudio(key, 0, steps);
+      this.emitPresentationStepImpact(key, 0, steps, session.lastEvents);
     }
 
     const presentation = this.presentation;
@@ -310,7 +346,7 @@ export class CanvasRenderer {
     ) {
       presentation.stepStartedMs += presentation.steps[presentation.index].durationMs;
       presentation.index += 1;
-      this.emitPresentationStepAudio(presentation.key, presentation.index, presentation.steps);
+      this.emitPresentationStepImpact(presentation.key, presentation.index, presentation.steps, session.lastEvents);
     }
 
     const currentStep = presentation.steps[presentation.index];
@@ -323,22 +359,51 @@ export class CanvasRenderer {
     return currentStep.board;
   }
 
-  private emitPresentationStepAudio(key: string, index: number, steps: PresentationStep[]): void {
+  private emitPresentationStepImpact(key: string, index: number, steps: PresentationStep[], events: SessionEvent[]): void {
     const step = steps[index];
     if (!step || step.type !== 'clear') {
       return;
     }
 
-    const audioKey = `${key}:${index}`;
-    if (this.handledPresentationAudioKey === audioKey) {
+    const impact = impactForClearStep(events, step.eventIndex);
+    if (!impact) {
       return;
     }
 
-    this.handledPresentationAudioKey = audioKey;
-    const clearCount = steps.slice(0, index + 1).filter((candidate) => candidate.type === 'clear').length;
-    this.presentationAudioCue = clearCount >= 2
-      ? { type: 'combo', intensity: clearCount, id: ++this.presentationAudioCueId }
-      : { type: 'match', id: ++this.presentationAudioCueId };
+    this.queueImpact(`${key}:${index}`, impact);
+  }
+
+  private queueImpact(key: string, descriptor: ImpactDescriptor): void {
+    if (this.handledImpactKey === key) {
+      return;
+    }
+
+    this.handledImpactKey = key;
+    this.impactCue = {
+      ...descriptor,
+      id: ++this.impactCueId,
+    };
+  }
+
+  private screenShakeOffset(nowMs: number): { x: number; y: number } {
+    const shake = this.screenShake;
+    if (!shake) {
+      return { x: 0, y: 0 };
+    }
+
+    const progress = clamp01((nowMs - shake.startedMs) / shake.durationMs);
+    if (progress >= 1) {
+      this.screenShake = null;
+      return { x: 0, y: 0 };
+    }
+
+    const envelope = 1 - easeOutCubic(progress);
+    const wave = progress * 28 + shake.seed * 2.399963;
+    const amplitude = shake.amplitude * envelope;
+    return {
+      x: Math.sin(wave) * amplitude,
+      y: Math.cos(wave * 1.37) * amplitude,
+    };
   }
 
   private drawTitle(title: string, subtitle: string): void {
@@ -461,15 +526,17 @@ function readClientPoint(event: PointerEvent | MiniGamePointerEvent): { clientX:
 
 function presentationSteps(events: SessionEvent[], finalBoard: Board): PresentationStep[] {
   const steps = events
-    .filter((event): event is SessionEvent & { board: Board } => Boolean(event.board))
-    .map((event) => ({
+    .map((event, eventIndex) => ({ event, eventIndex }))
+    .filter((entry): entry is { event: SessionEvent & { board: Board }; eventIndex: number } => Boolean(entry.event.board))
+    .map(({ event, eventIndex }) => ({
       type: event.type,
+      eventIndex,
       board: event.board,
       durationMs: event.phaseDurationMs ?? defaultPhaseDuration(event.type),
     }));
 
   if (steps.length > 0 && boardSignature(steps[steps.length - 1].board) !== boardSignature(finalBoard)) {
-    steps.push({ type: 'refill', board: finalBoard, durationMs: 420 });
+    steps.push({ type: 'refill', eventIndex: -1, board: finalBoard, durationMs: 420 });
   }
 
   return steps;
