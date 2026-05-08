@@ -1,6 +1,10 @@
 import type { LevelConfig, NodeReward, PieceKind } from '../core/types';
 
 const allPieces: PieceKind[] = ['shield', 'ammo', 'radar', 'medal', 'wrench', 'energy'];
+const BOARD_WIDTH = 10;
+const BOARD_HEIGHT = 10;
+const MOVE_EXTENSION = 8;
+const COLLECT_TARGET_SCALE = 1.5;
 
 export const CHAPTERS = [
   { id: 1, title: '前线集结', startLevel: 1, endLevel: 10 },
@@ -247,15 +251,28 @@ function level(
     chapterId: chapter.id,
     chapterTitle: chapter.title,
     briefing,
-    moves,
-    width: 7,
-    height: 7,
+    moves: moves + MOVE_EXTENSION,
+    width: BOARD_WIDTH,
+    height: BOARD_HEIGHT,
     piecePool: allPieces,
-    targets,
+    targets: scaleTargets(targets),
     blockers,
     rewards: {
       coins: 50 + id * 5 + chapter.id * 15,
     },
     nodeReward,
   };
+}
+
+function scaleTargets(targets: LevelConfig['targets']): LevelConfig['targets'] {
+  return targets.map((target) => {
+    if (target.type !== 'collect') {
+      return target;
+    }
+
+    return {
+      ...target,
+      count: Math.ceil(target.count * COLLECT_TARGET_SCALE),
+    };
+  });
 }

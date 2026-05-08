@@ -5,10 +5,12 @@ import { pieceColors, targetProgressText } from './theme';
 import { drawButton, drawPanel, drawText, roundRect, type UiRenderContext } from './uiPrimitives';
 import type { VisualBoardModel, VisualTile } from './visualBoard';
 
-export const BOARD_CELL_SIZE = 86;
-export const BOARD_GAP = 8;
-export const BOARD_START_X = 57;
-export const BOARD_START_Y = 300;
+export const BOARD_ROWS = 10;
+export const BOARD_COLS = 10;
+export const BOARD_CELL_SIZE = 62;
+export const BOARD_GAP = 5;
+export const BOARD_START_X = 43;
+export const BOARD_START_Y = 286;
 
 export interface GameScreenRenderContext {
   ui: UiRenderContext;
@@ -51,7 +53,7 @@ export function cellAt(x: number, y: number): Position | null {
   const insideX = (x - BOARD_START_X) % (BOARD_CELL_SIZE + BOARD_GAP) <= BOARD_CELL_SIZE;
   const insideY = (y - BOARD_START_Y) % (BOARD_CELL_SIZE + BOARD_GAP) <= BOARD_CELL_SIZE;
 
-  if (row >= 0 && row < 7 && col >= 0 && col < 7 && insideX && insideY) {
+  if (row >= 0 && row < BOARD_ROWS && col >= 0 && col < BOARD_COLS && insideX && insideY) {
     return { row, col };
   }
 
@@ -139,11 +141,11 @@ function drawVisualTile(ctx: CanvasRenderingContext2D, tile: VisualTile, size: n
     ctx.stroke();
     ctx.fillStyle = color;
     ctx.beginPath();
-    ctx.arc(size / 2, size / 2, 28, 0, Math.PI * 2);
+    ctx.arc(size / 2, size / 2, size * 0.32, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,0.22)';
     ctx.beginPath();
-    ctx.ellipse(size / 2 - 8, size / 2 - 10, 15, 8, -0.4, 0, Math.PI * 2);
+    ctx.ellipse(size / 2 - size * 0.09, size / 2 - size * 0.11, size * 0.17, size * 0.09, -0.4, 0, Math.PI * 2);
     ctx.fill();
     drawPieceIcon(ctx, tile.cell.pieceKind, size / 2, size / 2, color);
   }
@@ -155,7 +157,7 @@ function drawPieceIcon(ctx: CanvasRenderingContext2D, kind: PieceKind, cx: numbe
   ctx.strokeStyle = '#ffffff';
   ctx.fillStyle = withAlpha(color, 0.45);
   ctx.lineWidth = 3;
-  const s = 18;
+  const s = Math.max(12, Math.round(18 * (BOARD_CELL_SIZE / 86)));
 
   if (kind === 'shield') {
     ctx.beginPath();

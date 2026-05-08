@@ -14,6 +14,15 @@ describe('campaign helpers', () => {
     expect(levels.every((level) => level.piecePool.includes('energy'))).toBe(true);
   });
 
+  test('configures large boards with longer collect pacing', () => {
+    const opening = levelById(1);
+
+    expect(opening.width).toBe(10);
+    expect(opening.height).toBe(10);
+    expect(opening.moves).toBeGreaterThan(18);
+    expect(opening.targets[0]).toMatchObject({ type: 'collect', kind: 'shield', count: 12 });
+  });
+
   test('computes per-chapter progress from highest unlocked level', () => {
     expect(chapterProgressForSave(12)).toEqual([
       { id: 1, title: '前线集结', startLevel: 1, endLevel: 10, unlockedCount: 10, completedCount: 10, current: false },

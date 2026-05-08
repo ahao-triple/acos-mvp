@@ -4,6 +4,7 @@ import { GameController, type WinSummary } from '../app/controller';
 import type { Board, GameSession } from '../core/types';
 import type { PlatformAdapter } from '../platform/types';
 import { CanvasRenderer } from '../render/canvasRenderer';
+import { BOARD_CELL_SIZE, BOARD_GAP, BOARD_START_X, BOARD_START_Y, cellAt } from '../render/gameScreen';
 import { targetLabel, targetProgressText } from '../render/theme';
 import { drawAdButton, drawButton } from '../render/uiPrimitives';
 
@@ -32,7 +33,7 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
     const text = ctx.fillTexts.map((entry) => entry.text).join('\n');
     expect(text).toContain('作战简报');
     expect(text).toContain('开始作战');
-    expect(text).toContain('护盾 0/8');
+    expect(text).toContain('护盾 0/12');
   });
 
   test('renders win result with coin doubling action', async () => {
@@ -271,6 +272,15 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
     await expect(handlePointer(renderer, { clientX: 100, clientY: 340 })).resolves.toBeUndefined();
     await expect(handlePointer(renderer, { touches: [{ clientX: 100, clientY: 340 }] })).resolves.toBeUndefined();
     await expect(handlePointer(renderer, { touches: [{ x: 100, y: 340 }] })).resolves.toBeUndefined();
+  });
+
+  test('maps the full 10x10 board to logical canvas cells', () => {
+    expect(cellAt(BOARD_START_X + 9 * (BOARD_CELL_SIZE + BOARD_GAP) + 1, BOARD_START_Y + 9 * (BOARD_CELL_SIZE + BOARD_GAP) + 1)).toEqual({
+      row: 9,
+      col: 9,
+    });
+    expect(BOARD_START_X + 10 * BOARD_CELL_SIZE + 9 * BOARD_GAP).toBeLessThanOrEqual(716);
+    expect(BOARD_START_Y + 10 * BOARD_CELL_SIZE + 9 * BOARD_GAP).toBeLessThanOrEqual(958);
   });
 
   test('formats level targets with player-facing Chinese labels', () => {
