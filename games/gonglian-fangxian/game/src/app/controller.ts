@@ -1,20 +1,23 @@
 import { levels } from '../config/levels';
 import { applyMove, applyPowerUp, createSession } from '../core/session';
-import type { GameSession, Position, PowerUpType } from '../core/types';
+import type { GameSession, LevelConfig, NodeReward, Position, PowerUpType } from '../core/types';
 import type { PlatformAdapter } from '../platform/types';
 import type { AudioCue, AudioCueType } from '../audio/soundEngine';
 import { debugLog } from './debugLog';
 import { createDefaultSave, loadSave, type SaveData, writeSave } from './save';
 import { claimAdItemReward, claimDesktopReward, claimFavoriteReward, claimSidebarReward, requestExtraMoves, type InventoryItem } from './rewards';
+import { chapterProgressForSave, levelById, type ChapterProgress } from './campaign';
 
-export type Screen = 'menu' | 'levels' | 'playing' | 'paused' | 'won' | 'lost' | 'settings';
+export type Screen = 'menu' | 'levels' | 'briefing' | 'playing' | 'paused' | 'won' | 'lost' | 'settings' | 'supplies';
 
 export type AppAction =
   | { type: 'start' }
   | { type: 'openLevels' }
   | { type: 'openSettings' }
+  | { type: 'openSupplies' }
   | { type: 'closeModal' }
   | { type: 'selectLevel'; levelId: number }
+  | { type: 'beginLevel' }
   | { type: 'tapCell'; position: Position }
   | { type: 'pause' }
   | { type: 'resume' }
@@ -30,10 +33,22 @@ export type AppAction =
   | { type: 'toggleSound' }
   | { type: 'toggleMusic' };
 
+export interface WinSummary {
+  levelId: number;
+  chapterTitle: string;
+  baseCoins: number;
+  nodeReward: NodeReward | null;
+  nextLevelId: number | null;
+  doubled: boolean;
+}
+
 export interface AppViewState {
   screen: Screen;
   save: SaveData;
   session: GameSession | null;
+  pendingLevel: LevelConfig | null;
+  winSummary: WinSummary | null;
+  chapterProgress: ChapterProgress[];
   feedback: string | null;
   visualCue: VisualCue | null;
   audioCue: AudioCue | null;
@@ -53,6 +68,8 @@ export class GameController {
   private feedback: string | null = null;
   private visualCue: VisualCue | null = null;
   private audioCue: AudioCue | null = null;
+  private pendingLevelId: number | null = null;
+  private winSummary: WinSummary | null = null;
   private activePowerUp: PowerUpType | null = null;
   private cueId = 0;
   private audioCueId = 0;
@@ -67,6 +84,9 @@ export class GameController {
       screen: this.screen,
       save: this.save,
       session: this.session,
+      pendingLevel: this.pendingLevelId ? levelById(this.pendingLevelId) : null,
+      winSummary: this.winSummary,
+      chapterProgress: chapterProgressForSave(this.save.highestUnlockedLevel, this.save.completedLevelCount),
       feedback: this.feedback,
       visualCue: this.visualCue,
       audioCue: this.audioCue,
@@ -86,7 +106,7 @@ export class GameController {
 
     switch (action.type) {
       case 'start':
-        this.startLevel(this.save.highestUnlockedLevel);
+        this.openBriefing(this.save.highestUnlockedLevel);
         break;
       case 'openLevels':
         this.screen = 'levels';
@@ -94,11 +114,17 @@ export class GameController {
       case 'openSettings':
         this.screen = 'settings';
         break;
+      case 'openSupplies':
+        this.screen = 'supplies';
+        break;
       case 'closeModal':
         this.screen = this.session?.status === 'playing' ? 'playing' : 'menu';
         break;
       case 'selectLevel':
-        this.startLevel(action.levelId);
+        this.openBriefing(action.levelId);
+        break;
+      case 'beginLevel':
+        this.beginPendingLevel();
         break;
       case 'tapCell':
         this.tapCell(action.position);
@@ -116,13 +142,15 @@ export class GameController {
         });
         this.session = null;
         this.activePowerUp = null;
+        this.pendingLevelId = null;
+        this.winSummary = null;
         this.screen = 'menu';
         break;
       case 'retry':
-        this.startLevel(this.session?.levelId ?? this.save.highestUnlockedLevel);
+        this.openBriefing(this.session?.levelId ?? this.pendingLevelId ?? this.save.highestUnlockedLevel);
         break;
       case 'nextLevel':
-        this.startLevel(Math.min(levels.length, (this.session?.levelId ?? 1) + 1));
+        this.openBriefing(Math.min(levels.length, (this.session?.levelId ?? this.winSummary?.levelId ?? 1) + 1));
         break;
       case 'extraMovesAd':
         await this.requestExtraMoves();
@@ -151,9 +179,31 @@ export class GameController {
     }
   }
 
+  private openBriefing(levelId: number): void {
+    if (levelId > this.save.highestUnlockedLevel) {
+      this.pendingLevelId = null;
+      this.feedback = '该关卡尚未解锁。';
+      this.screen = 'levels';
+      return;
+    }
+
+    const level = levelById(levelId);
+    this.pendingLevelId = level.id;
+    this.session = null;
+    this.activePowerUp = null;
+    this.winSummary = null;
+    this.screen = 'briefing';
+  }
+
+  private beginPendingLevel(): void {
+    this.startLevel(this.pendingLevelId ?? this.save.highestUnlockedLevel);
+  }
+
   private startLevel(levelId: number): void {
-    const level = levels.find((candidate) => candidate.id === levelId) ?? levels[0];
+    const level = levelById(levelId);
     this.seed += 1;
+    this.pendingLevelId = level.id;
+    this.winSummary = null;
     this.session = createSession(level, this.seed);
     this.screen = 'playing';
   }

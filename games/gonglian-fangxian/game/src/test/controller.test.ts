@@ -10,6 +10,7 @@ describe('game controller visual cues', () => {
     const controller = new GameController(mockPlatform());
 
     await controller.dispatch({ type: 'start' });
+    await controller.dispatch({ type: 'beginLevel' });
     await controller.dispatch({ type: 'tapCell', position: { row: 0, col: 0 } });
 
     expect(controller.getViewState().audioCue).toMatchObject({ type: 'select' });
@@ -19,6 +20,7 @@ describe('game controller visual cues', () => {
     const controller = new GameController(mockPlatform());
 
     await controller.dispatch({ type: 'start' });
+    await controller.dispatch({ type: 'beginLevel' });
     await controller.dispatch({ type: 'tapCell', position: { row: 0, col: 0 } });
     await controller.dispatch({ type: 'tapCell', position: { row: 1, col: 1 } });
 
@@ -50,6 +52,7 @@ describe('game controller visual cues', () => {
     const controller = new GameController(mockPlatform({ ad: { status: 'success' } }));
 
     await controller.dispatch({ type: 'start' });
+    await controller.dispatch({ type: 'beginLevel' });
     await controller.dispatch({ type: 'usePowerUp', item: 'bomb' });
 
     expect(controller.getViewState().activePowerUp).toBe('bomb');
@@ -63,6 +66,7 @@ describe('game controller visual cues', () => {
 
     try {
       await controller.dispatch({ type: 'start' });
+      await controller.dispatch({ type: 'beginLevel' });
       await controller.dispatch({ type: 'usePowerUp', item: 'bomb' });
 
       const events = info.mock.calls.map((call) => call[1]);
@@ -78,11 +82,64 @@ describe('game controller visual cues', () => {
     const controller = new GameController(mockPlatform());
 
     await controller.dispatch({ type: 'start' });
+    await controller.dispatch({ type: 'beginLevel' });
     await controller.dispatch({ type: 'pause' });
     await controller.dispatch({ type: 'home' });
 
     expect(controller.getViewState().screen).toBe('menu');
     expect(controller.getViewState().session).toBeNull();
+  });
+});
+
+describe('game controller briefing flow', () => {
+  test('start opens a briefing for the highest unlocked level before play', async () => {
+    const controller = new GameController(mockPlatform({
+      storedSave: {
+        version: 1,
+        highestUnlockedLevel: 12,
+        coins: 0,
+        items: { extraMoves: 0, bomb: 0, suck: 0, shuffle: 0 },
+        desktopRewardClaimed: false,
+        favoriteRewardClaimed: false,
+        sidebarRewardClaimed: false,
+        soundEnabled: true,
+        musicEnabled: true,
+      },
+    }));
+
+    await controller.dispatch({ type: 'start' });
+
+    expect(controller.getViewState().screen).toBe('briefing');
+    expect(controller.getViewState().pendingLevel?.id).toBe(12);
+    expect(controller.getViewState().pendingLevel?.chapterTitle).toBe('阵地修复');
+
+    await controller.dispatch({ type: 'beginLevel' });
+
+    expect(controller.getViewState().screen).toBe('playing');
+    expect(controller.getViewState().session?.levelId).toBe(12);
+  });
+
+  test('locked level selection stays on levels screen with feedback', async () => {
+    const controller = new GameController(mockPlatform());
+
+    await controller.dispatch({ type: 'openLevels' });
+    await controller.dispatch({ type: 'selectLevel', levelId: 5 });
+
+    expect(controller.getViewState().screen).toBe('levels');
+    expect(controller.getViewState().feedback).toContain('尚未解锁');
+    expect(controller.getViewState().pendingLevel).toBeNull();
+  });
+
+  test('view state exposes chapter progress for rendering', () => {
+    const controller = new GameController(mockPlatform());
+    const progress = controller.getViewState().chapterProgress;
+
+    expect(progress).toBeDefined();
+    expect(progress.map((chapter) => chapter.title)).toEqual([
+      '前线集结',
+      '阵地修复',
+      '最终防线',
+    ]);
   });
 });
 
@@ -131,11 +188,16 @@ function mockPlatform(
     ad?: { status: 'success' | 'failed' | 'cancelled' | 'unsupported' };
     desktop?: { status: 'success' | 'failed' | 'cancelled' | 'unsupported' };
     storage?: StorageLike;
+    storedSave?: unknown;
   } = {},
 ): PlatformAdapter {
+  const storage = options.storage ?? new MemoryStorage(
+    options.storedSave ? { [SAVE_KEY]: JSON.stringify(options.storedSave) } : {},
+  );
+
   return {
     name: 'test',
-    storage: options.storage ?? new MemoryStorage(),
+    storage,
     async showRewardedAd() {
       return options.ad ?? { status: 'unsupported' };
     },
