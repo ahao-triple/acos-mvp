@@ -103,6 +103,24 @@ describe('impact feedback levels', () => {
     });
   });
 
+  test('maps later-phase clears with no preceding match as power-up clears', () => {
+    const events: SessionEvent[] = [
+      { type: 'match', cells: line(3), count: 3, kind: 'shield' },
+      { type: 'clear', cells: line(3) },
+      { type: 'fall' },
+      { type: 'refill' },
+      { type: 'clear', cells: line(6, 1) },
+    ];
+
+    expect(impactForClearStep(events, 4)).toMatchObject({
+      level: 7,
+      source: 'powerUp',
+      sound: 'combo',
+      haptic: 'long',
+      shake: { amplitude: 6, durationMs: 190 },
+    });
+  });
+
   test('maps win finale to level nine', () => {
     expect(impactForWinFinale()).toMatchObject({
       level: 9,

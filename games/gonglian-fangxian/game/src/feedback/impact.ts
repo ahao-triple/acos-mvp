@@ -41,14 +41,13 @@ export function impactForClearStep(events: SessionEvent[], clearEventIndex: numb
   }
 
   const clearPhase = events.slice(0, clearEventIndex + 1).filter((candidate) => candidate.type === 'clear').length;
-  if (clearPhase >= 2) {
-    return impactForLevel(cascadeLevel(clearPhase), 'cascade');
-  }
-
   const clearCount = uniquePositionCount(event.cells ?? []);
   const matchEvents = matchEventsBeforeClear(events, clearEventIndex);
   if (matchEvents.length === 0) {
     return impactForLevel(powerUpLevel(clearCount), 'powerUp');
+  }
+  if (clearPhase >= 2) {
+    return impactForLevel(cascadeLevel(clearPhase), 'cascade');
   }
 
   return impactForLevel(matchLevel(matchEvents, clearCount), 'match');
