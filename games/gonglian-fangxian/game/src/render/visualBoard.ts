@@ -44,6 +44,7 @@ const REMOVE_MS = 520;
 
 export class VisualBoardModel {
   private readonly tiles = new Map<string, InternalTile>();
+  private readonly finaleBlockedIds = new Set<string>();
 
   constructor(private readonly metrics: VisualBoardMetrics) {}
 
@@ -62,10 +63,15 @@ export class VisualBoardModel {
         }
 
         seen.add(id);
+        if (this.finaleBlockedIds.has(id)) {
+          continue;
+        }
+
         const target = this.cellCenter(row, col);
         const existing = this.tiles.get(id);
 
         if (!existing) {
+          const specialSpawn = cell.kind === 'special';
           const tile: InternalTile = {
             id,
             cell,
@@ -73,8 +79,8 @@ export class VisualBoardModel {
             col,
             removed: false,
             x: tweenNumber(target.x, target.x, nowMs, SPAWN_MS, easeOutCubic),
-            y: tweenNumber(target.y - this.metrics.cellSize * 1.55, target.y, nowMs, SPAWN_MS, easeBackOut),
-            scale: tweenNumber(0.72, 1, nowMs, SPAWN_MS, easeBackOut),
+            y: tweenNumber(specialSpawn ? target.y : target.y - this.metrics.cellSize * 1.55, target.y, nowMs, SPAWN_MS, easeBackOut),
+            scale: tweenNumber(specialSpawn ? 0.32 : 0.72, 1, nowMs, SPAWN_MS, easeBackOut),
             alpha: tweenNumber(0, 1, nowMs, SPAWN_MS, easeOutCubic),
           };
           this.tiles.set(id, tile);
@@ -127,6 +133,31 @@ export class VisualBoardModel {
     }
 
     return result;
+  }
+
+  blastAll(nowMs: number): VisualTile[] {
+    const blasted: VisualTile[] = [];
+
+    for (const tile of this.tiles.values()) {
+      if (tile.removed) {
+        continue;
+      }
+
+      const current = this.sample(tile, nowMs);
+      tile.removed = true;
+      this.finaleBlockedIds.add(tile.id);
+      tile.x = tweenNumber(current.x, current.x, nowMs, REMOVE_MS, easeOutCubic);
+      tile.y = tweenNumber(current.y, current.y, nowMs, REMOVE_MS, easeOutCubic);
+      tile.scale = tweenNumber(current.scale, 0.02, nowMs, REMOVE_MS, easeInOutSine);
+      tile.alpha = tweenNumber(current.alpha, 0, nowMs, REMOVE_MS, easeOutCubic);
+      blasted.push({ ...current, removed: true });
+    }
+
+    return blasted;
+  }
+
+  clearFinaleBlocks(): void {
+    this.finaleBlockedIds.clear();
   }
 
   isBusy(nowMs: number): boolean {

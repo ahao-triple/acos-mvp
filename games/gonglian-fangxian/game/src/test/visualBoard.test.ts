@@ -39,6 +39,30 @@ describe('visual board model', () => {
     expect(model.tilesAt(760).find((candidate) => candidate.id === 'b')?.alpha).toBeLessThan(1);
     expect(model.tilesAt(1100).some((candidate) => candidate.id === 'b')).toBe(false);
   });
+
+  test('creates special tiles with an in-place pop animation', () => {
+    const model = new VisualBoardModel({ cellSize: 80, gap: 8, startX: 10, startY: 20 });
+
+    model.sync(specialBoard(), 100);
+    const tile = model.tilesAt(100).find((candidate) => candidate.id === 'special-bomb');
+
+    expect(tile?.y).toBe(20);
+    expect(tile?.scale).toBeLessThan(1);
+    expect(tile?.alpha).toBeLessThan(1);
+  });
+
+  test('can blast every visible tile for a win finale', () => {
+    const model = new VisualBoardModel({ cellSize: 80, gap: 8, startX: 10, startY: 20 });
+
+    model.sync(board([['a', 'b']]), 0);
+    model.tilesAt(700);
+    const blasted = model.blastAll(700);
+
+    expect(blasted.map((tile) => tile.id)).toEqual(['a', 'b']);
+    expect(model.tilesAt(900).every((tile) => tile.removed)).toBe(true);
+    expect(model.isBusy(900)).toBe(true);
+    expect(model.tilesAt(1300)).toHaveLength(0);
+  });
 });
 
 function board(ids: string[][]): Board {
@@ -49,4 +73,13 @@ function board(ids: string[][]): Board {
       id,
     })),
   );
+}
+
+function specialBoard(): Board {
+  return [[{
+    kind: 'special' as const,
+    pieceKind: 'shield' as const,
+    specialKind: 'areaBomb' as const,
+    id: 'special-bomb',
+  }]];
 }

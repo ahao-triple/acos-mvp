@@ -48,13 +48,27 @@ describe('game controller visual cues', () => {
     expect(controller.getViewState().audioCue).toMatchObject({ type: 'reward' });
   });
 
-  test('in-game ad power-up activates after completed rewarded video', async () => {
-    const controller = new GameController(mockPlatform({ ad: { status: 'success' } }));
+  test('in-game ad power-up asks for confirmation before showing rewarded video', async () => {
+    let adCalls = 0;
+    const platform = mockPlatform({ ad: { status: 'success' } });
+    platform.showRewardedAd = async () => {
+      adCalls += 1;
+      return { status: 'success' };
+    };
+    const controller = new GameController(platform);
 
     await controller.dispatch({ type: 'start' });
     await controller.dispatch({ type: 'beginLevel' });
     await controller.dispatch({ type: 'usePowerUp', item: 'bomb' });
 
+    expect(adCalls).toBe(0);
+    expect(controller.getViewState().adPrompt).toMatchObject({
+      title: '观看视频领取炸开道具',
+    });
+
+    await controller.dispatch({ type: 'confirmRewardedAd' });
+
+    expect(adCalls).toBe(1);
     expect(controller.getViewState().activePowerUp).toBe('bomb');
     expect(controller.getViewState().feedback).toContain('广告');
     expect(controller.getViewState().audioCue).toMatchObject({ type: 'reward' });
@@ -68,6 +82,7 @@ describe('game controller visual cues', () => {
       await controller.dispatch({ type: 'start' });
       await controller.dispatch({ type: 'beginLevel' });
       await controller.dispatch({ type: 'usePowerUp', item: 'bomb' });
+      await controller.dispatch({ type: 'confirmRewardedAd' });
 
       const events = info.mock.calls.map((call) => call[1]);
       expect(events).toEqual(expect.arrayContaining(['power_up_ad_request', 'power_up_activate']));
@@ -273,6 +288,57 @@ describe('game controller campaign progress', () => {
     expect(controller.getViewState().save.coins).toBe(afterFirst);
     expect(controller.getViewState().feedback).toContain('已领取');
     expect(controller.getViewState().winSummary?.doubled).toBe(true);
+  });
+
+  test('double win reward asks for confirmation before showing rewarded video', async () => {
+    let adCalls = 0;
+    const platform = mockPlatform({ ad: { status: 'success' } });
+    platform.showRewardedAd = async () => {
+      adCalls += 1;
+      return { status: 'success' };
+    };
+    const controller = new GameController(platform);
+
+    forcePrivateWinSummary(controller, {
+      levelId: 1,
+      chapterTitle: '前线集结',
+      baseCoins: 70,
+      nodeReward: null,
+      nextLevelId: 2,
+      doubled: false,
+    });
+
+    await controller.dispatch({ type: 'requestRewardedAd', request: { type: 'doubleWinReward' } });
+
+    expect(adCalls).toBe(0);
+    expect(controller.getViewState().adPrompt).toMatchObject({
+      title: '观看视频让本关金币奖励翻倍',
+    });
+
+    await controller.dispatch({ type: 'confirmRewardedAd' });
+
+    expect(adCalls).toBe(1);
+    expect(controller.getViewState().winSummary?.doubled).toBe(true);
+    expect(controller.getViewState().adPrompt).toBeNull();
+  });
+
+  test('cancel rewarded ad confirmation closes without showing video', async () => {
+    let adCalls = 0;
+    const platform = mockPlatform({ ad: { status: 'success' } });
+    platform.showRewardedAd = async () => {
+      adCalls += 1;
+      return { status: 'success' };
+    };
+    const controller = new GameController(platform);
+
+    await controller.dispatch({ type: 'start' });
+    await controller.dispatch({ type: 'beginLevel' });
+    await controller.dispatch({ type: 'requestRewardedAd', request: { type: 'extraMovesAd' } });
+    await controller.dispatch({ type: 'cancelRewardedAd' });
+
+    expect(adCalls).toBe(0);
+    expect(controller.getViewState().adPrompt).toBeNull();
+    expect(controller.getViewState().screen).toBe('playing');
   });
 
   test('concurrent double win reward dispatches only grant once', async () => {

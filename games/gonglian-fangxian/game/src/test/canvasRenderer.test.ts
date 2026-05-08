@@ -1,6 +1,7 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 
 import { GameController, type WinSummary } from '../app/controller';
+import type { Board, GameSession } from '../core/types';
 import type { PlatformAdapter } from '../platform/types';
 import { CanvasRenderer } from '../render/canvasRenderer';
 import { targetLabel, targetProgressText } from '../render/theme';
@@ -47,13 +48,76 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
       nextLevelId: 2,
       doubled: false,
     });
+    forcePrivateSessionNull(controller);
 
     renderer.render();
 
     const text = ctx.fillTexts.map((entry) => entry.text).join('\n');
     expect(text).toContain('防线推进');
     expect(text).toContain('获得金币 70');
-    expect(text).toContain('看广告奖励翻倍');
+    expect(text).toContain('奖励翻倍');
+  });
+
+  test('win reward button opens a rewarded ad confirmation modal', async () => {
+    const { canvas, ctx } = createRecordingCanvas();
+    const controller = new GameController(mockPlatform());
+    const renderer = new CanvasRenderer(canvas, controller);
+    renderer.resize(750, 1334, 1);
+
+    forcePrivateWinSummary(controller, {
+      levelId: 1,
+      chapterTitle: '前线集结',
+      baseCoins: 70,
+      nodeReward: null,
+      nextLevelId: 2,
+      doubled: false,
+    });
+    forcePrivateSessionNull(controller);
+
+    renderer.render();
+    await handlePointer(renderer, { clientX: 375, clientY: 705 });
+    renderer.render();
+
+    const text = renderedText(ctx);
+    expect(text).toContain('观看视频让本关金币奖励翻倍');
+    expect(text).toContain('确认观看');
+    expect(text).toContain('取消');
+  });
+
+  test('renders special pieces with visual symbols instead of internal labels', async () => {
+    const { canvas, ctx } = createRecordingCanvas();
+    const controller = new GameController(mockPlatform());
+    const renderer = new CanvasRenderer(canvas, controller);
+    renderer.resize(750, 1334, 1);
+
+    forcePrivateSession(controller, createPlayingSession(specialBoard()));
+
+    renderer.render();
+
+    const text = renderedText(ctx);
+    expect(text).not.toContain('爆');
+    expect(text).not.toContain('横');
+    expect(text).not.toContain('竖');
+  });
+
+  test('delays win result while board presentation is still playing', async () => {
+    const now = vi.spyOn(performance, 'now').mockReturnValue(100);
+    const { canvas, ctx } = createRecordingCanvas();
+    const controller = new GameController(mockPlatform());
+    const renderer = new CanvasRenderer(canvas, controller);
+    renderer.resize(750, 1334, 1);
+
+    forcePrivateWonSession(controller, createWonAnimatedSession());
+
+    try {
+      renderer.render();
+
+      const text = renderedText(ctx);
+      expect(text).not.toContain('防线推进');
+      expect(text).not.toContain('奖励翻倍');
+    } finally {
+      now.mockRestore();
+    }
   });
 
   test('win result blocks hidden gameplay hit areas', async () => {
@@ -95,9 +159,12 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
       nextLevelId: 2,
       doubled: false,
     });
+    forcePrivateSessionNull(controller);
 
     renderer.render();
     await handlePointer(renderer, { clientX: 375, clientY: 705 });
+    renderer.render();
+    await handlePointer(renderer, { clientX: 242, clientY: 667 });
 
     expect(controller.getViewState().screen).toBe('won');
     expect(controller.getViewState().winSummary?.doubled).toBe(true);
@@ -231,7 +298,7 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
     drawAdButton({ ctx, hitAreas, pressedButton: null }, 60, 1148, 190, 70, '看广告炸开', { type: 'start' });
 
     const label = ctx.fillTexts.find((entry) => entry.text === '看广告炸开');
-    const icon = ctx.translates.find((entry) => entry.x === 60 + 190 * 0.12);
+    const icon = ctx.translates.find((entry) => entry.y === 1148 + 21);
     expect(label).toMatchObject({
       y: 1183,
       align: 'left',
@@ -271,9 +338,96 @@ function forcePrivateWinSummary(controller: GameController, summary: WinSummary)
   writableController.winSummary = summary;
 }
 
+function forcePrivateSession(controller: GameController, session: GameSession): void {
+  const writableController = controller as unknown as { screen: 'playing'; session: GameSession };
+  writableController.screen = 'playing';
+  writableController.session = session;
+}
+
+function forcePrivateSessionNull(controller: GameController): void {
+  const writableController = controller as unknown as { session: null };
+  writableController.session = null;
+}
+
+function forcePrivateWonSession(controller: GameController, session: GameSession): void {
+  const writableController = controller as unknown as { screen: 'won'; session: GameSession; winSummary: WinSummary };
+  writableController.screen = 'won';
+  writableController.session = session;
+  writableController.winSummary = {
+    levelId: 1,
+    chapterTitle: '前线集结',
+    baseCoins: 70,
+    nodeReward: null,
+    nextLevelId: 2,
+    doubled: false,
+  };
+}
+
 function forcePrivateFeedback(controller: GameController, feedback: string): void {
   const writableController = controller as unknown as { feedback: string };
   writableController.feedback = feedback;
+}
+
+function createPlayingSession(board: Board): GameSession {
+  return {
+    levelId: 1,
+    board,
+    movesLeft: 12,
+    targetProgress: {},
+    targets: [{ type: 'collect', kind: 'shield', count: 8 }],
+    selectedCell: null,
+    comboCount: 0,
+    status: 'playing',
+    lastEvents: [],
+    piecePool: ['shield', 'ammo', 'radar', 'medal', 'wrench'],
+  };
+}
+
+function createWonAnimatedSession(): GameSession {
+  const before = normalBoard('before');
+  const after = normalBoard('after');
+  return {
+    ...createPlayingSession(after),
+    status: 'won',
+    lastEvents: [
+      { type: 'clear', board: before, phaseDurationMs: 680 },
+      { type: 'refill', board: after, phaseDurationMs: 720 },
+      { type: 'win' },
+    ],
+  };
+}
+
+function specialBoard(): Board {
+  const board = normalBoard('special');
+  board[0][0] = {
+    kind: 'special',
+    pieceKind: 'shield',
+    specialKind: 'areaBomb',
+    id: 'special-area-bomb',
+  };
+  board[0][1] = {
+    kind: 'special',
+    pieceKind: 'ammo',
+    specialKind: 'horizontalRocket',
+    id: 'special-horizontal',
+  };
+  board[0][2] = {
+    kind: 'special',
+    pieceKind: 'radar',
+    specialKind: 'verticalFlare',
+    id: 'special-vertical',
+  };
+  return board;
+}
+
+function normalBoard(prefix: string): Board {
+  return Array.from({ length: 7 }, (_, row) =>
+    Array.from({ length: 7 }, (_, col) => ({
+      kind: 'normal' as const,
+      pieceKind: 'shield' as const,
+      id: `${prefix}-${row}-${col}`,
+    })),
+  );
 }
 
 function renderedText(ctx: RecordingContext): string {
@@ -336,6 +490,7 @@ function createRecordingContext(): RecordingContext {
       this.translates.push({ x, y });
     },
     scale() {},
+    rotate() {},
     clearRect() {},
     fillRect() {},
     beginPath() {},

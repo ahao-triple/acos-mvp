@@ -1,12 +1,13 @@
 import type { GameController, AppViewState } from '../app/controller';
-import type { Board, SessionEvent } from '../core/types';
+import type { Board, BoardCell, SessionEvent } from '../core/types';
 import { drawBriefingScreen } from './briefingScreen';
 import { EffectsModel, type FloatingText, type Particle } from './effects';
 import { BOARD_CELL_SIZE, BOARD_GAP, BOARD_START_X, BOARD_START_Y, cellAt, drawGameScreen } from './gameScreen';
 import { drawLevelsScreen } from './levelsScreen';
 import { drawMenuScreen, drawSuppliesScreen } from './menuScreen';
-import { drawLostResult, drawPausedResult, drawWinResult } from './resultScreen';
+import { drawAdConfirmModal, drawLostResult, drawPausedResult, drawWinResult } from './resultScreen';
 import { coverRect, fitLogicalCanvas, LOGICAL_HEIGHT, LOGICAL_WIDTH, toLogicalPoint, type CanvasFit } from './scaler';
+import { pieceColors } from './theme';
 import { actionKey, drawButton, drawPanel, drawText, roundRect, type HitArea, type PressedButton, type UiRenderContext } from './uiPrimitives';
 import { VisualBoardModel } from './visualBoard';
 
@@ -16,6 +17,16 @@ interface BoardPresentation {
   index: number;
   stepStartedMs: number;
 }
+
+type ResultRevealPhase = 'waiting' | 'finale';
+
+interface ResultReveal {
+  key: string;
+  phase: ResultRevealPhase;
+  startedMs: number;
+}
+
+const VICTORY_FINALE_MS = 900;
 
 export class CanvasRenderer {
   private readonly ctx: CanvasRenderingContext2D;
@@ -34,6 +45,7 @@ export class CanvasRenderer {
   private feedbackSinceMs = 0;
   private presentation: BoardPresentation | null = null;
   private handledPresentationKey: string | null = null;
+  private resultReveal: ResultReveal | null = null;
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -76,6 +88,11 @@ export class CanvasRenderer {
     this.ctx.scale(this.fit.scale, this.fit.scale);
     this.drawBackground(view, nowMs);
 
+    if (view.screen !== 'won' && view.screen !== 'lost') {
+      this.resultReveal = null;
+      this.visualBoard.clearFinaleBlocks();
+    }
+
     if (view.screen === 'menu') {
       drawMenuScreen(this.ui(), view);
     } else if (view.screen === 'levels') {
@@ -99,16 +116,21 @@ export class CanvasRenderer {
       if (view.screen === 'paused') {
         drawPausedResult(this.ui());
       }
-      if (view.screen === 'won') {
+      if (view.screen === 'won' && this.resultOverlayReady(view, nowMs)) {
         drawWinResult(this.ui(), view);
       }
-      if (view.screen === 'lost') {
+      if (view.screen === 'lost' && this.resultOverlayReady(view, nowMs)) {
         drawLostResult(this.ui(), view);
       }
     }
 
     if (view.feedback) {
       this.drawToast(view.feedback, nowMs);
+    }
+
+    if (view.adPrompt) {
+      this.hitAreas = [];
+      drawAdConfirmModal(this.ui(), view.adPrompt);
     }
 
     this.ctx.restore();
@@ -202,6 +224,45 @@ export class CanvasRenderer {
     drawButton(this.ui(), 160, 380, 430, 86, `音效：${view.save.soundEnabled ? '开' : '关'}`, { type: 'toggleSound' });
     drawButton(this.ui(), 160, 500, 430, 86, `音乐：${view.save.musicEnabled ? '开' : '关'}`, { type: 'toggleMusic' });
     drawButton(this.ui(), 160, 620, 430, 86, '返回', { type: 'closeModal' });
+  }
+
+  private resultOverlayReady(view: AppViewState, nowMs: number): boolean {
+    if (view.screen !== 'won' && view.screen !== 'lost') {
+      return true;
+    }
+
+    if (!view.session) {
+      return true;
+    }
+
+    const key = `${view.screen}:${view.session.levelId}:${view.winSummary?.doubled ? 'doubled' : 'base'}`;
+    if (this.resultReveal?.key !== key) {
+      this.resultReveal = { key, phase: 'waiting', startedMs: nowMs };
+    }
+
+    if (this.resultReveal.phase === 'finale') {
+      return nowMs - this.resultReveal.startedMs >= VICTORY_FINALE_MS && !this.visualBoard.isBusy(nowMs);
+    }
+
+    if (this.presentation || this.visualBoard.isBusy(nowMs)) {
+      return false;
+    }
+
+    if (view.screen === 'lost') {
+      return true;
+    }
+
+    this.startVictoryFinale(nowMs);
+    this.resultReveal = { key, phase: 'finale', startedMs: nowMs };
+    return false;
+  }
+
+  private startVictoryFinale(nowMs: number): void {
+    const blasted = this.visualBoard.blastAll(nowMs);
+    for (const tile of blasted) {
+      this.effects.burst(tile.x + BOARD_CELL_SIZE / 2, tile.y + BOARD_CELL_SIZE / 2, colorForPresentationCell(tile.cell), nowMs, 10);
+    }
+    this.effects.floatText('防线推进', 375, 640, '#ffd166', nowMs);
   }
 
   private presentedBoard(session: NonNullable<AppViewState['session']>, nowMs: number): Board {
@@ -405,4 +466,16 @@ function boardSignature(board: Board): string {
         .join(','),
     )
     .join('/');
+}
+
+function colorForPresentationCell(cell: BoardCell): string {
+  if (cell.kind === 'normal' || cell.kind === 'special') {
+    return pieceColors[cell.pieceKind];
+  }
+
+  if (cell.kind === 'blocker') {
+    return cell.blockerKind === 'sandbag' ? '#9b6a3a' : '#6b7280';
+  }
+
+  return '#ffffff';
 }

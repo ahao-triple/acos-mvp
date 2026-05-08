@@ -50,10 +50,14 @@ export function drawAdButton(ui: UiRenderContext, x: number, y: number, width: n
   drawButtonBase(ui, x, y, width, height, action, () => {
     const iconHeight = nearestMultipleOfFour(height * 0.4);
     const iconWidth = iconHeight * (38 / 28);
-    const iconX = x + width * 0.12;
+    const labelSize = 22;
+    const gap = 14;
+    const textWidth = typeof ui.ctx.measureText === 'function' ? ui.ctx.measureText(label).width : label.length * labelSize;
+    const contentWidth = iconWidth + gap + textWidth;
+    const iconX = x + Math.max(12, (width - contentWidth) / 2);
     const iconY = y + (height - iconHeight) / 2;
     drawAdVideoIcon(ui.ctx, iconX, iconY, iconWidth, iconHeight, '#111827');
-    drawText(ui.ctx, label, iconX + iconWidth + 14, y + height / 2, 22, '#111827', 'left');
+    drawText(ui.ctx, label, iconX + iconWidth + gap, y + height / 2, labelSize, '#111827', 'left');
   });
 }
 
