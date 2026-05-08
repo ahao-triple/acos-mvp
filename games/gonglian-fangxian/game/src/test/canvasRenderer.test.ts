@@ -1,9 +1,10 @@
 import { describe, expect, test } from 'vitest';
 
 import { GameController } from '../app/controller';
-import type { GameSession } from '../core/types';
 import type { PlatformAdapter } from '../platform/types';
 import { CanvasRenderer } from '../render/canvasRenderer';
+import { targetLabel, targetProgressText } from '../render/theme';
+import { drawAdButton, drawButton } from '../render/uiPrimitives';
 
 describe('CanvasRenderer mini game canvas compatibility', () => {
   test('renders the campaign briefing after start', async () => {
@@ -82,11 +83,16 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
     await expect(handlePointer(renderer, { touches: [{ x: 100, y: 340 }] })).resolves.toBeUndefined();
   });
 
-  test('centers regular button text vertically', () => {
-    const { canvas, ctx } = createRecordingCanvas();
-    const renderer = new CanvasRenderer(canvas, new GameController(mockPlatform()));
+  test('formats level targets with player-facing Chinese labels', () => {
+    expect(targetLabel('shield')).toBe('护盾');
+    expect(targetProgressText({ type: 'collect', kind: 'shield', count: 8 }, { shield: 3 })).toBe('护盾 3/8');
+    expect(targetProgressText({ type: 'clearBlocker', kind: 'sandbag', count: 4 }, { sandbag: 1 })).toBe('沙袋 1/4');
+  });
 
-    drawPrivateButton(renderer, 10, 20, 120, 50, '继续');
+  test('centers regular button text vertically through UI primitives', () => {
+    const { ctx, hitAreas } = createRecordingUi();
+
+    drawButton({ ctx, hitAreas, pressedButton: null }, 10, 20, 120, 50, '继续', { type: 'start' });
 
     expect(ctx.fillTexts.find((entry) => entry.text === '继续')).toMatchObject({
       x: 70,
@@ -94,13 +100,13 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
       align: 'center',
       baseline: 'middle',
     });
+    expect(hitAreas).toHaveLength(1);
   });
 
-  test('lays out rewarded-video button icon and label without overlap', () => {
-    const { canvas, ctx } = createRecordingCanvas();
-    const renderer = new CanvasRenderer(canvas, new GameController(mockPlatform()));
+  test('lays out rewarded-video button icon and label without overlap through UI primitives', () => {
+    const { ctx, hitAreas } = createRecordingUi();
 
-    drawPrivateAdButton(renderer, 60, 1148, 190, 70, '看广告炸开');
+    drawAdButton({ ctx, hitAreas, pressedButton: null }, 60, 1148, 190, 70, '看广告炸开', { type: 'start' });
 
     const label = ctx.fillTexts.find((entry) => entry.text === '看广告炸开');
     const icon = ctx.translates.find((entry) => entry.x === 60 + 190 * 0.12);
@@ -111,33 +117,7 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
     });
     expect(icon).toBeDefined();
     expect(label?.x).toBeGreaterThan((icon?.x ?? 0) + 38);
-  });
-
-  test('renders level targets with player-facing Chinese labels', () => {
-    const { canvas, ctx } = createRecordingCanvas();
-    const renderer = new CanvasRenderer(canvas, new GameController(mockPlatform()));
-
-    drawPrivateTargets(renderer, {
-      levelId: 1,
-      board: [],
-      movesLeft: 18,
-      targetProgress: { shield: 3, sandbag: 1 },
-      targets: [
-        { type: 'collect', kind: 'shield', count: 8 },
-        { type: 'clearBlocker', kind: 'sandbag', count: 4 },
-      ],
-      selectedCell: null,
-      comboCount: 0,
-      status: 'playing',
-      lastEvents: [],
-      piecePool: ['shield', 'ammo', 'radar', 'medal', 'wrench'],
-    });
-
-    const targetText = ctx.fillTexts.map((entry) => entry.text).join('\n');
-    expect(targetText).toContain('护盾 3/8');
-    expect(targetText).toContain('沙袋 1/4');
-    expect(targetText).not.toContain('shield');
-    expect(targetText).not.toContain('sandbag');
+    expect(hitAreas).toHaveLength(1);
   });
 });
 
@@ -157,24 +137,8 @@ function handlePointer(renderer: CanvasRenderer, event: unknown): Promise<void> 
   return (renderer as unknown as { handlePointer(event: unknown): Promise<void> }).handlePointer(event);
 }
 
-function drawPrivateButton(renderer: CanvasRenderer, x: number, y: number, width: number, height: number, label: string): void {
-  (renderer as unknown as { drawButton(x: number, y: number, width: number, height: number, label: string, action: { type: 'start' }): void }).drawButton(x, y, width, height, label, { type: 'start' });
-}
-
-function drawPrivateAdButton(renderer: CanvasRenderer, x: number, y: number, width: number, height: number, label: string): void {
-  (renderer as unknown as { drawAdButton(x: number, y: number, width: number, height: number, label: string, action: { type: 'start' }): void }).drawAdButton(x, y, width, height, label, { type: 'start' });
-}
-
-function drawPrivateTargets(renderer: CanvasRenderer, session: GameSession): void {
-  (renderer as unknown as CanvasRendererPrivateTargets).drawTargets(session);
-}
-
 function renderedText(ctx: RecordingContext): string {
   return ctx.fillTexts.map((entry) => entry.text).join('\n');
-}
-
-interface CanvasRendererPrivateTargets {
-  drawTargets(session: GameSession): void;
 }
 
 function createRecordingCanvas(): {
@@ -191,6 +155,13 @@ function createRecordingCanvas(): {
       },
     } as unknown as HTMLCanvasElement & { width: number; height: number },
     ctx,
+  };
+}
+
+function createRecordingUi(): { ctx: RecordingContext & CanvasRenderingContext2D; hitAreas: Array<{ x: number; y: number; width: number; height: number; action: { type: 'start' } }> } {
+  return {
+    ctx: createRecordingContext() as RecordingContext & CanvasRenderingContext2D,
+    hitAreas: [],
   };
 }
 

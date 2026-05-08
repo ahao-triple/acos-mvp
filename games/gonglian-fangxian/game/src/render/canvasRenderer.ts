@@ -1,17 +1,11 @@
 import type { GameController, AppAction, AppViewState } from '../app/controller';
 import { describeNodeReward } from '../app/campaign';
-import type { Board, BoardCell, BlockerKind, PieceKind, Position, SessionEvent } from '../core/types';
+import type { Board, BoardCell, PieceKind, Position, SessionEvent } from '../core/types';
 import { EffectsModel, type FloatingText, type Particle } from './effects';
 import { coverRect, fitLogicalCanvas, LOGICAL_HEIGHT, LOGICAL_WIDTH, toLogicalPoint, type CanvasFit } from './scaler';
+import { pieceColors, targetLabel, targetProgressText } from './theme';
+import { actionKey, drawAdButton, drawButton, drawPanel, drawSmallText, drawText, roundRect, type HitArea, type PressedButton } from './uiPrimitives';
 import { VisualBoardModel, type VisualTile } from './visualBoard';
-
-interface HitArea {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  action: AppAction;
-}
 
 interface BoardPresentation {
   key: string;
@@ -25,24 +19,6 @@ const BOARD_GAP = 8;
 const BOARD_START_X = 57;
 const BOARD_START_Y = 300;
 
-const pieceColors: Record<PieceKind, string> = {
-  shield: '#2f80ed',
-  ammo: '#27ae60',
-  radar: '#9b51e0',
-  medal: '#f2c94c',
-  wrench: '#eb5757',
-};
-
-const targetLabels: Record<PieceKind | BlockerKind, string> = {
-  shield: '护盾',
-  ammo: '弹药',
-  radar: '雷达',
-  medal: '勋章',
-  wrench: '扳手',
-  sandbag: '沙袋',
-  brokenDefense: '破损防线',
-};
-
 export class CanvasRenderer {
   private readonly ctx: CanvasRenderingContext2D;
   private fit: CanvasFit = fitLogicalCanvas(LOGICAL_WIDTH, LOGICAL_HEIGHT);
@@ -55,7 +31,7 @@ export class CanvasRenderer {
   });
   private readonly effects = new EffectsModel(80, 2026);
   private handledCueId = 0;
-  private pressedButton: { key: string; untilMs: number } | null = null;
+  private pressedButton: PressedButton | null = null;
   private lastFeedback: string | null = null;
   private feedbackSinceMs = 0;
   private lastScreen: string | null = null;
@@ -230,17 +206,17 @@ export class CanvasRenderer {
 
   private drawMenu(view: AppViewState): void {
     this.drawTitle('共联防线', '调度资源，修复防线，守住前线');
-    this.drawPanel(80, 260, 590, 780);
-    this.drawButton(150, 330, 450, 78, '继续作战', { type: 'start' });
-    this.drawButton(150, 436, 450, 78, '关卡选择', { type: 'openLevels' });
-    this.drawButton(150, 542, 450, 78, '补给', { type: 'openSupplies' });
-    this.drawButton(150, 648, 450, 78, '设置', { type: 'openSettings' });
-    this.drawSmallText(`金币 ${view.save.coins}  最高关卡 ${view.highestLevel}`, 375, 1000);
+    drawPanel(this.ctx, 80, 260, 590, 780);
+    drawButton(this.ui(), 150, 330, 450, 78, '继续作战', { type: 'start' });
+    drawButton(this.ui(), 150, 436, 450, 78, '关卡选择', { type: 'openLevels' });
+    drawButton(this.ui(), 150, 542, 450, 78, '补给', { type: 'openSupplies' });
+    drawButton(this.ui(), 150, 648, 450, 78, '设置', { type: 'openSettings' });
+    drawSmallText(this.ctx, `金币 ${view.save.coins}  最高关卡 ${view.highestLevel}`, 375, 1000);
   }
 
   private drawLevels(view: AppViewState): void {
     this.drawTitle('关卡选择', '完成关卡可解锁下一关');
-    this.drawPanel(62, 220, 626, 820);
+    drawPanel(this.ctx, 62, 220, 626, 820);
     for (let index = 0; index < view.levelCount; index += 1) {
       const levelId = index + 1;
       const col = index % 2;
@@ -248,43 +224,43 @@ export class CanvasRenderer {
       const x = 110 + col * 280;
       const y = 270 + row * 125;
       const unlocked = levelId <= view.highestLevel;
-      this.drawButton(x, y, 250, 82, unlocked ? `第 ${levelId} 关` : `第 ${levelId} 关 未解锁`, unlocked ? { type: 'selectLevel', levelId } : { type: 'openLevels' });
+      drawButton(this.ui(), x, y, 250, 82, unlocked ? `第 ${levelId} 关` : `第 ${levelId} 关 未解锁`, unlocked ? { type: 'selectLevel', levelId } : { type: 'openLevels' });
     }
-    this.drawButton(190, 920, 370, 78, '返回', { type: 'closeModal' });
+    drawButton(this.ui(), 190, 920, 370, 78, '返回', { type: 'closeModal' });
   }
 
   private drawBriefing(view: AppViewState): void {
     const level = view.pendingLevel;
     this.drawTitle('作战简报', level ? `${level.chapterTitle} · 第 ${level.id} 关` : '选择关卡后开始作战');
-    this.drawPanel(62, 238, 626, 790);
+    drawPanel(this.ctx, 62, 238, 626, 790);
 
     if (!level) {
-      this.drawText('暂无待命关卡', 375, 470, 34, '#ffffff', 'center');
-      this.drawButton(190, 930, 370, 78, '返回', { type: 'home' });
+      drawText(this.ctx, '暂无待命关卡', 375, 470, 34, '#ffffff', 'center');
+      drawButton(this.ui(), 190, 930, 370, 78, '返回', { type: 'home' });
       return;
     }
 
-    const targetText = level.targets.map((target) => `${targetLabels[target.kind]} x${target.count}`).join('  ');
+    const targetText = level.targets.map((target) => `${targetLabel(target.kind)} x${target.count}`).join('  ');
     const nodeReward = describeNodeReward(level.nodeReward);
-    this.drawText(`${level.chapterTitle} / 第 ${level.id} 关`, 112, 315, 30, '#ffffff', 'left');
-    this.drawText(level.briefing, 112, 385, 26, '#f8fafc', 'left');
-    this.drawText(`步数：${level.moves}`, 112, 465, 26, '#fef3c7', 'left');
-    this.drawText(`目标：${targetText}`, 112, 535, 24, '#d1fae5', 'left');
-    this.drawText(`奖励：金币 ${level.rewards.coins}`, 112, 605, 24, '#fde68a', 'left');
-    this.drawText(`节点奖励：${nodeReward || '无'}`, 112, 675, 24, '#dbeafe', 'left');
-    this.drawButton(150, 930, 450, 78, '开始作战', { type: 'beginLevel' });
-    this.drawButton(190, 1035, 370, 78, '返回', { type: 'home' });
+    drawText(this.ctx, `${level.chapterTitle} / 第 ${level.id} 关`, 112, 315, 30, '#ffffff', 'left');
+    drawText(this.ctx, level.briefing, 112, 385, 26, '#f8fafc', 'left');
+    drawText(this.ctx, `步数：${level.moves}`, 112, 465, 26, '#fef3c7', 'left');
+    drawText(this.ctx, `目标：${targetText}`, 112, 535, 24, '#d1fae5', 'left');
+    drawText(this.ctx, `奖励：金币 ${level.rewards.coins}`, 112, 605, 24, '#fde68a', 'left');
+    drawText(this.ctx, `节点奖励：${nodeReward || '无'}`, 112, 675, 24, '#dbeafe', 'left');
+    drawButton(this.ui(), 150, 930, 450, 78, '开始作战', { type: 'beginLevel' });
+    drawButton(this.ui(), 190, 1035, 370, 78, '返回', { type: 'home' });
   }
 
   private drawSupplies(view: AppViewState): void {
     this.drawTitle('补给', '领取平台补给并查看当前资源');
-    this.drawPanel(80, 260, 590, 760);
-    this.drawText(`金币 ${view.save.coins}`, 375, 335, 36, '#ffffff', 'center');
-    this.drawText(`道具 炸开 ${view.save.items.bomb}  吸走 ${view.save.items.suck}  重排 ${view.save.items.shuffle}`, 375, 395, 24, '#d1fae5', 'center');
-    this.drawButton(150, 470, 450, 78, '添加到桌面领奖', { type: 'desktopReward' });
-    this.drawButton(150, 576, 450, 78, '添加到常用领奖', { type: 'favoriteReward' });
-    this.drawButton(150, 682, 450, 78, '侧边栏入口奖励', { type: 'sidebarReward' });
-    this.drawButton(190, 900, 370, 78, '返回', { type: 'closeModal' });
+    drawPanel(this.ctx, 80, 260, 590, 760);
+    drawText(this.ctx, `金币 ${view.save.coins}`, 375, 335, 36, '#ffffff', 'center');
+    drawText(this.ctx, `道具 炸开 ${view.save.items.bomb}  吸走 ${view.save.items.suck}  重排 ${view.save.items.shuffle}`, 375, 395, 24, '#d1fae5', 'center');
+    drawButton(this.ui(), 150, 470, 450, 78, '添加到桌面领奖', { type: 'desktopReward' });
+    drawButton(this.ui(), 150, 576, 450, 78, '添加到常用领奖', { type: 'favoriteReward' });
+    drawButton(this.ui(), 150, 682, 450, 78, '侧边栏入口奖励', { type: 'sidebarReward' });
+    drawButton(this.ui(), 190, 900, 370, 78, '返回', { type: 'closeModal' });
   }
 
   private drawGame(view: AppViewState, nowMs: number): void {
@@ -294,11 +270,11 @@ export class CanvasRenderer {
       return;
     }
 
-    this.drawPanel(36, 36, 678, 180);
-    this.drawText(`第 ${session.levelId} 关`, 70, 92, 34, '#ffffff', 'left');
-    this.drawText(`步数 ${session.movesLeft}`, 70, 146, 30, '#fef3c7', 'left');
-    this.drawText(`金币 ${view.save.coins}`, 430, 92, 28, '#ffffff', 'left');
-    this.drawButton(570, 130, 110, 54, '暂停', { type: 'pause' });
+    drawPanel(this.ctx, 36, 36, 678, 180);
+    drawText(this.ctx, `第 ${session.levelId} 关`, 70, 92, 34, '#ffffff', 'left');
+    drawText(this.ctx, `步数 ${session.movesLeft}`, 70, 146, 30, '#fef3c7', 'left');
+    drawText(this.ctx, `金币 ${view.save.coins}`, 430, 92, 28, '#ffffff', 'left');
+    drawButton(this.ui(), 570, 130, 110, 54, '暂停', { type: 'pause' });
     this.drawTargets(session);
     this.handleVisualCue(view, nowMs);
     this.drawBoard(session, nowMs);
@@ -310,23 +286,21 @@ export class CanvasRenderer {
 
   private drawSettings(view: AppViewState): void {
     this.drawTitle('设置', '音频开关会保存到本地');
-    this.drawPanel(100, 300, 550, 500);
-    this.drawButton(160, 380, 430, 86, `音效：${view.save.soundEnabled ? '开' : '关'}`, { type: 'toggleSound' });
-    this.drawButton(160, 500, 430, 86, `音乐：${view.save.musicEnabled ? '开' : '关'}`, { type: 'toggleMusic' });
-    this.drawButton(160, 620, 430, 86, '返回', { type: 'closeModal' });
+    drawPanel(this.ctx, 100, 300, 550, 500);
+    drawButton(this.ui(), 160, 380, 430, 86, `音效：${view.save.soundEnabled ? '开' : '关'}`, { type: 'toggleSound' });
+    drawButton(this.ui(), 160, 500, 430, 86, `音乐：${view.save.musicEnabled ? '开' : '关'}`, { type: 'toggleMusic' });
+    drawButton(this.ui(), 160, 620, 430, 86, '返回', { type: 'closeModal' });
   }
 
   private drawTargets(session: AppViewState['session']): void {
     if (!session) return;
-    const text = session.targets
-      .map((target) => `${targetLabels[target.kind]} ${(session.targetProgress[target.kind] ?? 0)}/${target.count}`)
-      .join('  ');
-    this.drawText(text, 375, 198, 24, '#d1fae5', 'center');
+    const text = session.targets.map((target) => targetProgressText(target, session.targetProgress)).join('  ');
+    drawText(this.ctx, text, 375, 198, 24, '#d1fae5', 'center');
   }
 
   private drawBoard(session: NonNullable<AppViewState['session']>, nowMs: number): void {
     const board = this.presentedBoard(session, nowMs);
-    this.drawPanel(34, 276, 682, 682);
+    drawPanel(this.ctx, 34, 276, 682, 682);
 
     for (let row = 0; row < board.length; row += 1) {
       for (let col = 0; col < board[row].length; col += 1) {
@@ -416,7 +390,7 @@ export class CanvasRenderer {
       this.ctx.fillStyle = color;
       roundRect(this.ctx, 15, 18, size - 30, size - 36, 8);
       this.ctx.fill();
-      this.drawText(tile.cell.blockerKind === 'sandbag' ? '沙' : '损', size / 2, size / 2 + 10, 32, '#ffffff', 'center');
+      drawText(this.ctx, tile.cell.blockerKind === 'sandbag' ? '沙' : '损', size / 2, size / 2 + 10, 32, '#ffffff', 'center');
       this.ctx.restore();
       return;
     }
@@ -438,7 +412,7 @@ export class CanvasRenderer {
       this.ctx.fill();
       this.drawPieceIcon(tile.cell.pieceKind, size / 2, size / 2, color);
       if (tile.cell.kind === 'special') {
-        this.drawText(tile.cell.specialKind === 'areaBomb' ? '爆' : tile.cell.specialKind === 'horizontalRocket' ? '横' : '竖', size / 2, size - 16, 18, '#ffffff', 'center');
+        drawText(this.ctx, tile.cell.specialKind === 'areaBomb' ? '爆' : tile.cell.specialKind === 'horizontalRocket' ? '横' : '竖', size / 2, size - 16, 18, '#ffffff', 'center');
       }
     }
 
@@ -471,121 +445,38 @@ export class CanvasRenderer {
     this.ctx.translate(375, 585);
     this.ctx.scale(scale, scale);
     this.ctx.translate(-375, -585);
-    this.drawPanel(105, 350, 540, 470);
-    this.drawText(title, 375, 430, 56, '#ffffff', 'center');
+    drawPanel(this.ctx, 105, 350, 540, 470);
+    drawText(this.ctx, title, 375, 430, 56, '#ffffff', 'center');
     buttons.forEach(([label, action], index) => {
       if (action.type === 'extraMovesAd') {
-        this.drawAdButton(175, 500 + index * 100, 400, 74, label, action);
+        drawAdButton(this.ui(), 175, 500 + index * 100, 400, 74, label, action);
       } else {
-        this.drawButton(175, 500 + index * 100, 400, 74, label, action);
+        drawButton(this.ui(), 175, 500 + index * 100, 400, 74, label, action);
       }
     });
     this.ctx.restore();
   }
 
   private drawTitle(title: string, subtitle: string): void {
-    this.drawText(title, 375, 126, 72, '#ffffff', 'center');
-    this.drawText(subtitle, 375, 184, 28, '#d1fae5', 'center');
+    drawText(this.ctx, title, 375, 126, 72, '#ffffff', 'center');
+    drawText(this.ctx, subtitle, 375, 184, 28, '#d1fae5', 'center');
   }
 
-  private drawButton(x: number, y: number, width: number, height: number, label: string, action: AppAction): void {
-    this.drawButtonBase(x, y, width, height, action, () => {
-      this.drawText(label, x + width / 2, y + height / 2, 26, '#111827', 'center');
-    });
+  private ui() {
+    return {
+      ctx: this.ctx,
+      hitAreas: this.hitAreas,
+      pressedButton: this.pressedButton,
+    };
   }
 
   private drawPowerUpButton(x: number, y: number, width: number, height: number, name: string, count: number, active: boolean, action: AppAction): void {
     if (count > 0) {
-      this.drawButton(x, y, width, height, `${active ? '>' : ''}${name} ${count}`, action);
+      drawButton(this.ui(), x, y, width, height, `${active ? '>' : ''}${name} ${count}`, action);
       return;
     }
 
-    this.drawAdButton(x, y, width, height, `${active ? '>' : ''}看广告${name}`, action);
-  }
-
-  private drawAdButton(x: number, y: number, width: number, height: number, label: string, action: AppAction): void {
-    this.drawButtonBase(x, y, width, height, action, () => {
-      const iconHeight = nearestMultipleOfFour(height * 0.4);
-      const iconWidth = iconHeight * (38 / 28);
-      const iconX = x + width * 0.12;
-      const iconY = y + (height - iconHeight) / 2;
-      this.drawAdVideoIcon(iconX, iconY, iconWidth, iconHeight, '#111827');
-      this.drawText(label, iconX + iconWidth + 14, y + height / 2, 22, '#111827', 'left');
-    });
-  }
-
-  private drawButtonBase(x: number, y: number, width: number, height: number, action: AppAction, drawContent: () => void): void {
-    const key = actionKey(action);
-    const pressed = this.pressedButton?.key === key && this.pressedButton.untilMs > performance.now();
-
-    this.ctx.save();
-    if (pressed) {
-      this.ctx.translate(x + width / 2, y + height / 2);
-      this.ctx.scale(0.96, 0.96);
-      this.ctx.translate(-(x + width / 2), -(y + height / 2));
-    }
-    this.ctx.fillStyle = '#f8fafc';
-    roundRect(this.ctx, x, y, width, height, 8);
-    this.ctx.fill();
-    this.ctx.strokeStyle = '#111827';
-    this.ctx.lineWidth = 3;
-    this.ctx.stroke();
-    drawContent();
-    this.ctx.restore();
-
-    this.hitAreas.push({ x, y, width, height, action });
-  }
-
-  private drawAdVideoIcon(x: number, y: number, width: number, height: number, color: string): void {
-    const py = (value: number) => 28 - value;
-    this.ctx.save();
-    this.ctx.translate(x, y);
-    this.ctx.scale(width / 38, height / 28);
-
-    // Official Douyin rewarded-video icon material is a 38x28 vector.
-    this.ctx.fillStyle = color;
-    this.ctx.beginPath();
-    this.ctx.moveTo(0, py(22.790697));
-    this.ctx.bezierCurveTo(0, py(25.667715), 2.306872, py(28), 5.152542, py(28));
-    this.ctx.lineTo(25.118643, py(28));
-    this.ctx.bezierCurveTo(27.964314, py(28), 30.271185, py(25.667715), 30.271185, py(22.790697));
-    this.ctx.lineTo(30.271185, py(21.971283));
-    this.ctx.bezierCurveTo(30.271185, py(21.510889), 30.735935, py(21.195894), 31.163574, py(21.366449));
-    this.ctx.lineTo(34.478329, py(22.688473));
-    this.ctx.bezierCurveTo(36.168919, py(23.362732), 38, py(22.102938), 38, py(20.265535));
-    this.ctx.lineTo(38, py(7.788822));
-    this.ctx.bezierCurveTo(38, py(5.936855), 36.142109, py(4.676512), 34.447056, py(5.378595));
-    this.ctx.lineTo(31.17153, py(6.73531));
-    this.ctx.bezierCurveTo(30.742785, py(6.912895), 30.271185, py(6.597778), 30.271185, py(6.133711));
-    this.ctx.lineTo(30.271185, py(5.209301));
-    this.ctx.bezierCurveTo(30.271185, py(2.332283), 27.964314, py(0), 25.118643, py(0));
-    this.ctx.lineTo(5.152542, py(0));
-    this.ctx.bezierCurveTo(2.306871, py(0), 0, py(2.332283), 0, py(5.209301));
-    this.ctx.lineTo(0, py(22.790697));
-    this.ctx.closePath();
-    this.ctx.fill();
-
-    this.ctx.fillStyle = '#f8fafc';
-    this.ctx.beginPath();
-    this.ctx.moveTo(20.621685, py(11.820709));
-    this.ctx.bezierCurveTo(22.204817, py(12.847475), 22.204819, py(15.164505), 20.621687, py(16.191273));
-    this.ctx.lineTo(14.970669, py(19.856339));
-    this.ctx.bezierCurveTo(13.237776, py(20.980234), 10.948714, py(19.736496), 10.948714, py(17.671053));
-    this.ctx.lineTo(10.948714, py(10.340927));
-    this.ctx.bezierCurveTo(10.948714, py(8.275482), 13.237773, py(7.031748), 14.970665, py(8.155643));
-    this.ctx.lineTo(20.621685, py(11.820709));
-    this.ctx.closePath();
-    this.ctx.fill();
-    this.ctx.restore();
-  }
-
-  private drawPanel(x: number, y: number, width: number, height: number): void {
-    this.ctx.fillStyle = 'rgba(15,23,42,0.72)';
-    roundRect(this.ctx, x, y, width, height, 8);
-    this.ctx.fill();
-    this.ctx.strokeStyle = 'rgba(255,255,255,0.56)';
-    this.ctx.lineWidth = 2;
-    this.ctx.stroke();
+    drawAdButton(this.ui(), x, y, width, height, `${active ? '>' : ''}看广告${name}`, action);
   }
 
   private drawToast(message: string, nowMs: number): void {
@@ -599,7 +490,7 @@ export class CanvasRenderer {
     this.ctx.strokeStyle = '#ffffff';
     this.ctx.lineWidth = 2;
     this.ctx.stroke();
-    this.drawText(message, 375, y + 48, 24, '#ffffff', 'center');
+    drawText(this.ctx, message, 375, y + 48, 24, '#ffffff', 'center');
     this.ctx.restore();
   }
 
@@ -646,7 +537,7 @@ export class CanvasRenderer {
     this.ctx.globalAlpha = text.alpha;
     this.ctx.translate(text.x, text.y);
     this.ctx.scale(text.scale, text.scale);
-    this.drawText(text.text, 0, 0, 34, text.color, 'center');
+    drawText(this.ctx, text.text, 0, 0, 34, text.color, 'center');
     this.ctx.restore();
   }
 
@@ -697,17 +588,6 @@ export class CanvasRenderer {
     }
   }
 
-  private drawSmallText(text: string, x: number, y: number): void {
-    this.drawText(text, x, y, 26, '#f8fafc', 'center');
-  }
-
-  private drawText(text: string, x: number, y: number, size: number, color: string, align: CanvasTextAlign): void {
-    this.ctx.fillStyle = color;
-    this.ctx.font = `700 ${size}px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
-    this.ctx.textAlign = align;
-    this.ctx.textBaseline = 'middle';
-    this.ctx.fillText(text, x, y);
-  }
 }
 
 interface MiniGamePointerEvent {
@@ -741,10 +621,6 @@ function readClientPoint(event: PointerEvent | MiniGamePointerEvent): { clientX:
   }
 
   return null;
-}
-
-function actionKey(action: AppAction): string {
-  return JSON.stringify(action);
 }
 
 function presentationSteps(events: SessionEvent[], finalBoard: Board): Array<{ board: Board; durationMs: number }> {
@@ -844,10 +720,6 @@ function withAlpha(hex: string, alpha: number): string {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
-function nearestMultipleOfFour(value: number): number {
-  return Math.max(4, Math.round(value / 4) * 4);
-}
-
 function drawStar(ctx: CanvasRenderingContext2D, cx: number, cy: number, radius: number): void {
   ctx.beginPath();
   for (let i = 0; i < 10; i += 1) {
@@ -858,15 +730,5 @@ function drawStar(ctx: CanvasRenderingContext2D, cx: number, cy: number, radius:
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   }
-  ctx.closePath();
-}
-
-function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number): void {
-  ctx.beginPath();
-  ctx.moveTo(x + radius, y);
-  ctx.arcTo(x + width, y, x + width, y + height, radius);
-  ctx.arcTo(x + width, y + height, x, y + height, radius);
-  ctx.arcTo(x, y + height, x, y, radius);
-  ctx.arcTo(x, y, x + width, y, radius);
   ctx.closePath();
 }
