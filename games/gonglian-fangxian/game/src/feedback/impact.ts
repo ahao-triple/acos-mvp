@@ -62,9 +62,9 @@ export function impactForLevel(level: ImpactLevel, source: ImpactSource): Impact
   return {
     level,
     source,
-    sound: source === 'winFinale' ? 'win' : level <= 2 ? 'match' : 'combo',
+    sound: source === 'winFinale' ? 'win' : source === 'lose' ? 'lose' : level <= 2 ? 'match' : 'combo',
     haptic: profile.haptic,
-    shake: profile.shake,
+    shake: { ...profile.shake },
   };
 }
 
@@ -89,8 +89,9 @@ function powerUpLevel(clearCount: number): ImpactLevel {
 }
 
 function matchLevel(matchEvents: SessionEvent[], clearCount: number): ImpactLevel {
-  const groupCount = matchEvents.filter((event) => (event.cells?.length ?? event.count ?? 0) >= 3).length;
-  const shaped = matchEvents.some((event) => spansRowsAndColumns(event.cells ?? []));
+  const pieceMatchEvents = matchEvents.filter((event) => (event.cells?.length ?? 0) > 0);
+  const groupCount = pieceMatchEvents.filter((event) => (event.cells?.length ?? 0) >= 3).length;
+  const shaped = pieceMatchEvents.some((event) => spansRowsAndColumns(event.cells ?? []));
 
   if (clearCount >= 8) {
     return 5;

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { impactForClearStep, impactForWinFinale } from '../feedback/impact';
+import { impactForClearStep, impactForLevel, impactForWinFinale } from '../feedback/impact';
 import type { Position, SessionEvent } from '../core/types';
 
 describe('impact feedback levels', () => {
@@ -88,18 +88,37 @@ describe('impact feedback levels', () => {
       source: 'powerUp',
       sound: 'combo',
       haptic: 'short',
+      shake: { amplitude: 4, durationMs: 150 },
     });
     expect(impactForClearStep([{ type: 'clear', cells: line(6) }], 0)).toMatchObject({
       level: 7,
       source: 'powerUp',
       sound: 'combo',
       haptic: 'long',
+      shake: { amplitude: 6, durationMs: 190 },
     });
     expect(impactForClearStep([{ type: 'clear', cells: line(9) }], 0)).toMatchObject({
       level: 8,
       source: 'powerUp',
       sound: 'combo',
       haptic: 'long',
+      shake: { amplitude: 8, durationMs: 220 },
+    });
+  });
+
+  test('ignores count-only blocker match events for normal match group intensity', () => {
+    const events: SessionEvent[] = [
+      { type: 'match', cells: line(3), count: 3, kind: 'shield' },
+      { type: 'match', count: 3, kind: 'sandbag' },
+      { type: 'clear', cells: line(3) },
+    ];
+
+    expect(impactForClearStep(events, 2)).toMatchObject({
+      level: 1,
+      source: 'match',
+      sound: 'match',
+      haptic: 'short',
+      shake: { amplitude: 0, durationMs: 0 },
     });
   });
 
@@ -119,6 +138,25 @@ describe('impact feedback levels', () => {
       haptic: 'long',
       shake: { amplitude: 6, durationMs: 190 },
     });
+  });
+
+  test('maps lose impact source to lose sound', () => {
+    expect(impactForLevel(3, 'lose')).toMatchObject({
+      level: 3,
+      source: 'lose',
+      sound: 'lose',
+      haptic: 'short',
+      shake: { amplitude: 2, durationMs: 100 },
+    });
+  });
+
+  test('returns independent shake objects for each impact descriptor', () => {
+    const first = impactForLevel(5, 'match');
+    const second = impactForLevel(5, 'match');
+
+    first.shake.amplitude = 99;
+
+    expect(second.shake).toEqual({ amplitude: 4, durationMs: 150 });
   });
 
   test('maps win finale to level nine', () => {
