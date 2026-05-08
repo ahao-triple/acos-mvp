@@ -61,7 +61,7 @@ export class CanvasRenderer {
   private feedbackSinceMs = 0;
   private presentation: BoardPresentation | null = null;
   private handledPresentationKey: string | null = null;
-  private impactCue: ImpactEvent | null = null;
+  private impactCues: ImpactEvent[] = [];
   private impactCueId = 20_000;
   private handledImpactKey: string | null = null;
   private screenShake: ScreenShake | null = null;
@@ -160,9 +160,7 @@ export class CanvasRenderer {
   }
 
   consumeImpactCue(): ImpactEvent | null {
-    const cue = this.impactCue;
-    this.impactCue = null;
-    return cue;
+    return this.impactCues.shift() ?? null;
   }
 
   consumeAudioCue(): { type: ImpactEvent['sound']; id: number } | null {
@@ -379,10 +377,10 @@ export class CanvasRenderer {
     }
 
     this.handledImpactKey = key;
-    this.impactCue = {
+    this.impactCues.push({
       ...descriptor,
       id: ++this.impactCueId,
-    };
+    });
   }
 
   private screenShakeOffset(nowMs: number): { x: number; y: number } {

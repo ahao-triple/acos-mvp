@@ -171,6 +171,32 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
     }
   });
 
+  test('preserves multiple cascaded impacts emitted during one delayed render', async () => {
+    let currentNow = 0;
+    const now = vi.spyOn(performance, 'now').mockImplementation(() => currentNow);
+    const { canvas } = createRecordingCanvas();
+    const controller = new GameController(mockPlatform());
+    const renderer = new CanvasRenderer(canvas, controller);
+    renderer.resize(750, 1334, 1);
+
+    forcePrivateSession(controller, createTripleCascadeAnimatedSession());
+
+    try {
+      renderer.render();
+      expect(consumeRendererImpact(renderer)).toMatchObject({ level: 1, source: 'match' });
+      expect(consumeRendererImpact(renderer)).toBeNull();
+
+      currentNow = 630;
+      renderer.render();
+
+      expect(consumeRendererImpact(renderer)).toMatchObject({ level: 6, source: 'cascade' });
+      expect(consumeRendererImpact(renderer)).toMatchObject({ level: 7, source: 'cascade' });
+      expect(consumeRendererImpact(renderer)).toBeNull();
+    } finally {
+      now.mockRestore();
+    }
+  });
+
   test('applies screen shake without changing board hit testing', () => {
     let currentNow = 100;
     const now = vi.spyOn(performance, 'now').mockImplementation(() => currentNow);
@@ -506,6 +532,34 @@ function createCascadeAnimatedSession(): GameSession {
       { type: 'refill', board: refillOne, phaseDurationMs: 100 },
       { type: 'match', kind: 'ammo', count: 4, cells: clearCells(4, 1) },
       { type: 'clear', cells: clearCells(4, 1), board: clearTwo, phaseDurationMs: 100 },
+      { type: 'fall', board: final, phaseDurationMs: 100 },
+    ],
+  };
+}
+
+function createTripleCascadeAnimatedSession(): GameSession {
+  const clearOne = normalBoard('triple-cascade-clear-1');
+  const fallOne = normalBoard('triple-cascade-fall-1');
+  const refillOne = normalBoard('triple-cascade-refill-1');
+  const clearTwo = normalBoard('triple-cascade-clear-2');
+  const fallTwo = normalBoard('triple-cascade-fall-2');
+  const refillTwo = normalBoard('triple-cascade-refill-2');
+  const clearThree = normalBoard('triple-cascade-clear-3');
+  const final = normalBoard('triple-cascade-final');
+  return {
+    ...createPlayingSession(final),
+    comboCount: 3,
+    lastEvents: [
+      { type: 'match', kind: 'shield', count: 3, cells: clearCells(3, 0) },
+      { type: 'clear', cells: clearCells(3, 0), board: clearOne, phaseDurationMs: 100 },
+      { type: 'fall', board: fallOne, phaseDurationMs: 100 },
+      { type: 'refill', board: refillOne, phaseDurationMs: 100 },
+      { type: 'match', kind: 'ammo', count: 4, cells: clearCells(4, 1) },
+      { type: 'clear', cells: clearCells(4, 1), board: clearTwo, phaseDurationMs: 100 },
+      { type: 'fall', board: fallTwo, phaseDurationMs: 100 },
+      { type: 'refill', board: refillTwo, phaseDurationMs: 100 },
+      { type: 'match', kind: 'radar', count: 4, cells: clearCells(4, 2) },
+      { type: 'clear', cells: clearCells(4, 2), board: clearThree, phaseDurationMs: 100 },
       { type: 'fall', board: final, phaseDurationMs: 100 },
     ],
   };
