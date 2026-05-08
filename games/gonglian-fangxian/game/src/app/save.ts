@@ -5,6 +5,7 @@ export const SAVE_KEY = 'gonglian-fangxian-save';
 export interface SaveData {
   version: 1;
   highestUnlockedLevel: number;
+  completedLevelCount: number;
   coins: number;
   items: {
     extraMoves: number;
@@ -29,6 +30,7 @@ export function createDefaultSave(): SaveData {
   return {
     version: 1,
     highestUnlockedLevel: 1,
+    completedLevelCount: 0,
     coins: 0,
     items: {
       extraMoves: 0,
@@ -68,10 +70,16 @@ export function repairSaveData(input: unknown): SaveData {
   }
 
   const items = isRecord(input.items) ? input.items : {};
+  const highestUnlockedLevel = readNumber(input.highestUnlockedLevel, defaults.highestUnlockedLevel, 1, LEVEL_COUNT);
+  const completedLevelCount =
+    'completedLevelCount' in input
+      ? readNumber(input.completedLevelCount, defaults.completedLevelCount, 0, LEVEL_COUNT)
+      : Math.max(0, highestUnlockedLevel - 1);
 
   return {
     version: 1,
-    highestUnlockedLevel: readNumber(input.highestUnlockedLevel, defaults.highestUnlockedLevel, 1, LEVEL_COUNT),
+    highestUnlockedLevel,
+    completedLevelCount,
     coins: readNumber(input.coins, defaults.coins, 0),
     items: {
       extraMoves: readNumber(items.extraMoves, defaults.items.extraMoves, 0),

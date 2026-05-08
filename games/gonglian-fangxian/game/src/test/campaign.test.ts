@@ -17,6 +17,14 @@ describe('campaign helpers', () => {
     ]);
   });
 
+  test('uses persisted completed level count for final chapter completion', () => {
+    expect(chapterProgressForSave(30, 30)[2]).toMatchObject({
+      id: 3,
+      completedCount: 10,
+      current: true,
+    });
+  });
+
   test('formats node rewards and remaining targets in Chinese', () => {
     expect(describeNodeReward({ bomb: 1 })).toBe('炸开 x1');
     const session: GameSession = {

@@ -31,10 +31,13 @@ export function levelById(levelId: number): LevelConfig {
   return levels.find((level) => level.id === levelId) ?? levels[0];
 }
 
-export function chapterProgressForSave(highestUnlockedLevel: number): ChapterProgress[] {
+export function chapterProgressForSave(
+  highestUnlockedLevel: number,
+  completedLevelCount = Math.max(0, highestUnlockedLevel - 1),
+): ChapterProgress[] {
   return CHAPTERS.map((chapter) => {
     const unlockedCount = Math.max(0, Math.min(highestUnlockedLevel, chapter.endLevel) - chapter.startLevel + 1);
-    const completedCount = Math.max(0, Math.min(highestUnlockedLevel - 1, chapter.endLevel) - chapter.startLevel + 1);
+    const completedCount = Math.max(0, Math.min(completedLevelCount, chapter.endLevel) - chapter.startLevel + 1);
 
     return {
       id: chapter.id,

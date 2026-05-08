@@ -7,6 +7,7 @@ describe('save data', () => {
 
     expect(save.version).toBe(1);
     expect(save.highestUnlockedLevel).toBe(1);
+    expect(save.completedLevelCount).toBe(0);
     expect(save.coins).toBe(0);
     expect(save.items.extraMoves).toBe(0);
     expect(save.items.bomb).toBe(0);
@@ -29,6 +30,7 @@ describe('save data', () => {
     });
 
     expect(save.highestUnlockedLevel).toBe(4);
+    expect(save.completedLevelCount).toBe(3);
     expect(save.coins).toBe(0);
     expect(save.items.extraMoves).toBe(0);
     expect(save.items.bomb).toBe(2);
@@ -44,6 +46,34 @@ describe('save data', () => {
     });
 
     expect(save.highestUnlockedLevel).toBe(30);
+  });
+
+  test('keeps completed level count when final level is completed', () => {
+    const save = repairSaveData({
+      highestUnlockedLevel: 30,
+      completedLevelCount: 30,
+    });
+
+    expect(save.highestUnlockedLevel).toBe(30);
+    expect(save.completedLevelCount).toBe(30);
+  });
+
+  test('infers completed level count for old saves without the field', () => {
+    const save = repairSaveData({
+      highestUnlockedLevel: 12,
+    });
+
+    expect(save.completedLevelCount).toBe(11);
+  });
+
+  test('clamps repaired unlock and completion counts to campaign level count', () => {
+    const save = repairSaveData({
+      highestUnlockedLevel: 99,
+      completedLevelCount: 99,
+    });
+
+    expect(save.highestUnlockedLevel).toBe(30);
+    expect(save.completedLevelCount).toBe(30);
   });
 
   test('loads and writes save data through storage', () => {
