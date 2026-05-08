@@ -1,6 +1,7 @@
 import type { AppAction, AppViewState } from '../app/controller';
 import type { Board, BoardCell, PieceKind, Position } from '../core/types';
 import type { EffectsModel } from './effects';
+import type { SuggestedSwap } from './guidance';
 import { pieceColors, targetProgressText } from './theme';
 import { drawButton, drawPanel, drawText, roundRect, type UiRenderContext } from './uiPrimitives';
 import type { VisualBoardModel, VisualTile } from './visualBoard';
@@ -13,11 +14,19 @@ export const BOARD_START_Y = 300;
 export interface GameScreenRenderContext {
   ui: UiRenderContext;
   nowMs: number;
+  guidance: BoardGuidance | null;
   visualBoard: VisualBoardModel;
   effects: EffectsModel;
   presentedBoard(session: NonNullable<AppViewState['session']>, nowMs: number): Board;
   handleVisualCue(view: AppViewState, nowMs: number): void;
   drawEffects(nowMs: number): void;
+}
+
+export interface BoardGuidance {
+  swap: SuggestedSwap;
+  focusX: number;
+  focusY: number;
+  scale: number;
 }
 
 export function drawGameScreen(context: GameScreenRenderContext, view: AppViewState): void {
@@ -75,6 +84,14 @@ function drawPowerUpButton(ui: UiRenderContext, x: number, y: number, width: num
 function drawBoard(context: GameScreenRenderContext, session: NonNullable<AppViewState['session']>): void {
   const board = context.presentedBoard(session, context.nowMs);
   const ctx = context.ui.ctx;
+
+  if (context.guidance) {
+    ctx.save();
+    ctx.translate(context.guidance.focusX, context.guidance.focusY);
+    ctx.scale(context.guidance.scale, context.guidance.scale);
+    ctx.translate(-context.guidance.focusX, -context.guidance.focusY);
+  }
+
   drawPanel(ctx, 34, 276, 682, 682);
 
   for (let row = 0; row < board.length; row += 1) {
@@ -95,8 +112,16 @@ function drawBoard(context: GameScreenRenderContext, session: NonNullable<AppVie
     context.effects.floatText(`${changes.removed.length} 连消`, center.x, center.y, '#ffd166', context.nowMs);
   }
 
+  if (context.guidance) {
+    drawGuidanceHighlight(ctx, context.guidance, context.nowMs);
+  }
+
   for (const tile of context.visualBoard.tilesAt(context.nowMs)) {
     drawVisualTile(ctx, tile, BOARD_CELL_SIZE, session.selectedCell);
+  }
+
+  if (context.guidance) {
+    ctx.restore();
   }
 }
 
@@ -189,6 +214,20 @@ function drawSpecialSymbol(ctx: CanvasRenderingContext2D, specialKind: 'horizont
     ctx.stroke();
   }
 
+  ctx.restore();
+}
+
+function drawGuidanceHighlight(ctx: CanvasRenderingContext2D, guidance: BoardGuidance, nowMs: number): void {
+  const pulse = 0.55 + Math.sin(nowMs / 220) * 0.18;
+  ctx.save();
+  ctx.strokeStyle = `rgba(254,243,199,${pulse})`;
+  ctx.lineWidth = 5;
+  for (const cell of [guidance.swap.from, guidance.swap.to]) {
+    const x = BOARD_START_X + cell.col * (BOARD_CELL_SIZE + BOARD_GAP) - 5;
+    const y = BOARD_START_Y + cell.row * (BOARD_CELL_SIZE + BOARD_GAP) - 5;
+    roundRect(ctx, x, y, BOARD_CELL_SIZE + 10, BOARD_CELL_SIZE + 10, 12);
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
