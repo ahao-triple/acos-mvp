@@ -42,8 +42,15 @@ export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
     if (!paused) {
       renderer.render();
       const view = controller.getViewState();
+      const impact = renderer.consumeImpactCue();
       void soundEngine.play(view.audioCue, view.save.soundEnabled);
-      void soundEngine.play(renderer.consumeAudioCue(), view.save.soundEnabled);
+      if (impact) {
+        void soundEngine.play({ type: impact.sound, id: impact.id, intensity: impact.level }, view.save.soundEnabled);
+        if (impact.haptic !== 'none') {
+          platform.triggerHaptic(impact.haptic);
+        }
+        renderer.applyImpact(impact);
+      }
       void soundEngine.syncMusic(view.save.musicEnabled);
     }
     frameHandle = requestFrame(frame);
