@@ -215,6 +215,7 @@ export class GameController {
     this.updateSave({
       ...this.save,
       highestUnlockedLevel: nextHighest,
+      completedLevelCount: Math.min(levels.length, Math.max(this.save.completedLevelCount, session.levelId)),
       coins: this.save.coins + (level?.rewards.coins ?? 0),
     });
     this.screen = 'won';

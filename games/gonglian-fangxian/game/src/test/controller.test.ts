@@ -1,5 +1,8 @@
 import { describe, expect, test, vi } from 'vitest';
 import { GameController } from '../app/controller';
+import { createDefaultSave, SAVE_KEY, type SaveData, type StorageLike } from '../app/save';
+import { levels } from '../config/levels';
+import type { GameSession } from '../core/types';
 import type { PlatformAdapter } from '../platform/types';
 
 describe('game controller visual cues', () => {
@@ -83,21 +86,56 @@ describe('game controller visual cues', () => {
   });
 });
 
+describe('game controller campaign progress', () => {
+  test('persists completed level count and unlocks next level when level one is won', () => {
+    const storage = new MemoryStorage();
+    const controller = new GameController(mockPlatform({ storage }));
+
+    completeLevel(controller, 1);
+
+    const save = controller.getViewState().save;
+    const storedSave = readStoredSave(storage);
+    expect(save.completedLevelCount).toBe(1);
+    expect(save.highestUnlockedLevel).toBe(2);
+    expect(save.coins).toBe(levels[0].rewards.coins);
+    expect(storedSave.completedLevelCount).toBe(1);
+    expect(storedSave.highestUnlockedLevel).toBe(2);
+  });
+
+  test('persists completed level thirty from an old repaired save without completed count', () => {
+    const oldSave = createDefaultSave();
+    const { completedLevelCount: _completedLevelCount, ...legacySave } = {
+      ...oldSave,
+      highestUnlockedLevel: 30,
+      coins: 200,
+    };
+    const storage = new MemoryStorage({ [SAVE_KEY]: JSON.stringify(legacySave) });
+    const controller = new GameController(mockPlatform({ storage }));
+
+    expect(controller.getViewState().save.completedLevelCount).toBe(29);
+
+    completeLevel(controller, 30);
+
+    const save = controller.getViewState().save;
+    const storedSave = readStoredSave(storage);
+    expect(save.completedLevelCount).toBe(30);
+    expect(save.highestUnlockedLevel).toBe(30);
+    expect(save.coins).toBe(200 + levels[29].rewards.coins);
+    expect(storedSave.completedLevelCount).toBe(30);
+    expect(storedSave.highestUnlockedLevel).toBe(30);
+  });
+});
+
 function mockPlatform(
   options: {
     ad?: { status: 'success' | 'failed' | 'cancelled' | 'unsupported' };
     desktop?: { status: 'success' | 'failed' | 'cancelled' | 'unsupported' };
+    storage?: StorageLike;
   } = {},
 ): PlatformAdapter {
   return {
     name: 'test',
-    storage: {
-      getItem() {
-        return null;
-      },
-      setItem() {},
-      removeItem() {},
-    },
+    storage: options.storage ?? new MemoryStorage(),
     async showRewardedAd() {
       return options.ad ?? { status: 'unsupported' };
     },
@@ -117,4 +155,52 @@ function mockPlatform(
       return { isSidebarEntry: false };
     },
   };
+}
+
+function completeLevel(controller: GameController, levelId: number): void {
+  (controller as unknown as { handleWin(session: GameSession): void }).handleWin(createWonSession(levelId));
+}
+
+function createWonSession(levelId: number): GameSession {
+  const level = levels.find((candidate) => candidate.id === levelId) ?? levels[0];
+  return {
+    levelId,
+    board: [],
+    movesLeft: 0,
+    targetProgress: {},
+    targets: level.targets,
+    selectedCell: null,
+    comboCount: 0,
+    status: 'won',
+    lastEvents: [{ type: 'win' }],
+    piecePool: level.piecePool,
+  };
+}
+
+function readStoredSave(storage: MemoryStorage): SaveData {
+  const raw = storage.getItem(SAVE_KEY);
+  expect(raw).not.toBeNull();
+  return JSON.parse(raw ?? '') as SaveData;
+}
+
+class MemoryStorage implements StorageLike {
+  private readonly data = new Map<string, string>();
+
+  constructor(initialData: Record<string, string> = {}) {
+    for (const [key, value] of Object.entries(initialData)) {
+      this.data.set(key, value);
+    }
+  }
+
+  getItem(key: string): string | null {
+    return this.data.get(key) ?? null;
+  }
+
+  setItem(key: string, value: string): void {
+    this.data.set(key, value);
+  }
+
+  removeItem(key: string): void {
+    this.data.delete(key);
+  }
 }
