@@ -6,6 +6,8 @@ export type BlockerKind = 'sandbag' | 'brokenDefense';
 
 export type PowerUpType = 'bomb' | 'suck' | 'shuffle';
 
+export type NodeReward = Partial<Record<PowerUpType, number>>;
+
 export interface Position {
   row: number;
   col: number;
@@ -64,6 +66,9 @@ export interface TargetConfig {
 
 export interface LevelConfig {
   id: number;
+  chapterId: number;
+  chapterTitle: string;
+  briefing: string;
   moves: number;
   width: number;
   height: number;
@@ -73,6 +78,7 @@ export interface LevelConfig {
   rewards: {
     coins: number;
   };
+  nodeReward?: NodeReward;
 }
 
 export type SessionStatus = 'playing' | 'paused' | 'won' | 'lost' | 'settling';
