@@ -2,7 +2,7 @@ import { describe, expect, test, vi } from 'vitest';
 import { GameController } from '../app/controller';
 import { createDefaultSave, SAVE_KEY, type SaveData, type StorageLike } from '../app/save';
 import { levels } from '../config/levels';
-import type { GameSession } from '../core/types';
+import type { Board, GameSession } from '../core/types';
 import type { PlatformAdapter } from '../platform/types';
 
 describe('game controller visual cues', () => {
@@ -48,6 +48,23 @@ describe('game controller visual cues', () => {
     await controller.dispatch({ type: 'desktopReward' });
 
     expect(controller.getViewState().audioCue).toMatchObject({ type: 'reward' });
+  });
+
+  test('defers settled clear audio to board presentation timing', async () => {
+    const controller = new GameController(mockPlatform());
+    forcePrivatePlayingSession(controller, {
+      ...sessionWithBoard([
+        row(['shield', 'ammo', 'shield']),
+        row(['shield', 'ammo', 'radar']),
+        row(['ammo', 'shield', 'wrench']),
+      ]),
+      selectedCell: { row: 2, col: 0 },
+    });
+
+    await controller.dispatch({ type: 'tapCell', position: { row: 2, col: 1 } });
+
+    expect(controller.getViewState().session?.lastEvents.some((event) => event.type === 'clear')).toBe(true);
+    expect(controller.getViewState().audioCue).toBeNull();
   });
 
   test('in-game ad power-up asks for confirmation before showing rewarded video', async () => {
@@ -489,6 +506,11 @@ function forcePrivateWinSummary(controller: GameController, summary: unknown): v
   (controller as unknown as { screen: string }).screen = 'won';
 }
 
+function forcePrivatePlayingSession(controller: GameController, session: GameSession): void {
+  (controller as unknown as { session: GameSession; screen: string }).session = session;
+  (controller as unknown as { screen: string }).screen = 'playing';
+}
+
 function createWonSession(levelId: number): GameSession {
   const level = levels.find((candidate) => candidate.id === levelId) ?? levels[0];
   return {
@@ -503,6 +525,25 @@ function createWonSession(levelId: number): GameSession {
     lastEvents: [{ type: 'win' }],
     piecePool: level.piecePool,
   };
+}
+
+function sessionWithBoard(board: Board): GameSession {
+  return {
+    levelId: 99,
+    board,
+    movesLeft: 3,
+    targetProgress: {},
+    targets: [{ type: 'collect', kind: 'shield', count: 50 }],
+    selectedCell: null,
+    comboCount: 0,
+    status: 'playing',
+    lastEvents: [],
+    piecePool: ['shield', 'ammo', 'radar', 'medal', 'wrench'],
+  };
+}
+
+function row(kinds: Array<'shield' | 'ammo' | 'radar' | 'medal' | 'wrench'>): Board[number] {
+  return kinds.map((pieceKind, col) => ({ kind: 'normal' as const, pieceKind, id: `${pieceKind}-${col}` }));
 }
 
 function readStoredSave(storage: MemoryStorage): SaveData {

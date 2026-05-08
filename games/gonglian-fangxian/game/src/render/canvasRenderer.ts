@@ -1,4 +1,5 @@
 import type { GameController, AppViewState } from '../app/controller';
+import type { AudioCue } from '../audio/soundEngine';
 import type { Board, BoardCell, SessionEvent } from '../core/types';
 import { drawBriefingScreen } from './briefingScreen';
 import { EffectsModel, type FloatingText, type Particle } from './effects';
@@ -13,9 +14,15 @@ import { VisualBoardModel } from './visualBoard';
 
 interface BoardPresentation {
   key: string;
-  steps: Array<{ board: Board; durationMs: number }>;
+  steps: PresentationStep[];
   index: number;
   stepStartedMs: number;
+}
+
+interface PresentationStep {
+  type: SessionEvent['type'];
+  board: Board;
+  durationMs: number;
 }
 
 type ResultRevealPhase = 'waiting' | 'finale';
@@ -45,6 +52,9 @@ export class CanvasRenderer {
   private feedbackSinceMs = 0;
   private presentation: BoardPresentation | null = null;
   private handledPresentationKey: string | null = null;
+  private presentationAudioCue: AudioCue | null = null;
+  private presentationAudioCueId = 10_000;
+  private handledPresentationAudioKey: string | null = null;
   private resultReveal: ResultReveal | null = null;
 
   constructor(
@@ -134,6 +144,12 @@ export class CanvasRenderer {
     }
 
     this.ctx.restore();
+  }
+
+  consumeAudioCue(): AudioCue | null {
+    const cue = this.presentationAudioCue;
+    this.presentationAudioCue = null;
+    return cue;
   }
 
   private trackViewTiming(view: AppViewState, nowMs: number): void {
@@ -280,6 +296,7 @@ export class CanvasRenderer {
         index: 0,
         stepStartedMs: nowMs,
       };
+      this.emitPresentationStepAudio(key, 0, steps);
     }
 
     const presentation = this.presentation;
@@ -293,6 +310,7 @@ export class CanvasRenderer {
     ) {
       presentation.stepStartedMs += presentation.steps[presentation.index].durationMs;
       presentation.index += 1;
+      this.emitPresentationStepAudio(presentation.key, presentation.index, presentation.steps);
     }
 
     const currentStep = presentation.steps[presentation.index];
@@ -303,6 +321,24 @@ export class CanvasRenderer {
     }
 
     return currentStep.board;
+  }
+
+  private emitPresentationStepAudio(key: string, index: number, steps: PresentationStep[]): void {
+    const step = steps[index];
+    if (!step || step.type !== 'clear') {
+      return;
+    }
+
+    const audioKey = `${key}:${index}`;
+    if (this.handledPresentationAudioKey === audioKey) {
+      return;
+    }
+
+    this.handledPresentationAudioKey = audioKey;
+    const clearCount = steps.slice(0, index + 1).filter((candidate) => candidate.type === 'clear').length;
+    this.presentationAudioCue = clearCount >= 2
+      ? { type: 'combo', intensity: clearCount, id: ++this.presentationAudioCueId }
+      : { type: 'match', id: ++this.presentationAudioCueId };
   }
 
   private drawTitle(title: string, subtitle: string): void {
@@ -423,16 +459,17 @@ function readClientPoint(event: PointerEvent | MiniGamePointerEvent): { clientX:
   return null;
 }
 
-function presentationSteps(events: SessionEvent[], finalBoard: Board): Array<{ board: Board; durationMs: number }> {
+function presentationSteps(events: SessionEvent[], finalBoard: Board): PresentationStep[] {
   const steps = events
     .filter((event): event is SessionEvent & { board: Board } => Boolean(event.board))
     .map((event) => ({
+      type: event.type,
       board: event.board,
       durationMs: event.phaseDurationMs ?? defaultPhaseDuration(event.type),
     }));
 
   if (steps.length > 0 && boardSignature(steps[steps.length - 1].board) !== boardSignature(finalBoard)) {
-    steps.push({ board: finalBoard, durationMs: 420 });
+    steps.push({ type: 'refill', board: finalBoard, durationMs: 420 });
   }
 
   return steps;

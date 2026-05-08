@@ -304,10 +304,6 @@ export class GameController {
       } else if (next.status === 'lost') {
         this.screen = 'lost';
         this.emitAudio('lose');
-      } else if (next.comboCount >= 2) {
-        this.emitAudio('combo', next.comboCount);
-      } else if (next.lastEvents.length > 0) {
-        this.emitAudio('match');
       }
       if (next.comboCount >= 2) {
         this.visualCue = { type: 'combo', combo: next.comboCount, id: ++this.cueId };

@@ -138,6 +138,29 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
     }
   });
 
+  test('emits presentation audio for cascaded clears after falling pieces settle', async () => {
+    let currentNow = 0;
+    const now = vi.spyOn(performance, 'now').mockImplementation(() => currentNow);
+    const { canvas } = createRecordingCanvas();
+    const controller = new GameController(mockPlatform());
+    const renderer = new CanvasRenderer(canvas, controller);
+    renderer.resize(750, 1334, 1);
+
+    forcePrivateSession(controller, createCascadeAnimatedSession());
+
+    try {
+      renderer.render();
+      expect(consumeRendererAudio(renderer)).toMatchObject({ type: 'match' });
+      expect(consumeRendererAudio(renderer)).toBeNull();
+
+      currentNow = 330;
+      renderer.render();
+      expect(consumeRendererAudio(renderer)).toMatchObject({ type: 'combo', intensity: 2 });
+    } finally {
+      now.mockRestore();
+    }
+  });
+
   test('win result blocks hidden gameplay hit areas', async () => {
     const { canvas } = createRecordingCanvas();
     const controller = new GameController(mockPlatform());
@@ -355,6 +378,10 @@ function handlePointer(renderer: CanvasRenderer, event: unknown): Promise<void> 
   return (renderer as unknown as { handlePointer(event: unknown): Promise<void> }).handlePointer(event);
 }
 
+function consumeRendererAudio(renderer: CanvasRenderer): unknown {
+  return (renderer as unknown as { consumeAudioCue(): unknown }).consumeAudioCue();
+}
+
 function wait(ms: number): Promise<void> {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -422,6 +449,25 @@ function createWonAnimatedSession(): GameSession {
       { type: 'clear', board: before, phaseDurationMs: 680 },
       { type: 'refill', board: after, phaseDurationMs: 720 },
       { type: 'win' },
+    ],
+  };
+}
+
+function createCascadeAnimatedSession(): GameSession {
+  const clearOne = normalBoard('cascade-clear-1');
+  const fallOne = normalBoard('cascade-fall-1');
+  const refillOne = normalBoard('cascade-refill-1');
+  const clearTwo = normalBoard('cascade-clear-2');
+  const final = normalBoard('cascade-final');
+  return {
+    ...createPlayingSession(final),
+    comboCount: 2,
+    lastEvents: [
+      { type: 'clear', board: clearOne, phaseDurationMs: 100 },
+      { type: 'fall', board: fallOne, phaseDurationMs: 100 },
+      { type: 'refill', board: refillOne, phaseDurationMs: 100 },
+      { type: 'clear', board: clearTwo, phaseDurationMs: 100 },
+      { type: 'fall', board: final, phaseDurationMs: 100 },
     ],
   };
 }

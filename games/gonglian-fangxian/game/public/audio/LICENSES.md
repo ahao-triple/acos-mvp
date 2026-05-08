@@ -4,10 +4,10 @@ All bundled audio files are distributed as `.wav` or `.mp3` assets.
 
 ## Sound Effects
 
-- Source: "UI Sound Effects (Button Clicks, User Feedback, Notifications)" by Robin Lamb
-- URL: https://opengameart.org/content/ui-sound-effects-button-clicks-user-feedback-notifications
+- Source: "Various Sound Effects" by Spring Spring
+- URL: https://opengameart.org/content/various-sound-effects-0
 - License: CC0
-- Used files: `click_2.wav`, `click_3.wav`, `negative_sound.wav`, `negative_sound2.wav`, `Ding.wav`, `ding_deep.wav`, `chimes.wav`
+- Used files: `snd_menu_move.wav`, `snd_menu_select.wav`, `beep1.wav`, `small_amber.wav`, `big_amber.wav`, `snd_treasure.wav`, `snd_getpowerup.wav`, `death_2.wav`
 - Project outputs: `button.wav`, `select.wav`, `invalid.wav`, `match.wav`, `combo.wav`, `reward.wav`, `win.wav`, `lose.wav`
 
 ## Background Music

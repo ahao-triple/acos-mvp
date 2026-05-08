@@ -43,6 +43,7 @@ export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
       renderer.render();
       const view = controller.getViewState();
       void soundEngine.play(view.audioCue, view.save.soundEnabled);
+      void soundEngine.play(renderer.consumeAudioCue(), view.save.soundEnabled);
       void soundEngine.syncMusic(view.save.musicEnabled);
     }
     frameHandle = requestFrame(frame);
