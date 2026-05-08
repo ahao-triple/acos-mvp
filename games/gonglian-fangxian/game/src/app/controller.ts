@@ -71,6 +71,7 @@ export class GameController {
   private audioCue: AudioCue | null = null;
   private pendingLevelId: number | null = null;
   private winSummary: WinSummary | null = null;
+  private doubleRewardPending = false;
   private activePowerUp: PowerUpType | null = null;
   private cueId = 0;
   private audioCueId = 0;
@@ -457,18 +458,23 @@ export class GameController {
       return;
     }
 
-    if (this.winSummary.doubled) {
-      this.feedback = '翻倍奖励已领取。';
+    if (this.winSummary.doubled || this.doubleRewardPending) {
+      this.feedback = this.doubleRewardPending ? '翻倍奖励领取中。' : '翻倍奖励已领取。';
       this.emitAudio('invalid');
       return;
     }
 
-    const outcome = await claimDoubleCoinsReward(this.save, this.winSummary.baseCoins, this.platform);
-    this.feedback = outcome.feedback;
-    this.emitAudio(outcome.granted ? 'reward' : 'invalid');
-    if (outcome.granted) {
-      this.updateSave(outcome.save);
-      this.winSummary = { ...this.winSummary, doubled: true };
+    this.doubleRewardPending = true;
+    try {
+      const outcome = await claimDoubleCoinsReward(this.save, this.winSummary.baseCoins, this.platform);
+      this.feedback = outcome.feedback;
+      this.emitAudio(outcome.granted ? 'reward' : 'invalid');
+      if (outcome.granted) {
+        this.updateSave(outcome.save);
+        this.winSummary = { ...this.winSummary, doubled: true };
+      }
+    } finally {
+      this.doubleRewardPending = false;
     }
   }
 

@@ -275,6 +275,38 @@ describe('game controller campaign progress', () => {
     expect(controller.getViewState().winSummary?.doubled).toBe(true);
   });
 
+  test('concurrent double win reward dispatches only grant once', async () => {
+    let resolveAd: (value: { status: 'success' }) => void = () => undefined;
+    let adCalls = 0;
+    const adResult = new Promise<{ status: 'success' }>((resolve) => {
+      resolveAd = resolve;
+    });
+    const platform = mockPlatform();
+    platform.showRewardedAd = async () => {
+      adCalls += 1;
+      return adResult;
+    };
+    const controller = new GameController(platform);
+
+    forcePrivateWinSummary(controller, {
+      levelId: 1,
+      chapterTitle: '前线集结',
+      baseCoins: 70,
+      nodeReward: null,
+      nextLevelId: 2,
+      doubled: false,
+    });
+    const first = controller.dispatch({ type: 'doubleWinReward' });
+    const second = controller.dispatch({ type: 'doubleWinReward' });
+
+    resolveAd({ status: 'success' });
+    await Promise.all([first, second]);
+
+    expect(adCalls).toBe(1);
+    expect(controller.getViewState().save.coins).toBe(70);
+    expect(controller.getViewState().winSummary?.doubled).toBe(true);
+  });
+
   test('cancelled double win reward does not mark reward doubled', async () => {
     const controller = new GameController(mockPlatform({ ad: { status: 'cancelled' } }));
 
