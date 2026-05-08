@@ -138,6 +138,10 @@ export class CanvasRenderer {
       return;
     }
 
+    if (this.controller.getViewState().screen !== 'playing') {
+      return;
+    }
+
     const cell = cellAt(point.x, point.y);
     if (cell) {
       const nowMs = performance.now();

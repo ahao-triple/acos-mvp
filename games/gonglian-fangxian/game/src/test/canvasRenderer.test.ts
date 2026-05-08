@@ -103,6 +103,32 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
     expect(controller.getViewState().winSummary?.doubled).toBe(true);
   });
 
+  test('win result blocks hidden board cell taps', async () => {
+    const { canvas } = createRecordingCanvas();
+    const controller = new GameController(mockPlatform());
+    const renderer = new CanvasRenderer(canvas, controller);
+    renderer.resize(750, 1334, 1);
+
+    await controller.dispatch({ type: 'start' });
+    await controller.dispatch({ type: 'beginLevel' });
+    forcePrivateWinSummary(controller, {
+      levelId: 1,
+      chapterTitle: '前线集结',
+      baseCoins: 70,
+      nodeReward: null,
+      nextLevelId: 2,
+      doubled: false,
+    });
+    forcePrivateFeedback(controller, '奖励待领取');
+
+    renderer.render();
+    await wait(700);
+    await handlePointer(renderer, { clientX: 100, clientY: 340 });
+
+    expect(controller.getViewState().screen).toBe('won');
+    expect(controller.getViewState().feedback).toBe('奖励待领取');
+  });
+
   test('renders the campaign briefing after start', async () => {
     const { canvas, ctx } = createRecordingCanvas();
     const controller = new GameController(mockPlatform());
@@ -233,10 +259,21 @@ function handlePointer(renderer: CanvasRenderer, event: unknown): Promise<void> 
   return (renderer as unknown as { handlePointer(event: unknown): Promise<void> }).handlePointer(event);
 }
 
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 function forcePrivateWinSummary(controller: GameController, summary: WinSummary): void {
   const writableController = controller as unknown as { screen: 'won'; winSummary: WinSummary };
   writableController.screen = 'won';
   writableController.winSummary = summary;
+}
+
+function forcePrivateFeedback(controller: GameController, feedback: string): void {
+  const writableController = controller as unknown as { feedback: string };
+  writableController.feedback = feedback;
 }
 
 function renderedText(ctx: RecordingContext): string {
