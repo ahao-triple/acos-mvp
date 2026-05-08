@@ -1,6 +1,7 @@
 import type { StorageLike } from '../app/save';
 
 export type PlatformResultStatus = 'success' | 'failed' | 'cancelled' | 'unsupported';
+export type HapticKind = 'short' | 'long';
 
 export interface PlatformResult {
   status: PlatformResultStatus;
@@ -20,4 +21,5 @@ export interface PlatformAdapter {
   didEnterFromSidebar(): Promise<boolean>;
   requestSidebarEntry(): Promise<PlatformResult>;
   getLaunchContext(): LaunchContext;
+  triggerHaptic(kind: HapticKind): void;
 }

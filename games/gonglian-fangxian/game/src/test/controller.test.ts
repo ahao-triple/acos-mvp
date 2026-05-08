@@ -494,6 +494,7 @@ function mockPlatform(
     getLaunchContext() {
       return { isSidebarEntry: false };
     },
+    triggerHaptic() {},
   };
 }
 

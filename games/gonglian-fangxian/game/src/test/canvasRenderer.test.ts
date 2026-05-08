@@ -622,5 +622,6 @@ function mockPlatform(): PlatformAdapter {
     getLaunchContext() {
       return { isSidebarEntry: false };
     },
+    triggerHaptic() {},
   };
 }

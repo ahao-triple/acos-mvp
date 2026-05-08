@@ -1,5 +1,5 @@
 import type { SoundEngineOptions } from '../audio/soundEngine';
-import type { PlatformAdapter, PlatformResult } from './types';
+import type { HapticKind, PlatformAdapter, PlatformResult } from './types';
 
 export type MiniPackRewardedVideoSlot = 'add-steps' | 'claim-reward';
 
@@ -26,6 +26,9 @@ export interface MiniPackGameRuntime {
   ads: {
     isRewardedVideoReady(slot: MiniPackRewardedVideoSlot): boolean;
     showRewardedVideo(slot: MiniPackRewardedVideoSlot): Promise<{ completed: boolean }>;
+  };
+  haptics?: {
+    trigger(kind: HapticKind): void;
   };
   rewards: {
     canAddDesktop(): Promise<boolean>;
@@ -115,6 +118,9 @@ export function createMiniPackPlatformAdapter(runtime: MiniPackGameRuntime): Pla
     },
     getLaunchContext() {
       return { isSidebarEntry: false };
+    },
+    triggerHaptic(kind) {
+      runtime.haptics?.trigger(kind);
     },
   };
 }

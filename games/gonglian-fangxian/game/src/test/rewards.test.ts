@@ -222,6 +222,7 @@ function platform(options: {
     getLaunchContext() {
       return { isSidebarEntry: options.sidebarEntry ?? false };
     },
+    triggerHaptic() {},
     storage: {
       getItem() {
         return null;
