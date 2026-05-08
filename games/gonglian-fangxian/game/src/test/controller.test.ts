@@ -92,6 +92,14 @@ describe('game controller visual cues', () => {
 });
 
 describe('game controller briefing flow', () => {
+  test('openSupplies opens the supplies screen', async () => {
+    const controller = new GameController(mockPlatform());
+
+    await controller.dispatch({ type: 'openSupplies' });
+
+    expect(controller.getViewState().screen).toBe('supplies');
+  });
+
   test('start opens a briefing for the highest unlocked level before play', async () => {
     const controller = new GameController(mockPlatform({
       storedSave: {
@@ -119,6 +127,22 @@ describe('game controller briefing flow', () => {
     expect(controller.getViewState().session?.levelId).toBe(12);
   });
 
+  test('unlocked level selection opens briefing for the selected level', async () => {
+    const controller = new GameController(mockPlatform({
+      storedSave: {
+        ...createDefaultSave(),
+        highestUnlockedLevel: 4,
+        completedLevelCount: 3,
+      },
+    }));
+
+    await controller.dispatch({ type: 'openLevels' });
+    await controller.dispatch({ type: 'selectLevel', levelId: 3 });
+
+    expect(controller.getViewState().screen).toBe('briefing');
+    expect(controller.getViewState().pendingLevel?.id).toBe(3);
+  });
+
   test('locked level selection stays on levels screen with feedback', async () => {
     const controller = new GameController(mockPlatform());
 
@@ -128,6 +152,37 @@ describe('game controller briefing flow', () => {
     expect(controller.getViewState().screen).toBe('levels');
     expect(controller.getViewState().feedback).toContain('尚未解锁');
     expect(controller.getViewState().pendingLevel).toBeNull();
+  });
+
+  test('retry from a played level returns to briefing for the same level', async () => {
+    const controller = new GameController(mockPlatform());
+
+    await controller.dispatch({ type: 'start' });
+    await controller.dispatch({ type: 'beginLevel' });
+    await controller.dispatch({ type: 'retry' });
+
+    expect(controller.getViewState().screen).toBe('briefing');
+    expect(controller.getViewState().pendingLevel?.id).toBe(1);
+    expect(controller.getViewState().session).toBeNull();
+  });
+
+  test('nextLevel from a won current session opens briefing for the next level', async () => {
+    const controller = new GameController(mockPlatform({
+      storedSave: {
+        ...createDefaultSave(),
+        highestUnlockedLevel: 2,
+        completedLevelCount: 1,
+      },
+    }));
+
+    await controller.dispatch({ type: 'selectLevel', levelId: 2 });
+    await controller.dispatch({ type: 'beginLevel' });
+    completeLevel(controller, 2);
+    await controller.dispatch({ type: 'nextLevel' });
+
+    expect(controller.getViewState().screen).toBe('briefing');
+    expect(controller.getViewState().pendingLevel?.id).toBe(3);
+    expect(controller.getViewState().session).toBeNull();
   });
 
   test('view state exposes chapter progress for rendering', () => {
