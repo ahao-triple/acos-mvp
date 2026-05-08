@@ -29,6 +29,8 @@ describe('game controller visual cues', () => {
       from: { row: 0, col: 0 },
       to: { row: 1, col: 1 },
     });
+    expect(controller.getViewState().feedback).toBe('只能交换相邻格子。');
+    expect(controller.getViewState().feedback).not.toContain('Cells');
     expect(controller.getViewState().audioCue).toMatchObject({ type: 'invalid' });
   });
 

@@ -313,7 +313,7 @@ export class GameController {
       }
     } catch (error) {
       this.session = { ...this.session, selectedCell: position };
-      this.feedback = error instanceof Error ? error.message : '该位置无法交换。';
+      this.feedback = swapErrorFeedback(error);
       this.visualCue = { type: 'swapRejected', from: previous, to: position, id: ++this.cueId };
       this.emitAudio('invalid');
     }
@@ -582,4 +582,12 @@ function rewardedAdPromptTitle(request: RewardedAdRequest): string {
     shuffle: '重排',
   };
   return `观看视频领取${labels[request.item]}道具`;
+}
+
+function swapErrorFeedback(error: unknown): string {
+  if (error instanceof Error && error.message === 'Cells must be adjacent') {
+    return '只能交换相邻格子。';
+  }
+
+  return '该位置无法交换。';
 }
