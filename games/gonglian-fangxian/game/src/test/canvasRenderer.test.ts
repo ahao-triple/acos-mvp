@@ -84,7 +84,7 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
     expect(text).toContain('取消');
   });
 
-  test('renders special pieces with visual symbols instead of internal labels', async () => {
+  test('renders legacy special pieces as ordinary pieces without special symbols', async () => {
     const { canvas, ctx } = createRecordingCanvas();
     const controller = new GameController(mockPlatform());
     const renderer = new CanvasRenderer(canvas, controller);
@@ -98,6 +98,7 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
     expect(text).not.toContain('爆');
     expect(text).not.toContain('横');
     expect(text).not.toContain('竖');
+    expect(ctx.rotations).not.toContain(Math.PI / 2);
   });
 
   test('delays win result while board presentation is still playing', async () => {
@@ -465,12 +466,14 @@ interface RecordingGradient {
 interface RecordingContext extends Partial<CanvasRenderingContext2D> {
   fillTexts: Array<{ text: string; x: number; y: number; align: CanvasTextAlign; baseline: CanvasTextBaseline }>;
   translates: Array<{ x: number; y: number }>;
+  rotations: number[];
 }
 
 function createRecordingContext(): RecordingContext {
   return {
     fillTexts: [],
     translates: [],
+    rotations: [],
     fillStyle: '',
     strokeStyle: '',
     lineWidth: 0,
@@ -490,7 +493,9 @@ function createRecordingContext(): RecordingContext {
       this.translates.push({ x, y });
     },
     scale() {},
-    rotate() {},
+    rotate(angle: number) {
+      this.rotations.push(angle);
+    },
     clearRect() {},
     fillRect() {},
     beginPath() {},

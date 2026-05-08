@@ -239,19 +239,7 @@ export function damageAdjacentBlockers(board: Board, clearedCells: Position[]): 
   return { board: next, clearedBlockers };
 }
 
-export function createSpecialForMatch(match: Match): SpecialPieceCell | null {
-  if (match.direction === 'both' && match.cells.length >= 4) {
-    return createSpecial(match, 'areaBomb');
-  }
-
-  if (match.length >= 5) {
-    return createSpecial(match, 'areaBomb');
-  }
-
-  if (match.length >= 4) {
-    return createSpecial(match, match.direction === 'h' ? 'horizontalRocket' : 'verticalFlare');
-  }
-
+export function createSpecialForMatch(_match: Match): SpecialPieceCell | null {
   return null;
 }
 
@@ -414,16 +402,6 @@ function isInsideOrCurrent(board: Board, position: Position, current: Position):
 
 function cloneBoard(board: Board): Board {
   return board.map((row) => row.map((cell) => ({ ...cell })));
-}
-
-function createSpecial(match: Match, specialKind: SpecialPieceCell['specialKind']): SpecialPieceCell {
-  const origin = match.cells[0];
-  return {
-    kind: 'special',
-    pieceKind: match.kind,
-    specialKind,
-    id: `special-${origin.row}-${origin.col}-${specialKind}`,
-  };
 }
 
 function shuffle<T>(items: T[], random: () => number): T[] {

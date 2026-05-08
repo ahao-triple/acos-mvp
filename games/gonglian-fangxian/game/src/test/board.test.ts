@@ -101,7 +101,7 @@ describe('board rules', () => {
     expect(result.board[2][2].kind).toBe('empty');
   });
 
-  test('creates directional and bomb special pieces from long matches', () => {
+  test('does not create unfinished special pieces from long matches', () => {
     const horizontal = createSpecialForMatch({
       kind: 'shield',
       direction: 'h',
@@ -136,10 +136,22 @@ describe('board rules', () => {
         { row: 0, col: 4 },
       ],
     });
+    const shaped = createSpecialForMatch({
+      kind: 'medal',
+      direction: 'both',
+      length: 3,
+      cells: [
+        { row: 0, col: 0 },
+        { row: 0, col: 1 },
+        { row: 0, col: 2 },
+        { row: 1, col: 1 },
+      ],
+    });
 
-    expect(horizontal?.specialKind).toBe('horizontalRocket');
-    expect(vertical?.specialKind).toBe('verticalFlare');
-    expect(bomb?.specialKind).toBe('areaBomb');
+    expect(horizontal).toBeNull();
+    expect(vertical).toBeNull();
+    expect(bomb).toBeNull();
+    expect(shaped).toBeNull();
   });
 });
 

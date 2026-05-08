@@ -146,47 +146,6 @@ function drawVisualTile(ctx: CanvasRenderingContext2D, tile: VisualTile, size: n
     ctx.ellipse(size / 2 - 8, size / 2 - 10, 15, 8, -0.4, 0, Math.PI * 2);
     ctx.fill();
     drawPieceIcon(ctx, tile.cell.pieceKind, size / 2, size / 2, color);
-    if (tile.cell.kind === 'special') {
-      drawSpecialSymbol(ctx, tile.cell.specialKind, size);
-    }
-  }
-
-  ctx.restore();
-}
-
-function drawSpecialSymbol(ctx: CanvasRenderingContext2D, specialKind: 'horizontalRocket' | 'verticalFlare' | 'areaBomb', size: number): void {
-  ctx.save();
-  ctx.strokeStyle = '#ffffff';
-  ctx.fillStyle = 'rgba(255,255,255,0.92)';
-  ctx.lineWidth = 4;
-  ctx.translate(size / 2, size / 2);
-
-  if (specialKind === 'areaBomb') {
-    ctx.beginPath();
-    ctx.arc(0, 0, 22, 0, Math.PI * 2);
-    ctx.stroke();
-    for (let index = 0; index < 8; index += 1) {
-      const angle = (Math.PI * 2 * index) / 8;
-      ctx.beginPath();
-      ctx.moveTo(Math.cos(angle) * 28, Math.sin(angle) * 28);
-      ctx.lineTo(Math.cos(angle) * 36, Math.sin(angle) * 36);
-      ctx.stroke();
-    }
-  } else {
-    const horizontal = specialKind === 'horizontalRocket';
-    ctx.rotate(horizontal ? 0 : Math.PI / 2);
-    roundRect(ctx, -32, -6, 64, 12, 6);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(20, -18);
-    ctx.lineTo(36, 0);
-    ctx.lineTo(20, 18);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(-20, -18);
-    ctx.lineTo(-36, 0);
-    ctx.lineTo(-20, 18);
-    ctx.stroke();
   }
 
   ctx.restore();
