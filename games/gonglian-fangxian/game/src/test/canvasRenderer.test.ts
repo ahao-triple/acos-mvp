@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 
 import { GameController } from '../app/controller';
+import type { GameSession } from '../core/types';
 import type { PlatformAdapter } from '../platform/types';
 import { CanvasRenderer } from '../render/canvasRenderer';
 
@@ -54,6 +55,33 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
     expect(icon).toBeDefined();
     expect(label?.x).toBeGreaterThan((icon?.x ?? 0) + 38);
   });
+
+  test('renders level targets with player-facing Chinese labels', () => {
+    const { canvas, ctx } = createRecordingCanvas();
+    const renderer = new CanvasRenderer(canvas, new GameController(mockPlatform()));
+
+    drawPrivateTargets(renderer, {
+      levelId: 1,
+      board: [],
+      movesLeft: 18,
+      targetProgress: { shield: 3, sandbag: 1 },
+      targets: [
+        { type: 'collect', kind: 'shield', count: 8 },
+        { type: 'clearBlocker', kind: 'sandbag', count: 4 },
+      ],
+      selectedCell: null,
+      comboCount: 0,
+      status: 'playing',
+      lastEvents: [],
+      piecePool: ['shield', 'ammo', 'radar', 'medal', 'wrench'],
+    });
+
+    const targetText = ctx.fillTexts.map((entry) => entry.text).join('\n');
+    expect(targetText).toContain('护盾 3/8');
+    expect(targetText).toContain('沙袋 1/4');
+    expect(targetText).not.toContain('shield');
+    expect(targetText).not.toContain('sandbag');
+  });
 });
 
 function createMiniGameCanvas(): HTMLCanvasElement & { width: number; height: number } {
@@ -78,6 +106,14 @@ function drawPrivateButton(renderer: CanvasRenderer, x: number, y: number, width
 
 function drawPrivateAdButton(renderer: CanvasRenderer, x: number, y: number, width: number, height: number, label: string): void {
   (renderer as unknown as { drawAdButton(x: number, y: number, width: number, height: number, label: string, action: { type: 'start' }): void }).drawAdButton(x, y, width, height, label, { type: 'start' });
+}
+
+function drawPrivateTargets(renderer: CanvasRenderer, session: GameSession): void {
+  (renderer as unknown as CanvasRendererPrivateTargets).drawTargets(session);
+}
+
+interface CanvasRendererPrivateTargets {
+  drawTargets(session: GameSession): void;
 }
 
 function createRecordingCanvas(): {

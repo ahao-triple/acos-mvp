@@ -1,5 +1,5 @@
 import type { GameController, AppAction, AppViewState } from '../app/controller';
-import type { Board, BoardCell, PieceKind, Position, SessionEvent } from '../core/types';
+import type { Board, BoardCell, BlockerKind, PieceKind, Position, SessionEvent } from '../core/types';
 import { EffectsModel, type FloatingText, type Particle } from './effects';
 import { coverRect, fitLogicalCanvas, LOGICAL_HEIGHT, LOGICAL_WIDTH, toLogicalPoint, type CanvasFit } from './scaler';
 import { VisualBoardModel, type VisualTile } from './visualBoard';
@@ -30,6 +30,16 @@ const pieceColors: Record<PieceKind, string> = {
   radar: '#9b51e0',
   medal: '#f2c94c',
   wrench: '#eb5757',
+};
+
+const targetLabels: Record<PieceKind | BlockerKind, string> = {
+  shield: '护盾',
+  ammo: '弹药',
+  radar: '雷达',
+  medal: '勋章',
+  wrench: '扳手',
+  sandbag: '沙袋',
+  brokenDefense: '破损防线',
 };
 
 export class CanvasRenderer {
@@ -272,7 +282,7 @@ export class CanvasRenderer {
   private drawTargets(session: AppViewState['session']): void {
     if (!session) return;
     const text = session.targets
-      .map((target) => `${target.kind} ${(session.targetProgress[target.kind] ?? 0)}/${target.count}`)
+      .map((target) => `${targetLabels[target.kind]} ${(session.targetProgress[target.kind] ?? 0)}/${target.count}`)
       .join('  ');
     this.drawText(text, 375, 198, 24, '#d1fae5', 'center');
   }
