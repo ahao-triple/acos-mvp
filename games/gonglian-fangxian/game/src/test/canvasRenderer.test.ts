@@ -47,6 +47,22 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
     expect(text).toContain('返回');
   });
 
+  test('menu supplies button opens the supplies screen', async () => {
+    const { canvas, ctx } = createRecordingCanvas();
+    const controller = new GameController(mockPlatform());
+    const renderer = new CanvasRenderer(canvas, controller);
+    renderer.resize(750, 1334, 1);
+
+    renderer.render();
+
+    const text = renderedText(ctx);
+    expect(text).toContain('补给');
+
+    await handlePointer(renderer, { clientX: 375, clientY: 581 });
+
+    expect(controller.getViewState().screen).toBe('supplies');
+  });
+
   test('resizes a canvas without DOM style fields', () => {
     const canvas = createMiniGameCanvas();
     const renderer = new CanvasRenderer(canvas, new GameController(mockPlatform()));

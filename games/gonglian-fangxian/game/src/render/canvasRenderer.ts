@@ -233,10 +233,8 @@ export class CanvasRenderer {
     this.drawPanel(80, 260, 590, 780);
     this.drawButton(150, 330, 450, 78, '继续作战', { type: 'start' });
     this.drawButton(150, 436, 450, 78, '关卡选择', { type: 'openLevels' });
-    this.drawButton(150, 542, 450, 78, '添加到桌面领奖', { type: 'desktopReward' });
-    this.drawButton(150, 648, 450, 78, '添加到常用领奖', { type: 'favoriteReward' });
-    this.drawButton(150, 754, 450, 78, '侧边栏入口奖励', { type: 'sidebarReward' });
-    this.drawButton(150, 860, 450, 78, '设置', { type: 'openSettings' });
+    this.drawButton(150, 542, 450, 78, '补给', { type: 'openSupplies' });
+    this.drawButton(150, 648, 450, 78, '设置', { type: 'openSettings' });
     this.drawSmallText(`金币 ${view.save.coins}  最高关卡 ${view.highestLevel}`, 375, 1000);
   }
 
