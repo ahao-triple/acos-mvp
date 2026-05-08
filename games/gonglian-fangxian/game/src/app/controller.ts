@@ -150,7 +150,7 @@ export class GameController {
         this.openBriefing(this.session?.levelId ?? this.pendingLevelId ?? this.save.highestUnlockedLevel);
         break;
       case 'nextLevel':
-        this.openBriefing(Math.min(levels.length, (this.session?.levelId ?? this.winSummary?.levelId ?? 1) + 1));
+        this.openBriefing(Math.min(levels.length, (this.session?.levelId ?? this.pendingLevelId ?? 1) + 1));
         break;
       case 'extraMovesAd':
         await this.requestExtraMoves();

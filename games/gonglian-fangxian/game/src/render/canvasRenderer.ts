@@ -1,4 +1,5 @@
 import type { GameController, AppAction, AppViewState } from '../app/controller';
+import { describeNodeReward } from '../app/campaign';
 import type { Board, BoardCell, BlockerKind, PieceKind, Position, SessionEvent } from '../core/types';
 import { EffectsModel, type FloatingText, type Particle } from './effects';
 import { coverRect, fitLogicalCanvas, LOGICAL_HEIGHT, LOGICAL_WIDTH, toLogicalPoint, type CanvasFit } from './scaler';
@@ -107,6 +108,10 @@ export class CanvasRenderer {
       this.drawMenu(view);
     } else if (view.screen === 'levels') {
       this.drawLevels(view);
+    } else if (view.screen === 'briefing') {
+      this.drawBriefing(view);
+    } else if (view.screen === 'supplies') {
+      this.drawSupplies(view);
     } else if (view.screen === 'playing' || view.screen === 'paused' || view.screen === 'won' || view.screen === 'lost') {
       this.drawGame(view, nowMs);
       if (view.screen === 'paused') {
@@ -248,6 +253,40 @@ export class CanvasRenderer {
       this.drawButton(x, y, 250, 82, unlocked ? `第 ${levelId} 关` : `第 ${levelId} 关 未解锁`, unlocked ? { type: 'selectLevel', levelId } : { type: 'openLevels' });
     }
     this.drawButton(190, 920, 370, 78, '返回', { type: 'closeModal' });
+  }
+
+  private drawBriefing(view: AppViewState): void {
+    const level = view.pendingLevel;
+    this.drawTitle('作战简报', level ? `${level.chapterTitle} · 第 ${level.id} 关` : '选择关卡后开始作战');
+    this.drawPanel(62, 238, 626, 790);
+
+    if (!level) {
+      this.drawText('暂无待命关卡', 375, 470, 34, '#ffffff', 'center');
+      this.drawButton(190, 930, 370, 78, '返回', { type: 'home' });
+      return;
+    }
+
+    const targetText = level.targets.map((target) => `${targetLabels[target.kind]} x${target.count}`).join('  ');
+    const nodeReward = describeNodeReward(level.nodeReward);
+    this.drawText(`${level.chapterTitle} / 第 ${level.id} 关`, 112, 315, 30, '#ffffff', 'left');
+    this.drawText(level.briefing, 112, 385, 26, '#f8fafc', 'left');
+    this.drawText(`步数：${level.moves}`, 112, 465, 26, '#fef3c7', 'left');
+    this.drawText(`目标：${targetText}`, 112, 535, 24, '#d1fae5', 'left');
+    this.drawText(`奖励：金币 ${level.rewards.coins}`, 112, 605, 24, '#fde68a', 'left');
+    this.drawText(`节点奖励：${nodeReward || '无'}`, 112, 675, 24, '#dbeafe', 'left');
+    this.drawButton(150, 930, 450, 78, '开始作战', { type: 'beginLevel' });
+    this.drawButton(190, 1035, 370, 78, '返回', { type: 'home' });
+  }
+
+  private drawSupplies(view: AppViewState): void {
+    this.drawTitle('补给', '领取平台补给并查看当前资源');
+    this.drawPanel(80, 260, 590, 760);
+    this.drawText(`金币 ${view.save.coins}`, 375, 335, 36, '#ffffff', 'center');
+    this.drawText(`道具 炸开 ${view.save.items.bomb}  吸走 ${view.save.items.suck}  重排 ${view.save.items.shuffle}`, 375, 395, 24, '#d1fae5', 'center');
+    this.drawButton(150, 470, 450, 78, '添加到桌面领奖', { type: 'desktopReward' });
+    this.drawButton(150, 576, 450, 78, '添加到常用领奖', { type: 'favoriteReward' });
+    this.drawButton(150, 682, 450, 78, '侧边栏入口奖励', { type: 'sidebarReward' });
+    this.drawButton(190, 900, 370, 78, '返回', { type: 'closeModal' });
   }
 
   private drawGame(view: AppViewState, nowMs: number): void {
