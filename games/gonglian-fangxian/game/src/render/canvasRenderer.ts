@@ -2,8 +2,7 @@ import type { GameController, AppViewState } from '../app/controller';
 import type { Board, BoardCell, SessionEvent } from '../core/types';
 import { drawBriefingScreen } from './briefingScreen';
 import { EffectsModel, type FloatingText, type Particle } from './effects';
-import { BOARD_CELL_SIZE, BOARD_GAP, BOARD_START_X, BOARD_START_Y, cellAt, drawGameScreen, type BoardGuidance } from './gameScreen';
-import { findSuggestedSwap } from './guidance';
+import { BOARD_CELL_SIZE, BOARD_GAP, BOARD_START_X, BOARD_START_Y, cellAt, drawGameScreen } from './gameScreen';
 import { drawLevelsScreen } from './levelsScreen';
 import { drawMenuScreen, drawSuppliesScreen } from './menuScreen';
 import { drawAdConfirmModal, drawLostResult, drawPausedResult, drawWinResult } from './resultScreen';
@@ -28,8 +27,6 @@ interface ResultReveal {
 }
 
 const VICTORY_FINALE_MS = 900;
-const OPENING_HINT_DELAY_MS = 700;
-const IDLE_HINT_DELAY_MS = 3000;
 
 export class CanvasRenderer {
   private readonly ctx: CanvasRenderingContext2D;
@@ -49,9 +46,6 @@ export class CanvasRenderer {
   private presentation: BoardPresentation | null = null;
   private handledPresentationKey: string | null = null;
   private resultReveal: ResultReveal | null = null;
-  private activeBoardGuidance: BoardGuidance | null = null;
-  private lastInteractionMs = 0;
-  private interactionSessionKey: string | null = null;
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -84,9 +78,7 @@ export class CanvasRenderer {
     const nowMs = performance.now();
     const view = this.controller.getViewState();
     this.trackViewTiming(view, nowMs);
-    this.trackInteractionSession(view, nowMs);
     this.hitAreas = [];
-    this.activeBoardGuidance = null;
 
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.drawViewportBackground(view, nowMs);
@@ -115,7 +107,6 @@ export class CanvasRenderer {
       drawGameScreen({
         ui: view.screen === 'playing' ? this.ui() : this.nonInteractiveUi(),
         nowMs,
-        guidance: this.guidanceFor(view, nowMs),
         visualBoard: this.visualBoard,
         effects: this.effects,
         presentedBoard: (session, time) => this.presentedBoard(session, time),
@@ -152,53 +143,6 @@ export class CanvasRenderer {
     }
   }
 
-  private trackInteractionSession(view: AppViewState, nowMs: number): void {
-    const key = view.session ? `${view.screen}:${view.session.levelId}` : view.screen;
-    if (this.interactionSessionKey !== key) {
-      this.interactionSessionKey = key;
-      this.lastInteractionMs = nowMs;
-    }
-  }
-
-  private guidanceFor(view: AppViewState, nowMs: number): BoardGuidance | null {
-    if (view.screen !== 'playing' || !view.session || view.session.selectedCell || view.adPrompt || this.presentation || this.visualBoard.isBusy(nowMs)) {
-      return null;
-    }
-
-    const delayMs = view.session.levelId === 1 ? OPENING_HINT_DELAY_MS : IDLE_HINT_DELAY_MS;
-    if (nowMs - this.lastInteractionMs < delayMs) {
-      return null;
-    }
-
-    const swap = findSuggestedSwap(view.session.board);
-    if (!swap) {
-      return null;
-    }
-
-    const from = cellCenter(swap.from);
-    const to = cellCenter(swap.to);
-    const guidance = {
-      swap,
-      focusX: (from.x + to.x) / 2,
-      focusY: (from.y + to.y) / 2,
-      scale: view.session.levelId === 1 ? 1.14 : 1.09,
-    };
-    this.activeBoardGuidance = guidance;
-    return guidance;
-  }
-
-  private toBoardPoint(point: { x: number; y: number }): { x: number; y: number } {
-    const guidance = this.activeBoardGuidance;
-    if (!guidance) {
-      return point;
-    }
-
-    return {
-      x: guidance.focusX + (point.x - guidance.focusX) / guidance.scale,
-      y: guidance.focusY + (point.y - guidance.focusY) / guidance.scale,
-    };
-  }
-
   private async handlePointer(event: PointerEvent | MiniGamePointerEvent): Promise<void> {
     const clientPoint = readClientPoint(event);
     if (!clientPoint) {
@@ -220,11 +164,9 @@ export class CanvasRenderer {
       return;
     }
 
-    const boardPoint = this.toBoardPoint(point);
-    const cell = cellAt(boardPoint.x, boardPoint.y);
+    const cell = cellAt(point.x, point.y);
     if (cell) {
       const nowMs = performance.now();
-      this.lastInteractionMs = nowMs;
       if (this.visualBoard.isBusy(nowMs) || this.presentation) {
         return;
       }
@@ -524,13 +466,6 @@ function boardSignature(board: Board): string {
         .join(','),
     )
     .join('/');
-}
-
-function cellCenter(cell: { row: number; col: number }): { x: number; y: number } {
-  return {
-    x: BOARD_START_X + cell.col * (BOARD_CELL_SIZE + BOARD_GAP) + BOARD_CELL_SIZE / 2,
-    y: BOARD_START_Y + cell.row * (BOARD_CELL_SIZE + BOARD_GAP) + BOARD_CELL_SIZE / 2,
-  };
 }
 
 function colorForPresentationCell(cell: BoardCell): string {

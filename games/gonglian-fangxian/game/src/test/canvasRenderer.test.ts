@@ -100,27 +100,6 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
     expect(text).not.toContain('竖');
   });
 
-  test('focuses the board around a suggested opening move after idle time', async () => {
-    let currentNow = 0;
-    const now = vi.spyOn(performance, 'now').mockImplementation(() => currentNow);
-    const { canvas, ctx } = createRecordingCanvas();
-    const controller = new GameController(mockPlatform());
-    const renderer = new CanvasRenderer(canvas, controller);
-    renderer.resize(750, 1334, 1);
-
-    forcePrivateSession(controller, createPlayingSession(guidanceBoard()));
-
-    try {
-      renderer.render();
-      currentNow = 4200;
-      renderer.render();
-
-      expect(ctx.scales.some((entry) => entry.x > 1.05 && entry.y > 1.05)).toBe(true);
-    } finally {
-      now.mockRestore();
-    }
-  });
-
   test('delays win result while board presentation is still playing', async () => {
     const now = vi.spyOn(performance, 'now').mockReturnValue(100);
     const { canvas, ctx } = createRecordingCanvas();
@@ -441,14 +420,6 @@ function specialBoard(): Board {
   return board;
 }
 
-function guidanceBoard(): Board {
-  return [
-    normalRow(['shield', 'ammo', 'shield'], 'hint-0'),
-    normalRow(['radar', 'shield', 'radar'], 'hint-1'),
-    normalRow(['ammo', 'shield', 'medal'], 'hint-2'),
-  ];
-}
-
 function normalBoard(prefix: string): Board {
   return Array.from({ length: 7 }, (_, row) =>
     Array.from({ length: 7 }, (_, col) => ({
@@ -457,14 +428,6 @@ function normalBoard(prefix: string): Board {
       id: `${prefix}-${row}-${col}`,
     })),
   );
-}
-
-function normalRow(kinds: Array<'shield' | 'ammo' | 'radar' | 'medal' | 'wrench'>, prefix: string): Board[number] {
-  return kinds.map((pieceKind, col) => ({
-    kind: 'normal',
-    pieceKind,
-    id: `${prefix}-${col}`,
-  }));
 }
 
 function renderedText(ctx: RecordingContext): string {
@@ -502,14 +465,12 @@ interface RecordingGradient {
 interface RecordingContext extends Partial<CanvasRenderingContext2D> {
   fillTexts: Array<{ text: string; x: number; y: number; align: CanvasTextAlign; baseline: CanvasTextBaseline }>;
   translates: Array<{ x: number; y: number }>;
-  scales: Array<{ x: number; y: number }>;
 }
 
 function createRecordingContext(): RecordingContext {
   return {
     fillTexts: [],
     translates: [],
-    scales: [],
     fillStyle: '',
     strokeStyle: '',
     lineWidth: 0,
@@ -528,9 +489,7 @@ function createRecordingContext(): RecordingContext {
     translate(x: number, y: number) {
       this.translates.push({ x, y });
     },
-    scale(x: number, y: number) {
-      this.scales.push({ x, y });
-    },
+    scale() {},
     rotate() {},
     clearRect() {},
     fillRect() {},
