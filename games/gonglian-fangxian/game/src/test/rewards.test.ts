@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import { createDefaultSave } from '../app/save';
 import { claimAdItemReward, claimDesktopReward, claimDoubleCoinsReward, claimFavoriteReward, claimSidebarReward, requestExtraMoves } from '../app/rewards';
 import type { PlatformAdapter, PlatformResult } from '../platform/types';
@@ -68,6 +68,26 @@ describe('reward flows', () => {
     expect(outcome.granted).toBe(true);
     expect(outcome.save.coins).toBe(180);
     expect(outcome.feedback).toContain('奖励已翻倍');
+  });
+
+  test('double coin reward logs debug reason and ad result', async () => {
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+    try {
+      await claimDoubleCoinsReward(createDefaultSave(), 80, platform({ ad: { status: 'success' } }));
+
+      expect(infoSpy).toHaveBeenCalledWith(
+        '[GLFX]',
+        'rewarded_ad_result',
+        expect.objectContaining({
+          reason: 'double_win_coins',
+          coins: 80,
+          status: 'success',
+        }),
+      );
+    } finally {
+      infoSpy.mockRestore();
+    }
   });
 
   test('cancelled double reward video does not add coins', async () => {
