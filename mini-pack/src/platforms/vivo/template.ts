@@ -2,7 +2,9 @@ import path from 'node:path';
 
 import type { LoadedGameConfig } from '../../shared/types.js';
 
-const VIVO_CLI_VERSION = '1.27.13';
+export const VIVO_CLI_VERSION = '1.27.23';
+export const VIVO_ICON_BASE64 =
+  'iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAYAAACqaXHeAAAAkElEQVR4nO3QQQ0AIBDAMMC/5+ONAvZoFSzZnJLNejvdAdy9A3gMaAxoDGgMaAxoDGgMaAxoDGgMaAxoDGgMaAxoDGgMaAxoDGgMaAxoDGgMaAxoDGgMaAxoDGgMaAxoDGgMaAxoDGgMaAxoDGgMaAxoDGgMaAxoDGgMaAxoDGgMaAxoDGgMaAxoDGgMaAxoDGgMaOxUu4MfQ7jBC+QAAAAASUVORK5CYII=';
 
 export function createVivoPackageJson(): Record<string, unknown> {
   return {
@@ -10,13 +12,13 @@ export function createVivoPackageJson(): Record<string, unknown> {
     version: '1.0.0',
     private: true,
     scripts: {
-      build: 'mg-service build',
-      release: 'mg-service release',
-      watch: 'mg-service watch',
-      server: 'mg-service server',
+      build: 'mgs build',
+      release: 'mgs release',
+      watch: 'mgs watch',
+      server: 'mgs server',
     },
     devDependencies: {
-      '@vivo-minigame/cli-service': VIVO_CLI_VERSION,
+      '@vivo-minigame/cli': VIVO_CLI_VERSION,
     },
   };
 }
@@ -30,6 +32,7 @@ export function createVivoManifest(config: LoadedGameConfig): Record<string, unk
     minPlatformVersion: 1060,
     deviceOrientation: config.orientation,
     type: 'game',
+    icon: '/icon.png',
     config: {
       logLevel: 'debug',
     },

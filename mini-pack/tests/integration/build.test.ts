@@ -82,19 +82,20 @@ describe('mini-pack build', () => {
     expect(result.exitCode).toBe(0);
     await expect(fs.stat(path.join(vivoOutputDir, 'package.json'))).resolves.toBeTruthy();
     await expect(fs.stat(path.join(vivoOutputDir, 'src/manifest.json'))).resolves.toBeTruthy();
+    await expect(fs.stat(path.join(vivoOutputDir, 'src/icon.png'))).resolves.toBeTruthy();
     await expect(fs.stat(path.join(vivoOutputDir, 'src/game.js'))).resolves.toBeTruthy();
     await expect(fs.stat(path.join(vivoOutputDir, 'src/assets/piece-shield.txt'))).resolves.toBeTruthy();
     await expect(fs.stat(path.join(vivoOutputDir, 'src/assets/nested/readme.txt'))).resolves.toBeTruthy();
 
     const packageJson = JSON.parse(await fs.readFile(path.join(vivoOutputDir, 'package.json'), 'utf8'));
     expect(packageJson.scripts).toMatchObject({
-      build: 'mg-service build',
-      release: 'mg-service release',
-      watch: 'mg-service watch',
-      server: 'mg-service server',
+      build: 'mgs build',
+      release: 'mgs release',
+      watch: 'mgs watch',
+      server: 'mgs server',
     });
     expect(packageJson.devDependencies).toMatchObject({
-      '@vivo-minigame/cli-service': '1.27.13',
+      '@vivo-minigame/cli': '1.27.23',
     });
 
     const manifest = JSON.parse(await fs.readFile(path.join(vivoOutputDir, 'src/manifest.json'), 'utf8'));
@@ -106,6 +107,7 @@ describe('mini-pack build', () => {
       minPlatformVersion: 1060,
       deviceOrientation: 'portrait',
       type: 'game',
+      icon: '/icon.png',
       config: {
         logLevel: 'debug',
       },

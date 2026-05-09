@@ -8,7 +8,7 @@ import { UserError } from '../../shared/errors.js';
 import type { BuildReport, LoadedGameConfig } from '../../shared/types.js';
 import type { PlatformBuildOptions, PlatformBuilder } from '../index.js';
 import { buildVivoRpk } from './rpk.js';
-import { createVivoManifest, createVivoPackageJson, renderVivoGameJs } from './template.js';
+import { createVivoManifest, createVivoPackageJson, renderVivoGameJs, VIVO_ICON_BASE64 } from './template.js';
 
 export const vivoPlatformBuilder: PlatformBuilder = {
   name: 'vivo',
@@ -29,6 +29,7 @@ export const vivoPlatformBuilder: PlatformBuilder = {
 
     await fs.writeJson(path.join(outDir, 'package.json'), createVivoPackageJson(), { spaces: 2 });
     await fs.writeJson(path.join(srcDir, 'manifest.json'), createVivoManifest(config), { spaces: 2 });
+    await fs.writeFile(path.join(srcDir, 'icon.png'), Buffer.from(VIVO_ICON_BASE64, 'base64'));
 
     const tempDir = path.join(outDir, '.mini-pack');
     const tempBundle = path.join(tempDir, 'game.bundle.js');

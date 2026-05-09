@@ -17,6 +17,7 @@ games/*/.env
 # Tool caches and temporary files
 .vite/
 .vite-temp/
+.pnpm-store/
 coverage/
 tmp/
 temp/
