@@ -7,6 +7,7 @@ import { createBuildReport, writeBuildReport } from '../../core/report.js';
 import { UserError } from '../../shared/errors.js';
 import type { BuildReport, LoadedGameConfig } from '../../shared/types.js';
 import type { PlatformBuildOptions, PlatformBuilder } from '../index.js';
+import { buildVivoRpk } from './rpk.js';
 import { createVivoManifest, createVivoPackageJson, renderVivoGameJs } from './template.js';
 
 export const vivoPlatformBuilder: PlatformBuilder = {
@@ -62,7 +63,7 @@ export const vivoPlatformBuilder: PlatformBuilder = {
     await writeBuildReport(path.join(outDir, 'build-report.json'), report);
 
     if (!options.skipVivoRpk) {
-      throw new UserError('Vivo RPK build runner is added in Task 4.');
+      await buildVivoRpk(outDir, config);
     }
 
     return report;

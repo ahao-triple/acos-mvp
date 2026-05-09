@@ -139,12 +139,28 @@ describe('mini-pack build', () => {
 
     await expect(fs.readFile(path.join(validFixture, 'game/src/main.ts'), 'utf8')).resolves.toBe(sourceBefore);
   });
+
+  test('invokes the vivo RPK builder and records the generated artifact', async () => {
+    const result = await runCli(['build', '--platform', 'vivo', '--out-dir', 'builds/vivo'], validFixture, {
+      MINI_PACK_VIVO_FAKE_RPK: '1',
+    });
+
+    expect(result.exitCode).toBe(0);
+    const rpkFiles = await findRpkFiles(vivoOutputDir);
+    expect(rpkFiles).toEqual([path.join(vivoOutputDir, 'dist/debug/com.minipack.gonglianfangxian.rpk')]);
+    expect(result.stdout).toContain('Built vivo package at builds/vivo');
+  });
 });
 
-function runCli(args: string[], cwd: string): Promise<{ exitCode: number | null; stdout: string; stderr: string }> {
+function runCli(
+  args: string[],
+  cwd: string,
+  env: Record<string, string> = {},
+): Promise<{ exitCode: number | null; stdout: string; stderr: string }> {
   return new Promise((resolve) => {
     const child = spawn(process.execPath, ['--import', path.resolve('node_modules/tsx/dist/loader.mjs'), path.resolve('src/cli.ts'), ...args], {
       cwd,
+      env: { ...process.env, ...env },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     let stdout = '';
@@ -163,4 +179,18 @@ function runCli(args: string[], cwd: string): Promise<{ exitCode: number | null;
 
 function fixturePath(name: string): string {
   return path.resolve(new URL(`../fixtures/${name}/`, import.meta.url).pathname);
+}
+
+async function findRpkFiles(dir: string): Promise<string[]> {
+  const entries = await fs.readdir(dir, { withFileTypes: true });
+  const files = await Promise.all(
+    entries.map(async (entry) => {
+      const entryPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        return findRpkFiles(entryPath);
+      }
+      return entry.isFile() && entry.name.endsWith('.rpk') ? [entryPath] : [];
+    }),
+  );
+  return files.flat().sort();
 }

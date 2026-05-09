@@ -36,6 +36,9 @@ importers:
       '@types/node':
         specifier: ^24.10.1
         version: 24.12.3
+      '@vivo-minigame/cli-service':
+        specifier: 1.27.13
+        version: 1.27.13
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -209,6 +212,38 @@ packages:
     engines: {node: '>=18'}
     cpu: [x64]
     os: [win32]
+
+  '@esm2cjs/execa@6.1.1-cjs.1':
+    resolution: {integrity: sha512-FHxfnmuDIjY1VS/BLzDkL8EkbcFvi8s6x1nYQ1Nyu0An0n88EJcGhDBcRWLFwt3C3nT7xwI+MwHRH1TZcAFW2w==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
+
+  '@esm2cjs/human-signals@3.0.1':
+    resolution: {integrity: sha512-QZme4eF/PwTpeSbMB4AaWGQ4VSygzE30jI+Oas1NPTtZQAgcHwWVDOQpIW8FUmtzn5Q+2cS7AjnTzbtqtc5P6g==}
+    engines: {node: '>=12.20.0'}
+
+  '@esm2cjs/is-stream@3.0.0':
+    resolution: {integrity: sha512-qcBscHlJpZFOD5nnmMHkzOrq2xyvsp9fbVreQLS8x2LOs8N3CrNi3fqvFY0GVJR+YSOHscwhG9T5t4Ck7R7QGw==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
+
+  '@esm2cjs/mimic-fn@4.0.0':
+    resolution: {integrity: sha512-LIIAjcpjLr4rcbYmRQ+eRu55Upy/MMB78seIlwqbnyiA+cTa1/pxWnJ1NHJQrw6tx2wMQmlYoJj+wf16NjWH6Q==}
+    engines: {node: '>=12'}
+
+  '@esm2cjs/npm-run-path@5.1.1-cjs.0':
+    resolution: {integrity: sha512-CWeAIyE8iNSCgP2ItPE8iPgS+lACqgH+MuFRaWOIl2T7hnHqPFfhAJJ/LcLJJ/RMIxNMeenjFMwc91HW7NWr1A==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
+
+  '@esm2cjs/onetime@6.0.1-cjs.0':
+    resolution: {integrity: sha512-MkZMZSxrSC/6yUuAw6Azc56XOgwHQQIsNDlO/zgFmOcycJBhRwRuc/gdYUUOFNZIh7y+f0JSIxkNdJPFvJ5W0w==}
+    engines: {node: '>=12'}
+
+  '@esm2cjs/path-key@4.0.0':
+    resolution: {integrity: sha512-fKzZ3uIIP4j+7WfyG0MEkomGHL0hUXWCx1kY2Zct3GTdl4pyY+3k5lCUxjgdDa2Ld1BCjMNorXnRHiBP6jW6CQ==}
+    engines: {node: '>=12'}
+
+  '@esm2cjs/strip-final-newline@3.0.1-cjs.0':
+    resolution: {integrity: sha512-o41riCGPiOEStayoikBCAqwa6igbv9L9rP+k5UCfQ24EJD/wGrdDs/KTNwkHG5JzDK3T60D5dMkWkLKEPy8gjA==}
+    engines: {node: '>=12'}
 
   '@jridgewell/sourcemap-codec@1.5.5':
     resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
@@ -385,6 +420,10 @@ packages:
   '@vitest/utils@4.1.5':
     resolution: {integrity: sha512-76wdkrmfXfqGjueGgnb45ITPyUi1ycZ4IHgC2bhPDUfWHklY/q3MdLOAB+TF1e6xfl8NxNY0ZYaPCFNWSsw3Ug==}
 
+  '@vivo-minigame/cli-service@1.27.13':
+    resolution: {integrity: sha512-oTsejKaCNn4vba6uxpqPGwu8AYTrIl/hUGuzmRGgGegFpg3SOFFpjrToCjrR8HrPiTxX2HMFV2G/Vm9Kdyn1aA==}
+    hasBin: true
+
   assertion-error@2.0.1:
     resolution: {integrity: sha512-Izi8RQcffqCeNVgFigKli1ssklIbpHnCYc6AknXGYoB6grJqyeby7jv12JUQgmTAnIDnbck1uxksT4dzN3PWBA==}
     engines: {node: '>=12'}
@@ -401,8 +440,15 @@ packages:
     resolution: {integrity: sha512-H+y0Jo/T1RZ9qPP4Eh1pkcQcLRglraJaSLoyOtHxu6AapkjWVCy2Sit1QQ4x3Dng8qDlSsZEet7g5Pq06MvTgw==}
     engines: {node: '>=20'}
 
+  commander@2.20.3:
+    resolution: {integrity: sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ==}
+
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
+
+  cross-spawn@7.0.6:
+    resolution: {integrity: sha512-uV2QOWP2nWzsy2aMp8aRibhi9dlzF5Hgh5SHaB9OiTGEyDTiJJyx0uy51QXdyWbtAHNua4XJzUKca3OzKUd3vA==}
+    engines: {node: '>= 8'}
 
   detect-libc@2.1.2:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
@@ -452,6 +498,10 @@ packages:
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
 
+  get-stream@6.0.1:
+    resolution: {integrity: sha512-ts6Wi+2j3jQjqi70w5AlN8DFnkSwC+MqmxEzdEALB2qXZYV3X/b1CTfgPLGJNMeAWxdPfU8FO1ms3NUfaHCPYg==}
+    engines: {node: '>=10'}
+
   get-tsconfig@4.14.0:
     resolution: {integrity: sha512-yTb+8DXzDREzgvYmh6s9vHsSVCHeC0G3PI5bEXNBHtmshPnO+S5O7qgLEOn0I5QvMy6kpZN8K1NKGyilLb93wA==}
 
@@ -473,6 +523,9 @@ packages:
   is-number@7.0.0:
     resolution: {integrity: sha512-41Cifkg6e8TylSpdtTpeLVMqvSBEVzTttHvERD741+pnZ8ANv0004MRL43QKPDlK9cGvNp6NZWZUBlbGXYxxng==}
     engines: {node: '>=0.12.0'}
+
+  isexe@2.0.0:
+    resolution: {integrity: sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==}
 
   jsonfile@6.2.1:
     resolution: {integrity: sha512-zwOTdL3rFQ/lRdBnntKVOX6k5cKJwEc1HdilT71BWEu7J41gXIB2MRp+vxduPSwZJPWBxEzv4yH1wYLJGUHX4Q==}
@@ -554,6 +607,9 @@ packages:
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
 
+  merge-stream@2.0.0:
+    resolution: {integrity: sha512-abv/qOcuPfk3URPfDzmZU1LKmuw8kT+0nIHvKrKgFrwifol/doWcdA4ZqsWQ8ENrFKkd67Mfpo/LovbIUsbt3w==}
+
   merge2@1.4.1:
     resolution: {integrity: sha512-8q7VEgMJW4J8tcfVPy8g09NcQwZdbwFEqhe/WZkoIzjn/3TGDwtOCYtXGxA3O8tPzpczCCDgv+P2P5y00ZJOOg==}
     engines: {node: '>= 8'}
@@ -562,6 +618,9 @@ packages:
     resolution: {integrity: sha512-PXwfBhYu0hBCPw8Dn0E+WDYb7af3dSLVWKi3HGv84IdF4TyFoC0ysxFd0Goxw7nSv4T/PzEJQxsYsEiFCKo2BA==}
     engines: {node: '>=8.6'}
 
+  minimist@1.2.8:
+    resolution: {integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==}
+
   nanoid@3.3.12:
     resolution: {integrity: sha512-ZB9RH/39qpq5Vu6Y+NmUaFhQR6pp+M2Xt76XBnEwDaGcVAqhlvxrl3B2bKS5D3NH3QR76v3aSrKaF/Kiy7lEtQ==}
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
@@ -569,6 +628,10 @@ packages:
 
   obug@2.1.1:
     resolution: {integrity: sha512-uTqF9MuPraAQ+IsnPf366RG4cP9RtUi7MLO1N3KEc+wb0a6yKpeL0lmk2IB1jY5KHPAlTc6T/JRdC/YqxHNwkQ==}
+
+  path-key@3.1.1:
+    resolution: {integrity: sha512-ojmeN0qd+y0jszEtoY48r0Peq5dwMEkIlCOu6Q5f41lfkswXuKtYrhgoTpLnyIcHm24Uhqx+5Tqm2InSwLhE6Q==}
+    engines: {node: '>=8'}
 
   pathe@2.0.3:
     resolution: {integrity: sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w==}
@@ -606,8 +669,19 @@ packages:
   run-parallel@1.2.0:
     resolution: {integrity: sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA==}
 
+  shebang-command@2.0.0:
+    resolution: {integrity: sha512-kHxr2zZpYtdmrN1qDjrrX/Z1rR1kG8Dx+gkpK1G4eXmvXswmcE1hTWBWYUzlraYw1/yZp6YuDY77YtvbN0dmDA==}
+    engines: {node: '>=8'}
+
+  shebang-regex@3.0.0:
+    resolution: {integrity: sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==}
+    engines: {node: '>=8'}
+
   siginfo@2.0.0:
     resolution: {integrity: sha512-ybx0WO1/8bSBLEWXZvEd7gMW3Sn3JFlW3TvX1nREbDLRNQNaeNN8WK0meBwPdAaOI7TtRRRJn/Es1zhrrCHu7g==}
+
+  signal-exit@3.0.7:
+    resolution: {integrity: sha512-wnD2ZE+l+SPC/uoS0vXeE9L1+0wuaMqKlfz9AMUo38JsyLSBWSFcHR1Rri62LZc12vLr1gb3jl7iwQhgwpAbGQ==}
 
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
@@ -742,6 +816,11 @@ packages:
       jsdom:
         optional: true
 
+  which@2.0.2:
+    resolution: {integrity: sha512-BLI3Tl1TW3Pvl70l3yq3Y64i+awpwXqsGBYWkkqMtnbXgrMD+yj7rhW0kuEDxzJaYXGjEW5ogapKNMEKNMjibA==}
+    engines: {node: '>= 8'}
+    hasBin: true
+
   why-is-node-running@2.3.0:
     resolution: {integrity: sha512-hUrmaWBdVDcxvYqnyh09zunKzROWjbZTiNy8dBEjkS7ehEDQibXJ7XvlmtbwuTclUiIyN+CyXQD4Vmko8fNm8w==}
     engines: {node: '>=8'}
@@ -845,6 +924,36 @@ snapshots:
 
   '@esbuild/win32-x64@0.27.7':
     optional: true
+
+  '@esm2cjs/execa@6.1.1-cjs.1':
+    dependencies:
+      '@esm2cjs/human-signals': 3.0.1
+      '@esm2cjs/is-stream': 3.0.0
+      '@esm2cjs/npm-run-path': 5.1.1-cjs.0
+      '@esm2cjs/onetime': 6.0.1-cjs.0
+      '@esm2cjs/strip-final-newline': 3.0.1-cjs.0
+      cross-spawn: 7.0.6
+      get-stream: 6.0.1
+      merge-stream: 2.0.0
+      signal-exit: 3.0.7
+
+  '@esm2cjs/human-signals@3.0.1': {}
+
+  '@esm2cjs/is-stream@3.0.0': {}
+
+  '@esm2cjs/mimic-fn@4.0.0': {}
+
+  '@esm2cjs/npm-run-path@5.1.1-cjs.0':
+    dependencies:
+      '@esm2cjs/path-key': 4.0.0
+
+  '@esm2cjs/onetime@6.0.1-cjs.0':
+    dependencies:
+      '@esm2cjs/mimic-fn': 4.0.0
+
+  '@esm2cjs/path-key@4.0.0': {}
+
+  '@esm2cjs/strip-final-newline@3.0.1-cjs.0': {}
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
 
@@ -990,6 +1099,12 @@ snapshots:
       convert-source-map: 2.0.0
       tinyrainbow: 3.1.0
 
+  '@vivo-minigame/cli-service@1.27.13':
+    dependencies:
+      commander: 2.20.3
+      execa: '@esm2cjs/execa@6.1.1-cjs.1'
+      minimist: 1.2.8
+
   assertion-error@2.0.1: {}
 
   braces@3.0.3:
@@ -1000,7 +1115,15 @@ snapshots:
 
   commander@14.0.3: {}
 
+  commander@2.20.3: {}
+
   convert-source-map@2.0.0: {}
+
+  cross-spawn@7.0.6:
+    dependencies:
+      path-key: 3.1.1
+      shebang-command: 2.0.0
+      which: 2.0.2
 
   detect-libc@2.1.2: {}
 
@@ -1070,6 +1193,8 @@ snapshots:
   fsevents@2.3.3:
     optional: true
 
+  get-stream@6.0.1: {}
+
   get-tsconfig@4.14.0:
     dependencies:
       resolve-pkg-maps: 1.0.0
@@ -1087,6 +1212,8 @@ snapshots:
       is-extglob: 2.1.1
 
   is-number@7.0.0: {}
+
+  isexe@2.0.0: {}
 
   jsonfile@6.2.1:
     dependencies:
@@ -1147,6 +1274,8 @@ snapshots:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
 
+  merge-stream@2.0.0: {}
+
   merge2@1.4.1: {}
 
   micromatch@4.0.8:
@@ -1154,9 +1283,13 @@ snapshots:
       braces: 3.0.3
       picomatch: 2.3.2
 
+  minimist@1.2.8: {}
+
   nanoid@3.3.12: {}
 
   obug@2.1.1: {}
+
+  path-key@3.1.1: {}
 
   pathe@2.0.3: {}
 
@@ -1203,7 +1336,15 @@ snapshots:
     dependencies:
       queue-microtask: 1.2.3
 
+  shebang-command@2.0.0:
+    dependencies:
+      shebang-regex: 3.0.0
+
+  shebang-regex@3.0.0: {}
+
   siginfo@2.0.0: {}
+
+  signal-exit@3.0.7: {}
 
   source-map-js@1.2.1: {}
 
@@ -1281,6 +1422,10 @@ snapshots:
       '@types/node': 24.12.3
     transitivePeerDependencies:
       - msw
+
+  which@2.0.2:
+    dependencies:
+      isexe: 2.0.0
 
   why-is-node-running@2.3.0:
     dependencies:
