@@ -2,6 +2,7 @@ import type { GameController, ToolName } from '../app/controller';
 import type { AssetManifest } from '../assets/types';
 import { resolveAssetUrl } from '../assets/loader';
 import type { BoardCell, Direction } from '../core/types';
+import { zhText } from '../i18n/zh';
 import { feedbackCellMotion, feedbackProgress, hintPulse, revealMotion } from './animation';
 import { boardDrawOrder } from './boardDrawPlan';
 import { cellPresentation, formatTimerRemaining, type CellTone } from './cellPresentation';
@@ -83,9 +84,9 @@ export class CanvasRenderer {
     this.drawBoard();
     this.drawTools();
     if (view.screen === 'win' && view.reveal.canContinue) {
-      this.drawResult('Complete', 'Continue', 'continue');
+      this.drawResult(zhText.results.winTitle, zhText.buttons.continue, 'continue');
     } else if (view.screen === 'failed') {
-      this.drawResult('No moves', 'Retry', 'retry');
+      this.drawResult(zhText.results.failedTitle, zhText.buttons.retry, 'retry');
     }
   }
 
@@ -105,20 +106,20 @@ export class CanvasRenderer {
   private drawHud(): void {
     const { save } = this.controller.getViewState();
     this.roundRect(36, 32, 678, 92, 28, theme.panelStrong, 'rgba(16, 32, 51, 0.14)');
-    this.text('Tap Gallery', 64, 86, 32, 700, theme.ink, 'left');
-    this.pill(452, 48, 92, 46, `E ${save.energy}`, theme.mint);
-    this.pill(562, 48, 120, 46, `$ ${save.coins}`, theme.gold);
+    this.text(zhText.title, 64, 86, 32, 700, theme.ink, 'left');
+    this.pill(452, 48, 92, 46, zhText.energy(save.energy), theme.mint);
+    this.pill(562, 48, 120, 46, zhText.coins(save.coins), theme.gold);
     this.roundRect(318, 48, 108, 46, 23, '#ffffff', 'rgba(16, 32, 51, 0.12)');
-    this.text('Levels', 372, 78, 18, 800, theme.ink, 'center');
+    this.text(zhText.buttons.levels, 372, 78, 18, 800, theme.ink, 'center');
     this.hits.push({ type: 'levels', rect: { x: 318, y: 48, width: 108, height: 46 } });
   }
 
   private drawLevelInfo(): void {
     const view = this.controller.getViewState();
     const timerLabel = formatTimerRemaining(view.timer.remainingMs);
-    this.text(`Level ${view.level.levelNo}`, 54, 178, 24, 700, theme.muted, 'left');
+    this.text(zhText.level(view.level.levelNo), 54, 178, 24, 700, theme.muted, 'left');
     this.text(view.level.title, 54, 214, 34, 800, theme.ink, 'left');
-    this.text(timerLabel ? `${timerLabel}  ${view.movesLeft} moves` : `${view.movesLeft} moves`, 696, 202, 26, 700, theme.ink, 'right');
+    this.text(timerLabel ? `${timerLabel}  ${zhText.moves(view.movesLeft)}` : zhText.moves(view.movesLeft), 696, 202, 26, 700, theme.ink, 'right');
     this.roundRect(54, 226, 642, 12, 6, 'rgba(16, 32, 51, 0.12)');
     this.roundRect(54, 226, 642 * view.progress, 12, 6, theme.coral);
   }
@@ -311,11 +312,11 @@ export class CanvasRenderer {
   private drawTools(): void {
     const view = this.controller.getViewState();
     const tools: Array<{ key: ToolName; label: string }> = [
-      { key: 'hint', label: 'Hint' },
-      { key: 'bomb', label: 'Bomb' },
-      { key: 'magnet', label: 'Magnet' },
-      { key: 'hammer', label: 'Hammer' },
-      { key: 'freeze', label: 'Freeze' },
+      { key: 'hint', label: zhText.tools.hint },
+      { key: 'bomb', label: zhText.tools.bomb },
+      { key: 'magnet', label: zhText.tools.magnet },
+      { key: 'hammer', label: zhText.tools.hammer },
+      { key: 'freeze', label: zhText.tools.freeze },
     ];
     const y = 996;
     const width = 120;
@@ -332,7 +333,7 @@ export class CanvasRenderer {
 
   private drawLevelSelect(): void {
     const view = this.controller.getViewState();
-    this.text('Gallery', 54, 286, 34, 800, theme.ink, 'left');
+    this.text(zhText.screens.gallery, 54, 286, 34, 800, theme.ink, 'left');
     const cols = 5;
     const size = 108;
     const gap = 24;

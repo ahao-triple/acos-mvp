@@ -1,7 +1,7 @@
 {
   "id": "level_015_compass",
   "levelNo": 15,
-  "title": "Compass",
+  "title": "指南针",
   "subject": "compass",
   "maskImage": "assets/levels/masks/level-015-compass-mask.png",
   "revealImage": "assets/levels/reveal/level-015-compass.png",

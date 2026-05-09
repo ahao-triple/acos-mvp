@@ -1,7 +1,7 @@
 {
   "id": "level_002_star_medal",
   "levelNo": 2,
-  "title": "Star Medal",
+  "title": "星星奖章",
   "subject": "star medal",
   "maskImage": "assets/levels/masks/level-002-star-medal-mask.png",
   "revealImage": "assets/levels/reveal/level-002-star-medal.png",

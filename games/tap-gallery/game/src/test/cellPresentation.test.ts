@@ -54,7 +54,7 @@ describe('cell presentation', () => {
     ]));
     const locked = board.cellsByIndex.get(15)!;
 
-    expect(cellPresentation(board, locked)).toMatchObject({ locked: true, label: 'LOCK' });
+    expect(cellPresentation(board, locked)).toMatchObject({ locked: true, label: '锁定' });
 
     const unlockedBoard = clearCell(clearCell(board, 0), 3);
     const unlocked = unlockedBoard.cellsByIndex.get(15)!;
@@ -68,7 +68,7 @@ describe('cell presentation', () => {
     ]));
 
     expect(cellPresentation(board, board.cellsByIndex.get(1)!)).toMatchObject({ badge: '+', tone: 'gold' });
-    expect(cellPresentation(board, board.cellsByIndex.get(2)!)).toMatchObject({ badge: 'T', tone: 'timer' });
+    expect(cellPresentation(board, board.cellsByIndex.get(2)!)).toMatchObject({ badge: '时', tone: 'timer' });
   });
 
   it('formats timer milliseconds for the HUD', () => {

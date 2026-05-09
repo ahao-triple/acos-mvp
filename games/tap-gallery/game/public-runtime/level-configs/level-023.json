@@ -1,7 +1,7 @@
 {
   "id": "level_023_music_note",
   "levelNo": 23,
-  "title": "Music Note",
+  "title": "音符",
   "subject": "music note badge",
   "maskImage": "assets/levels/masks/level-023-music-note-mask.png",
   "revealImage": "assets/levels/reveal/level-023-music-note.png",

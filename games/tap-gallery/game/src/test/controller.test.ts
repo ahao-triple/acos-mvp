@@ -170,7 +170,7 @@ describe('game controller', () => {
       platform: createWebPlatformAdapter(),
     });
 
-    expect(controller.getViewState().guidance).toEqual({ type: 'firstTap', index: 1, label: 'Tap' });
+    expect(controller.getViewState().guidance).toEqual({ type: 'firstTap', index: 1, label: '点击' });
     controller.tapCell(1);
     expect(controller.getViewState().guidance).toBeNull();
   });

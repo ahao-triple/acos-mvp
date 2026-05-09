@@ -1,11 +1,12 @@
 import type { HapticKind, PlatformAdapter, PlatformResult } from './types';
+import { zhText } from '../i18n/zh';
 
 export function createWebPlatformAdapter(): PlatformAdapter {
   return {
     name: 'web',
     storage: getWebStorage(),
     async showRewardedAd(): Promise<PlatformResult> {
-      return { status: 'unsupported', message: 'Rewarded ads are unavailable in browser preview.' };
+      return { status: 'unsupported', message: zhText.messages.rewardedAdsUnavailable };
     },
     triggerHaptic(kind) {
       triggerWebHaptic(kind);

@@ -1,5 +1,6 @@
 import { canClearCell } from '../core/board';
 import type { BoardCell, BoardState } from '../core/types';
+import { zhText } from '../i18n/zh';
 
 export type CellTone = 'normal' | 'gold' | 'timer' | 'bomb' | 'locked';
 
@@ -17,7 +18,7 @@ export function cellPresentation(board: BoardState, cell: BoardCell): CellPresen
   const badge = badgeFor(cell);
   return {
     arrowVisible: !secretHidden,
-    label: secretHidden ? '?' : locked ? 'LOCK' : null,
+    label: secretHidden ? '?' : locked ? zhText.cells.locked : null,
     badge,
     locked,
     tone: toneFor(cell, locked),
@@ -39,10 +40,10 @@ function badgeFor(cell: BoardCell): string | null {
     return '+';
   }
   if (cell.kind === 'timer') {
-    return 'T';
+    return zhText.cells.timerBadge;
   }
   if (cell.kind === 'bomb') {
-    return 'B';
+    return zhText.cells.bombBadge;
   }
   return null;
 }

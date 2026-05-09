@@ -1,7 +1,7 @@
 import { defineGameConfig } from '../../mini-pack/src/index';
 
 export default defineGameConfig({
-  title: 'Tap Gallery',
+  title: '点点画廊',
   platform: 'douyin',
   entry: 'game/src/main.ts',
   publicDir: 'game/public-pack',

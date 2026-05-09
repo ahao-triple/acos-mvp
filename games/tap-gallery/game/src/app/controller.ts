@@ -13,6 +13,7 @@ import type { LevelConfig } from '../assets/types';
 import { activeCellCount, canClearCell, clearCell, createBoard, findHintCell, isBoardComplete, revealCellDirection } from '../core/board';
 import { applyBomb, applyHammer, applyMagnet } from '../core/tools';
 import type { BoardState } from '../core/types';
+import { zhText } from '../i18n/zh';
 import type { PlatformAdapter } from '../platform/types';
 
 export type GameScreen = 'loading' | 'playing' | 'win' | 'failed' | 'levels' | 'error';
@@ -147,7 +148,7 @@ export class GameController {
     this.settleFreeze();
     if (this.screen === 'playing' && this.timerRemainingMs() === 0) {
       this.screen = 'failed';
-      this.setFeedback({ type: 'failed', message: 'Time expired.', sound: 'invalid' });
+      this.setFeedback({ type: 'failed', message: zhText.messages.timeExpired, sound: 'invalid' });
       return;
     }
     if (this.screen !== 'playing') {
@@ -168,7 +169,7 @@ export class GameController {
 
   tapCell(index: number): FeedbackEvent {
     if (this.screen !== 'playing') {
-      return this.setFeedback({ type: 'invalid', message: 'Level is not active.', sound: 'invalid' });
+      return this.setFeedback({ type: 'invalid', message: zhText.messages.inactiveLevel, sound: 'invalid' });
     }
 
     this.recordAction();
@@ -180,7 +181,7 @@ export class GameController {
       this.movesLeft -= 1;
       if (this.movesLeft <= 0) {
         this.screen = 'failed';
-        return this.setFeedback({ type: 'failed', message: 'No moves left.', sound: 'invalid' });
+        return this.setFeedback({ type: 'failed', message: zhText.messages.noMovesLeft, sound: 'invalid' });
       }
       this.platform.triggerHaptic('short');
       return this.setFeedback({ type: 'invalid', indexes: [index], sound: 'invalid' });
@@ -204,7 +205,7 @@ export class GameController {
     this.recordAction();
     const hint = findHintCell(this.board);
     if (!hint) {
-      return this.setFeedback({ type: 'invalid', message: 'No move available.', sound: 'invalid' });
+      return this.setFeedback({ type: 'invalid', message: zhText.messages.noMoveAvailable, sound: 'invalid' });
     }
     this.save = spendTool(this.save, 'hint');
     if (hint.kind === 'secret' && !hint.revealed) {
@@ -232,12 +233,12 @@ export class GameController {
   startLevel(levelNo: number): FeedbackEvent {
     const level = this.findLevel(levelNo) ?? this.levels[0];
     if (level.levelNo > this.save.highestUnlockedLevel) {
-      return this.setFeedback({ type: 'invalid', message: 'Level is locked.', sound: 'invalid' });
+      return this.setFeedback({ type: 'invalid', message: zhText.messages.levelLocked, sound: 'invalid' });
     }
     if (!level.mechanics.includes('infiniteEnergy') && level.levelNo !== this.save.currentLevel) {
       const nextSave = consumeEnergy(this.save);
       if (!nextSave) {
-        return this.setFeedback({ type: 'invalid', message: 'Not enough energy.', sound: 'invalid' });
+        return this.setFeedback({ type: 'invalid', message: zhText.messages.notEnoughEnergy, sound: 'invalid' });
       }
       this.save = nextSave;
     }
@@ -265,16 +266,16 @@ export class GameController {
 
   async requestExtraMoves(): Promise<FeedbackEvent> {
     if (this.extraMoveAdUsed) {
-      return this.setFeedback({ type: 'invalid', message: 'Continue already used.', sound: 'invalid' });
+      return this.setFeedback({ type: 'invalid', message: zhText.messages.continueUsed, sound: 'invalid' });
     }
     const result = await this.platform.showRewardedAd('extra_moves');
     if (result.status !== 'success') {
-      return this.setFeedback({ type: 'invalid', message: result.message ?? 'Extra moves unavailable.', sound: 'invalid' });
+      return this.setFeedback({ type: 'invalid', message: result.message ?? zhText.messages.extraMovesUnavailable, sound: 'invalid' });
     }
     this.extraMoveAdUsed = true;
     this.movesLeft += 8;
     this.screen = 'playing';
-    return this.setFeedback({ type: 'tool', message: '+8 moves', sound: 'ad-reward' });
+    return this.setFeedback({ type: 'tool', message: zhText.messages.extraMovesReward, sound: 'ad-reward' });
   }
 
   private applySelectedTool(index: number): FeedbackEvent {
@@ -284,7 +285,7 @@ export class GameController {
       return this.setFeedback({ type: 'none' });
     }
     if (!canSpendTool(this.save, tool)) {
-      return this.setFeedback({ type: 'invalid', indexes: [index], message: 'Tool unavailable.', sound: 'invalid' });
+      return this.setFeedback({ type: 'invalid', indexes: [index], message: zhText.messages.toolUnavailable, sound: 'invalid' });
     }
 
     if (tool === 'freeze') {
@@ -391,7 +392,7 @@ export class GameController {
     return {
       type: 'firstTap',
       index: firstTapIndex,
-      label: 'Tap',
+      label: zhText.guidance.tap,
     };
   }
 

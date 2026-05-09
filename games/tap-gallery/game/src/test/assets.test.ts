@@ -35,6 +35,14 @@ describe('asset loading helpers', () => {
     })).toThrow(/invalid cell/);
   });
 
+  it('keeps bundled level titles localized for display', () => {
+    const levels = (levelsJson as unknown[]).map(parseLevelConfig);
+
+    for (const level of levels) {
+      expect(/[\u4e00-\u9fff]/.test(level.title), level.title).toBe(true);
+    }
+  });
+
   it('keeps bundled runtime asset references inside public-pack', () => {
     const manifest = parseAssetManifest(manifestJson);
     const levels = (levelsJson as unknown[]).map(parseLevelConfig);

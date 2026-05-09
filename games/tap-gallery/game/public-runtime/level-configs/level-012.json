@@ -1,7 +1,7 @@
 {
   "id": "level_012_robot_head",
   "levelNo": 12,
-  "title": "Robot Head",
+  "title": "机器人头像",
   "subject": "robot head",
   "maskImage": "assets/levels/masks/level-012-robot-head-mask.png",
   "revealImage": "assets/levels/reveal/level-012-robot-head.png",

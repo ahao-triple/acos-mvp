@@ -2,7 +2,7 @@
   {
     "id": "level_001_strawberry",
     "levelNo": 1,
-    "title": "Strawberry",
+    "title": "草莓",
     "subject": "strawberry",
     "maskImage": "assets/levels/masks/level-001-strawberry-mask.png",
     "revealImage": "assets/levels/reveal/level-001-strawberry.png",
@@ -107,7 +107,7 @@
   {
     "id": "level_002_star_medal",
     "levelNo": 2,
-    "title": "Star Medal",
+    "title": "星星奖章",
     "subject": "star medal",
     "maskImage": "assets/levels/masks/level-002-star-medal-mask.png",
     "revealImage": "assets/levels/reveal/level-002-star-medal.png",
@@ -243,7 +243,7 @@
   {
     "id": "level_003_rocket",
     "levelNo": 3,
-    "title": "Rocket",
+    "title": "火箭",
     "subject": "rocket",
     "maskImage": "assets/levels/masks/level-003-rocket-mask.png",
     "revealImage": "assets/levels/reveal/level-003-rocket.png",
@@ -404,7 +404,7 @@
   {
     "id": "level_004_paint_palette",
     "levelNo": 4,
-    "title": "Paint Palette",
+    "title": "调色盘",
     "subject": "paint palette",
     "maskImage": "assets/levels/masks/level-004-paint-palette-mask.png",
     "revealImage": "assets/levels/reveal/level-004-paint-palette.png",
@@ -596,7 +596,7 @@
   {
     "id": "level_005_ice_cream",
     "levelNo": 5,
-    "title": "Ice Cream",
+    "title": "冰淇淋",
     "subject": "ice cream",
     "maskImage": "assets/levels/masks/level-005-ice-cream-mask.png",
     "revealImage": "assets/levels/reveal/level-005-ice-cream.png",
@@ -808,7 +808,7 @@
   {
     "id": "level_006_suitcase",
     "levelNo": 6,
-    "title": "Suitcase",
+    "title": "旅行箱",
     "subject": "suitcase",
     "maskImage": "assets/levels/masks/level-006-suitcase-mask.png",
     "revealImage": "assets/levels/reveal/level-006-suitcase.png",
@@ -1048,7 +1048,7 @@
   {
     "id": "level_007_camera",
     "levelNo": 7,
-    "title": "Camera",
+    "title": "相机",
     "subject": "camera",
     "maskImage": "assets/levels/masks/level-007-camera-mask.png",
     "revealImage": "assets/levels/reveal/level-007-camera.png",
@@ -1312,7 +1312,7 @@
   {
     "id": "level_008_cupcake",
     "levelNo": 8,
-    "title": "Cupcake",
+    "title": "纸杯蛋糕",
     "subject": "cupcake",
     "maskImage": "assets/levels/masks/level-008-cupcake-mask.png",
     "revealImage": "assets/levels/reveal/level-008-cupcake.png",
@@ -1600,7 +1600,7 @@
   {
     "id": "level_009_kite",
     "levelNo": 9,
-    "title": "Kite",
+    "title": "风筝",
     "subject": "kite",
     "maskImage": "assets/levels/masks/level-009-kite-mask.png",
     "revealImage": "assets/levels/reveal/level-009-kite.png",
@@ -1912,7 +1912,7 @@
   {
     "id": "level_010_gift_box",
     "levelNo": 10,
-    "title": "Gift Box",
+    "title": "礼物盒",
     "subject": "gift box",
     "maskImage": "assets/levels/masks/level-010-gift-box-mask.png",
     "revealImage": "assets/levels/reveal/level-010-gift-box.png",
@@ -2257,7 +2257,7 @@
   {
     "id": "level_011_sunflower",
     "levelNo": 11,
-    "title": "Sunflower",
+    "title": "向日葵",
     "subject": "sunflower",
     "maskImage": "assets/levels/masks/level-011-sunflower-mask.png",
     "revealImage": "assets/levels/reveal/level-011-sunflower.png",
@@ -2623,7 +2623,7 @@
   {
     "id": "level_012_robot_head",
     "levelNo": 12,
-    "title": "Robot Head",
+    "title": "机器人头像",
     "subject": "robot head",
     "maskImage": "assets/levels/masks/level-012-robot-head-mask.png",
     "revealImage": "assets/levels/reveal/level-012-robot-head.png",
@@ -3023,7 +3023,7 @@
   {
     "id": "level_013_hot_air_balloon",
     "levelNo": 13,
-    "title": "Hot Air Balloon",
+    "title": "热气球",
     "subject": "hot air balloon",
     "maskImage": "assets/levels/masks/level-013-hot-air-balloon-mask.png",
     "revealImage": "assets/levels/reveal/level-013-hot-air-balloon.png",
@@ -3460,7 +3460,7 @@
   {
     "id": "level_014_teapot",
     "levelNo": 14,
-    "title": "Teapot",
+    "title": "茶壶",
     "subject": "teapot",
     "maskImage": "assets/levels/masks/level-014-teapot-mask.png",
     "revealImage": "assets/levels/reveal/level-014-teapot.png",
@@ -3933,7 +3933,7 @@
   {
     "id": "level_015_compass",
     "levelNo": 15,
-    "title": "Compass",
+    "title": "指南针",
     "subject": "compass",
     "maskImage": "assets/levels/masks/level-015-compass-mask.png",
     "revealImage": "assets/levels/reveal/level-015-compass.png",
@@ -4444,7 +4444,7 @@
   {
     "id": "level_016_skateboard",
     "levelNo": 16,
-    "title": "Skateboard",
+    "title": "滑板",
     "subject": "skateboard",
     "maskImage": "assets/levels/masks/level-016-skateboard-mask.png",
     "revealImage": "assets/levels/reveal/level-016-skateboard.png",
@@ -4945,7 +4945,7 @@
   {
     "id": "level_017_castle",
     "levelNo": 17,
-    "title": "Castle",
+    "title": "城堡",
     "subject": "castle",
     "maskImage": "assets/levels/masks/level-017-castle-mask.png",
     "revealImage": "assets/levels/reveal/level-017-castle.png",
@@ -5477,7 +5477,7 @@
   {
     "id": "level_018_pineapple",
     "levelNo": 18,
-    "title": "Pineapple",
+    "title": "菠萝",
     "subject": "pineapple",
     "maskImage": "assets/levels/masks/level-018-pineapple-mask.png",
     "revealImage": "assets/levels/reveal/level-018-pineapple.png",
@@ -6044,7 +6044,7 @@
   {
     "id": "level_019_lighthouse",
     "levelNo": 19,
-    "title": "Lighthouse",
+    "title": "灯塔",
     "subject": "lighthouse",
     "maskImage": "assets/levels/masks/level-019-lighthouse-mask.png",
     "revealImage": "assets/levels/reveal/level-019-lighthouse.png",
@@ -6650,7 +6650,7 @@
   {
     "id": "level_020_umbrella",
     "levelNo": 20,
-    "title": "Umbrella",
+    "title": "雨伞",
     "subject": "umbrella",
     "maskImage": "assets/levels/masks/level-020-umbrella-mask.png",
     "revealImage": "assets/levels/reveal/level-020-umbrella.png",
@@ -7296,7 +7296,7 @@
   {
     "id": "level_021_train_front",
     "levelNo": 21,
-    "title": "Train Front",
+    "title": "小火车头",
     "subject": "train front",
     "maskImage": "assets/levels/masks/level-021-train-front-mask.png",
     "revealImage": "assets/levels/reveal/level-021-train-front.png",
@@ -8002,7 +8002,7 @@
   {
     "id": "level_022_potion_bottle",
     "levelNo": 22,
-    "title": "Potion Bottle",
+    "title": "魔药瓶",
     "subject": "potion bottle",
     "maskImage": "assets/levels/masks/level-022-potion-bottle-mask.png",
     "revealImage": "assets/levels/reveal/level-022-potion-bottle.png",
@@ -8758,7 +8758,7 @@
   {
     "id": "level_023_music_note",
     "levelNo": 23,
-    "title": "Music Note",
+    "title": "音符",
     "subject": "music note badge",
     "maskImage": "assets/levels/masks/level-023-music-note-mask.png",
     "revealImage": "assets/levels/reveal/level-023-music-note.png",
@@ -9555,7 +9555,7 @@
   {
     "id": "level_024_paper_lantern",
     "levelNo": 24,
-    "title": "Paper Lantern",
+    "title": "纸灯笼",
     "subject": "paper lantern",
     "maskImage": "assets/levels/masks/level-024-paper-lantern-mask.png",
     "revealImage": "assets/levels/reveal/level-024-paper-lantern.png",
@@ -10465,7 +10465,7 @@
   {
     "id": "level_025_astronaut_helmet",
     "levelNo": 25,
-    "title": "Astronaut Helmet",
+    "title": "宇航员头盔",
     "subject": "astronaut helmet",
     "maskImage": "assets/levels/masks/level-025-astronaut-helmet-mask.png",
     "revealImage": "assets/levels/reveal/level-025-astronaut-helmet.png",
@@ -11366,7 +11366,7 @@
   {
     "id": "level_026_treasure_chest",
     "levelNo": 26,
-    "title": "Treasure Chest",
+    "title": "宝箱",
     "subject": "treasure chest",
     "maskImage": "assets/levels/masks/level-026-treasure-chest-mask.png",
     "revealImage": "assets/levels/reveal/level-026-treasure-chest.png",
@@ -12299,7 +12299,7 @@
   {
     "id": "level_027_crown",
     "levelNo": 27,
-    "title": "Crown",
+    "title": "皇冠",
     "subject": "crown",
     "maskImage": "assets/levels/masks/level-027-crown-mask.png",
     "revealImage": "assets/levels/reveal/level-027-crown.png",
@@ -13385,7 +13385,7 @@
   {
     "id": "level_028_mountain_cabin",
     "levelNo": 28,
-    "title": "Mountain Cabin",
+    "title": "山间小屋",
     "subject": "mountain cabin",
     "maskImage": "assets/levels/masks/level-028-mountain-cabin-mask.png",
     "revealImage": "assets/levels/reveal/level-028-mountain-cabin.png",
@@ -14501,7 +14501,7 @@
   {
     "id": "level_029_fireworks_badge",
     "levelNo": 29,
-    "title": "Fireworks Badge",
+    "title": "烟花徽章",
     "subject": "fireworks badge",
     "maskImage": "assets/levels/masks/level-029-fireworks-badge-mask.png",
     "revealImage": "assets/levels/reveal/level-029-fireworks-badge.png",
@@ -15634,7 +15634,7 @@
   {
     "id": "level_030_trophy_tower",
     "levelNo": 30,
-    "title": "Trophy Tower",
+    "title": "奖杯塔",
     "subject": "trophy tower",
     "maskImage": "assets/levels/masks/level-030-trophy-tower-mask.png",
     "revealImage": "assets/levels/reveal/level-030-trophy-tower.png",

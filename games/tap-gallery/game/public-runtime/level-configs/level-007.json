@@ -1,7 +1,7 @@
 {
   "id": "level_007_camera",
   "levelNo": 7,
-  "title": "Camera",
+  "title": "相机",
   "subject": "camera",
   "maskImage": "assets/levels/masks/level-007-camera-mask.png",
   "revealImage": "assets/levels/reveal/level-007-camera.png",
