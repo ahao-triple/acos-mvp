@@ -5,26 +5,35 @@ import { describe, expect, test } from 'vitest';
 import { createVivoCliCommand } from '../../src/platforms/vivo/rpk.js';
 
 describe('createVivoCliCommand', () => {
-  test('uses a shell-safe command for Windows cmd shims', () => {
-    const packageRoot = path.join('C:', 'repo', 'mini-pack');
+  test('uses node to execute the JS entry on Windows when the package path contains spaces', () => {
+    const packageRoot = path.win32.join('C:\\', 'Users', 'Jane Doe', 'repo', 'mini-pack');
+    const jsEntry = path.win32.join(
+      packageRoot,
+      'node_modules',
+      '@vivo-minigame',
+      'cli-service',
+      'bin',
+      'cli-service.js',
+    );
 
-    const command = createVivoCliCommand(packageRoot, 'win32');
+    const command = createVivoCliCommand(packageRoot, jsEntry);
 
     expect(command).toEqual({
-      command: path.join(packageRoot, 'node_modules', '.bin', 'mg-service.cmd'),
-      args: ['build'],
-      spawnOptions: { shell: true },
+      command: process.execPath,
+      args: [jsEntry, 'build'],
+      spawnOptions: {},
     });
   });
 
-  test('uses the local executable directly on non-Windows platforms', () => {
+  test('uses node to execute the JS entry on non-Windows platforms', () => {
     const packageRoot = path.join('/repo', 'mini-pack');
+    const jsEntry = path.join(packageRoot, 'node_modules', '@vivo-minigame', 'cli-service', 'bin', 'cli-service.js');
 
-    const command = createVivoCliCommand(packageRoot, 'darwin');
+    const command = createVivoCliCommand(packageRoot, jsEntry);
 
     expect(command).toEqual({
-      command: path.join(packageRoot, 'node_modules', '.bin', 'mg-service'),
-      args: ['build'],
+      command: process.execPath,
+      args: [jsEntry, 'build'],
       spawnOptions: {},
     });
   });

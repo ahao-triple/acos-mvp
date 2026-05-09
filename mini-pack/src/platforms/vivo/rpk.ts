@@ -17,6 +17,8 @@ export interface VivoCliCommand {
   spawnOptions: Pick<SpawnOptions, 'shell'>;
 }
 
+const VIVO_CLI_PACKAGE = '@vivo-minigame/cli-service';
+
 export async function buildVivoRpk(projectDir: string, config: LoadedGameConfig): Promise<VivoRpkBuildResult> {
   if (process.env.MINI_PACK_VIVO_FAKE_RPK === '1') {
     const fakeRpk = path.join(projectDir, 'dist/debug', `${createVivoPackageName(config.douyin.projectName)}.rpk`);
@@ -26,8 +28,8 @@ export async function buildVivoRpk(projectDir: string, config: LoadedGameConfig)
   }
 
   const packageRoot = await findMiniPackRoot(path.dirname(fileURLToPath(import.meta.url)));
-  const cliCommand = createVivoCliCommand(packageRoot);
-  await assertVivoCliInstalled(cliCommand.command);
+  const cliEntry = await resolveVivoCliEntry(packageRoot);
+  const cliCommand = createVivoCliCommand(packageRoot, cliEntry);
   await runCommand(cliCommand, projectDir);
 
   const rpkFiles = await findRpkFiles(projectDir);
@@ -41,25 +43,47 @@ export async function buildVivoRpk(projectDir: string, config: LoadedGameConfig)
   return { rpkFiles };
 }
 
-export function createVivoCliCommand(packageRoot: string, platform: NodeJS.Platform = process.platform): VivoCliCommand {
-  const executable = platform === 'win32' ? 'mg-service.cmd' : 'mg-service';
-
+export function createVivoCliCommand(_packageRoot: string, cliEntry: string): VivoCliCommand {
   return {
-    command: path.join(packageRoot, 'node_modules', '.bin', executable),
-    args: ['build'],
-    spawnOptions: platform === 'win32' ? { shell: true } : {},
+    command: process.execPath,
+    args: [cliEntry, 'build'],
+    spawnOptions: {},
   };
 }
 
-async function assertVivoCliInstalled(cliPath: string): Promise<void> {
+async function resolveVivoCliEntry(packageRoot: string): Promise<string> {
+  const cliPackageRoot = path.join(packageRoot, 'node_modules', VIVO_CLI_PACKAGE);
+  const packageJsonPath = path.join(cliPackageRoot, 'package.json');
+  let packageJson: { bin?: string | Record<string, string> };
+
   try {
-    await fs.access(cliPath);
+    packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8')) as { bin?: string | Record<string, string> };
   } catch {
     throw new UserError(
       'Vivo CLI is not installed.',
       'Run pnpm --dir mini-pack install, then rerun pnpm build games/gonglian-fangxian --platform vivo.',
     );
   }
+
+  const binEntry = typeof packageJson.bin === 'string' ? packageJson.bin : packageJson.bin?.['mg-service'];
+  if (!binEntry || path.isAbsolute(binEntry)) {
+    throw new UserError(
+      'Vivo CLI package is missing a usable mg-service bin entry.',
+      `Install ${VIVO_CLI_PACKAGE}@1.27.13 with pnpm --dir mini-pack install, then retry the vivo build.`,
+    );
+  }
+
+  const cliEntry = path.resolve(cliPackageRoot, binEntry);
+  try {
+    await fs.access(cliEntry);
+  } catch {
+    throw new UserError(
+      'Vivo CLI package is installed but its mg-service JS entry was not found.',
+      `Install ${VIVO_CLI_PACKAGE}@1.27.13 with pnpm --dir mini-pack install, then retry the vivo build.`,
+    );
+  }
+
+  return cliEntry;
 }
 
 async function findMiniPackRoot(startDir: string): Promise<string> {
