@@ -4,17 +4,21 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const gamePath = process.argv[2];
+const supportedPlatforms = new Set(['douyin', 'vivo']);
+const usage = 'Usage: pnpm build games/<game-project> [--platform douyin|vivo]';
+const parsed = parseArgs(process.argv.slice(2));
 
-if (!gamePath) {
-  console.error('Usage: pnpm build games/<game-project>');
+if (!parsed.ok) {
+  console.error(parsed.message);
+  console.error(usage);
   process.exit(1);
 }
 
+const { gamePath, platform } = parsed;
 const gameRoot = path.resolve(repoRoot, gamePath);
 const gameName = path.basename(gameRoot);
 const configFile = path.join(gameRoot, 'game.config.ts');
-const outDir = path.posix.join('build', `${gameName}-douyin`);
+const outDir = path.posix.join('build', `${gameName}-${platform}`);
 
 if (!fs.existsSync(configFile)) {
   console.error(`Config file not found: ${path.relative(repoRoot, configFile)}`);
@@ -26,13 +30,61 @@ run(process.execPath, [
   'mini-pack/dist/cli.js',
   'build',
   '--platform',
-  'douyin',
+  platform,
   '--project-root',
   gamePath,
   '--out-dir',
   outDir,
 ]);
-run(process.execPath, ['scripts/smoke-douyin.mjs', gamePath]);
+if (platform === 'douyin') {
+  run(process.execPath, ['scripts/smoke-douyin.mjs', gamePath]);
+}
+
+function parseArgs(args) {
+  let gamePath;
+  let platform = 'douyin';
+
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+
+    if (arg === '--platform') {
+      const value = args[index + 1];
+      if (!value || value.startsWith('--')) {
+        return { ok: false, message: 'Missing value for --platform.' };
+      }
+      platform = value;
+      index += 1;
+      continue;
+    }
+
+    if (arg.startsWith('--platform=')) {
+      platform = arg.slice('--platform='.length);
+      if (!platform) {
+        return { ok: false, message: 'Missing value for --platform.' };
+      }
+      continue;
+    }
+
+    if (arg.startsWith('--')) {
+      return { ok: false, message: `Unexpected argument: ${arg}` };
+    }
+
+    if (gamePath) {
+      return { ok: false, message: `Unexpected argument: ${arg}` };
+    }
+    gamePath = arg;
+  }
+
+  if (!gamePath) {
+    return { ok: false, message: 'Missing game project path.' };
+  }
+
+  if (!supportedPlatforms.has(platform)) {
+    return { ok: false, message: `Unsupported platform: ${platform}\nSupported platforms: ${[...supportedPlatforms].join(', ')}` };
+  }
+
+  return { ok: true, gamePath, platform };
+}
 
 function run(command, args) {
   const result = spawnSync(command, args, {

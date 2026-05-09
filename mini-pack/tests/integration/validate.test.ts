@@ -4,11 +4,29 @@ import path from 'node:path';
 import { describe, expect, test } from 'vitest';
 
 describe('mini-pack validate', () => {
+  const validFixture = fixturePath('valid-douyin-game');
+
   test('exits 0 for a valid Douyin fixture', async () => {
-    const result = await runCli(['validate', '--platform', 'douyin'], fixturePath('valid-douyin-game'));
+    const result = await runCli(['validate', '--platform', 'douyin'], validFixture);
 
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain('Configuration valid');
+  });
+
+  test('validates a config through the vivo platform override', async () => {
+    const result = await runCli(['validate', '--platform', 'vivo'], validFixture);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toBe('');
+    expect(result.stdout).toContain('Configuration valid for vivo: 共联防线');
+  });
+
+  test('reports all supported platforms for invalid validation platform', async () => {
+    const result = await runCli(['validate', '--platform', 'wechat'], validFixture);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain('Unsupported platform: wechat');
+    expect(result.stderr).toContain('Supported platforms: douyin, vivo');
   });
 
   test('exits 1 and names the missing entry path', async () => {
