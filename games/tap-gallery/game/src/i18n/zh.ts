@@ -3,6 +3,7 @@ import type { ToolName } from '../app/controller';
 export const zhText = {
   title: '点点画廊',
   level: (levelNo: number) => `第 ${levelNo} 关`,
+  levelTitle: (levelNo: number, title: string) => `第 ${levelNo} 关 · ${title}`,
   moves: (movesLeft: number) => `${movesLeft} 步`,
   energy: (energy: number) => `体力 ${energy}`,
   coins: (coins: number) => `金币 ${coins}`,

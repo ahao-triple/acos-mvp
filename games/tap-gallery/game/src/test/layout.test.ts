@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { boardLayout, designToCanvas, viewportScale } from '../render/layout';
+import { BOARD_BOX, boardLayout, designToCanvas, viewportScale } from '../render/layout';
 
 describe('canvas layout', () => {
   it('scales the 750 x 1334 design into the viewport', () => {
@@ -14,7 +14,11 @@ describe('canvas layout', () => {
     expect(layout.width).toBeLessThanOrEqual(660);
     expect(layout.height).toBeLessThanOrEqual(660);
     expect(layout.x).toBeGreaterThan(45);
-    expect(layout.y).toBeGreaterThanOrEqual(235);
+    expect(layout.y).toBeGreaterThanOrEqual(BOARD_BOX.y);
+  });
+
+  it('keeps the board panel below the level header and progress bar', () => {
+    expect(BOARD_BOX.y).toBeGreaterThanOrEqual(280);
   });
 
   it('maps design coordinates into backing canvas coordinates', () => {

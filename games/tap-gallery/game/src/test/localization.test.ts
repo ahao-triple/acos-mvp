@@ -29,6 +29,7 @@ describe('Chinese localization', () => {
   it('provides Chinese labels for visible game chrome', () => {
     expect(zhText.title).toBe('点点画廊');
     expect(zhText.level(2)).toBe('第 2 关');
+    expect(zhText.levelTitle(2, '星星奖章')).toBe('第 2 关 · 星星奖章');
     expect(zhText.moves(8)).toBe('8 步');
     expect(zhText.buttons.levels).toBe('关卡');
     expect(zhText.tools.freeze).toBe('冻结');

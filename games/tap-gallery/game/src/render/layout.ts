@@ -1,6 +1,6 @@
 export const DESIGN_WIDTH = 750;
 export const DESIGN_HEIGHT = 1334;
-export const BOARD_BOX = { x: 45, y: 235, size: 660 };
+export const BOARD_BOX = { x: 45, y: 280, size: 660 };
 
 export interface BoardDimensions {
   width: number;

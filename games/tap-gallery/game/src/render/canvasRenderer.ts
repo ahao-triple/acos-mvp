@@ -117,11 +117,10 @@ export class CanvasRenderer {
   private drawLevelInfo(): void {
     const view = this.controller.getViewState();
     const timerLabel = formatTimerRemaining(view.timer.remainingMs);
-    this.text(zhText.level(view.level.levelNo), 54, 178, 24, 700, theme.muted, 'left');
-    this.text(view.level.title, 54, 214, 34, 800, theme.ink, 'left');
-    this.text(timerLabel ? `${timerLabel}  ${zhText.moves(view.movesLeft)}` : zhText.moves(view.movesLeft), 696, 202, 26, 700, theme.ink, 'right');
-    this.roundRect(54, 226, 642, 12, 6, 'rgba(16, 32, 51, 0.12)');
-    this.roundRect(54, 226, 642 * view.progress, 12, 6, theme.coral);
+    this.text(zhText.levelTitle(view.level.levelNo, view.level.title), 54, 190, 30, 800, theme.ink, 'left');
+    this.text(timerLabel ? `${timerLabel}  ${zhText.moves(view.movesLeft)}` : zhText.moves(view.movesLeft), 696, 190, 26, 700, theme.ink, 'right');
+    this.roundRect(54, 224, 642, 10, 5, 'rgba(16, 32, 51, 0.12)');
+    this.roundRect(54, 224, 642 * view.progress, 10, 5, theme.coral);
   }
 
   private drawBoard(): void {
