@@ -17,6 +17,7 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
     renderer.render();
 
     const text = ctx.fillTexts.map((entry) => entry.text).join('\n');
+    expect(text).toContain('共联防线软件');
     expect(text).toContain('前线集结');
     expect(text).toContain('1/30');
     expect(text).toContain('继续作战');
@@ -338,6 +339,10 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
 
     const text = renderedText(ctx);
     expect(text).toContain('补给');
+    expect(text).toContain('侧边栏复访任务');
+    expect(text).toContain('任务指引：点击下方按钮打开侧边栏');
+    expect(text).toContain('从侧边栏卡片重新进入游戏后领取奖励');
+    expect(text).toContain('奖励：80金币，仅可领取一次');
     expect(text).toContain('返回');
   });
 

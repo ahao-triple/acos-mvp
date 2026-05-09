@@ -1,0 +1,212 @@
+{
+  "id": "level_005_ice_cream",
+  "levelNo": 5,
+  "title": "Ice Cream",
+  "subject": "ice cream",
+  "maskImage": "assets/levels/masks/level-005-ice-cream-mask.png",
+  "revealImage": "assets/levels/reveal/level-005-ice-cream.png",
+  "thumbnail": "assets/levels/thumbs/level-005-ice-cream-thumb.png",
+  "board": {
+    "width": 8,
+    "height": 9,
+    "allowPan": false,
+    "allowZoom": false,
+    "initialZoom": 1
+  },
+  "moves": 95,
+  "cellsTarget": 45,
+  "mechanics": [
+    "wrongMoveFeedback"
+  ],
+  "idleHintDelayMs": 5000,
+  "guidance": {
+    "introCue": "none",
+    "weakHintEnabled": true,
+    "revealFocus": true,
+    "firstTapIndex": 3
+  },
+  "cells": [
+    {
+      "index": 3,
+      "direction": 0
+    },
+    {
+      "index": 4,
+      "direction": 0
+    },
+    {
+      "index": 10,
+      "direction": 0
+    },
+    {
+      "index": 11,
+      "direction": 0
+    },
+    {
+      "index": 12,
+      "direction": 0
+    },
+    {
+      "index": 13,
+      "direction": 0
+    },
+    {
+      "index": 17,
+      "direction": 3
+    },
+    {
+      "index": 18,
+      "direction": 0
+    },
+    {
+      "index": 19,
+      "direction": 0
+    },
+    {
+      "index": 20,
+      "direction": 0
+    },
+    {
+      "index": 21,
+      "direction": 0
+    },
+    {
+      "index": 22,
+      "direction": 1
+    },
+    {
+      "index": 25,
+      "direction": 3
+    },
+    {
+      "index": 26,
+      "direction": 3
+    },
+    {
+      "index": 27,
+      "direction": 0
+    },
+    {
+      "index": 28,
+      "direction": 0
+    },
+    {
+      "index": 29,
+      "direction": 1
+    },
+    {
+      "index": 30,
+      "direction": 1
+    },
+    {
+      "index": 32,
+      "direction": 3
+    },
+    {
+      "index": 33,
+      "direction": 3
+    },
+    {
+      "index": 34,
+      "direction": 3
+    },
+    {
+      "index": 35,
+      "direction": 3
+    },
+    {
+      "index": 36,
+      "direction": 1
+    },
+    {
+      "index": 37,
+      "direction": 1
+    },
+    {
+      "index": 38,
+      "direction": 1
+    },
+    {
+      "index": 39,
+      "direction": 1
+    },
+    {
+      "index": 41,
+      "direction": 3
+    },
+    {
+      "index": 42,
+      "direction": 3
+    },
+    {
+      "index": 43,
+      "direction": 2
+    },
+    {
+      "index": 44,
+      "direction": 2
+    },
+    {
+      "index": 45,
+      "direction": 1
+    },
+    {
+      "index": 46,
+      "direction": 1
+    },
+    {
+      "index": 47,
+      "direction": 1
+    },
+    {
+      "index": 49,
+      "direction": 3
+    },
+    {
+      "index": 50,
+      "direction": 2
+    },
+    {
+      "index": 51,
+      "direction": 2
+    },
+    {
+      "index": 52,
+      "direction": 2
+    },
+    {
+      "index": 53,
+      "direction": 2
+    },
+    {
+      "index": 54,
+      "direction": 1
+    },
+    {
+      "index": 58,
+      "direction": 2
+    },
+    {
+      "index": 59,
+      "direction": 2
+    },
+    {
+      "index": 60,
+      "direction": 2
+    },
+    {
+      "index": 61,
+      "direction": 2
+    },
+    {
+      "index": 67,
+      "direction": 2
+    },
+    {
+      "index": 68,
+      "direction": 2
+    }
+  ],
+  "artStatus": "imagegen",
+  "sourceImagegenFile": "ig_01a85e89cd76e8490169fea8f409a48191a362c9f5b46d1471.png"
+}

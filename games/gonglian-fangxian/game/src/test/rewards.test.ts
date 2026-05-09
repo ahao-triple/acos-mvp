@@ -162,6 +162,8 @@ describe('reward flows', () => {
     expect(outcome.save.coins).toBe(0);
     expect(outcome.feedback).toContain('侧边栏');
     expect(outcome.feedback).toContain('返回');
+    expect(outcome.feedback).toContain('从侧边栏卡片重新进入《共联防线软件》');
+    expect(outcome.feedback).toContain('80金币');
     expect(calls).toEqual(['request']);
   });
 

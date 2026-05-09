@@ -171,7 +171,7 @@ export async function claimSidebarReward(save: SaveData, platform: PlatformAdapt
     if (result.status === 'success') {
       return {
         granted: false,
-        feedback: '已打开侧边栏，请从侧边栏卡片返回游戏后再次领取奖励。',
+        feedback: '已打开侧边栏。请从侧边栏卡片重新进入《共联防线软件》，返回补给页后再次点击任务领取80金币。',
         save,
       };
     }

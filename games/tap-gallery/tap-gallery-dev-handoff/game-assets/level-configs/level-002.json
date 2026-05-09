@@ -1,0 +1,136 @@
+{
+  "id": "level_002_star_medal",
+  "levelNo": 2,
+  "title": "Star Medal",
+  "subject": "star medal",
+  "maskImage": "assets/levels/masks/level-002-star-medal-mask.png",
+  "revealImage": "assets/levels/reveal/level-002-star-medal.png",
+  "thumbnail": "assets/levels/thumbs/level-002-star-medal-thumb.png",
+  "board": {
+    "width": 7,
+    "height": 6,
+    "allowPan": false,
+    "allowZoom": false,
+    "initialZoom": 1
+  },
+  "moves": 60,
+  "cellsTarget": 26,
+  "mechanics": [
+    "normal"
+  ],
+  "idleHintDelayMs": 5000,
+  "guidance": {
+    "introCue": "none",
+    "weakHintEnabled": true,
+    "revealFocus": true,
+    "firstTapIndex": 2
+  },
+  "cells": [
+    {
+      "index": 2,
+      "direction": 0
+    },
+    {
+      "index": 3,
+      "direction": 0
+    },
+    {
+      "index": 4,
+      "direction": 0
+    },
+    {
+      "index": 8,
+      "direction": 3
+    },
+    {
+      "index": 9,
+      "direction": 0
+    },
+    {
+      "index": 10,
+      "direction": 0
+    },
+    {
+      "index": 11,
+      "direction": 0
+    },
+    {
+      "index": 12,
+      "direction": 1
+    },
+    {
+      "index": 15,
+      "direction": 3
+    },
+    {
+      "index": 16,
+      "direction": 3
+    },
+    {
+      "index": 17,
+      "direction": 0
+    },
+    {
+      "index": 18,
+      "direction": 1
+    },
+    {
+      "index": 19,
+      "direction": 1
+    },
+    {
+      "index": 22,
+      "direction": 3
+    },
+    {
+      "index": 23,
+      "direction": 3
+    },
+    {
+      "index": 24,
+      "direction": 2
+    },
+    {
+      "index": 25,
+      "direction": 1
+    },
+    {
+      "index": 26,
+      "direction": 1
+    },
+    {
+      "index": 29,
+      "direction": 3
+    },
+    {
+      "index": 30,
+      "direction": 2
+    },
+    {
+      "index": 31,
+      "direction": 2
+    },
+    {
+      "index": 32,
+      "direction": 2
+    },
+    {
+      "index": 33,
+      "direction": 1
+    },
+    {
+      "index": 37,
+      "direction": 2
+    },
+    {
+      "index": 38,
+      "direction": 2
+    },
+    {
+      "index": 39,
+      "direction": 2
+    }
+  ],
+  "artStatus": "imagegen",
+  "sourceImagegenFile": "ig_01a85e89cd76e8490169fea3d521d881918ee6b35f4fa16abc.png"
+}
