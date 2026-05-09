@@ -6,6 +6,7 @@ import { afterEach, describe, expect, test } from 'vitest';
 
 const validFixture = fixturePath('valid-douyin-game');
 const outputDir = path.join(validFixture, 'builds/douyin');
+const vivoOutputDir = path.join(validFixture, 'builds/vivo');
 
 afterEach(async () => {
   await fs.rm(path.join(validFixture, 'builds'), { force: true, recursive: true });
@@ -70,6 +71,70 @@ describe('mini-pack build', () => {
     });
     expect(report.bundle.bytes).toBeGreaterThan(0);
     expect(report.assets.bytes).toBeGreaterThan(0);
+    await expect(fs.readFile(path.join(validFixture, 'game/src/main.ts'), 'utf8')).resolves.toBe(sourceBefore);
+  });
+
+  test('generates a vivo project without modifying source files', async () => {
+    const sourceBefore = await fs.readFile(path.join(validFixture, 'game/src/main.ts'), 'utf8');
+
+    const result = await runCli(['build', '--platform', 'vivo', '--out-dir', 'builds/vivo', '--skip-vivo-rpk'], validFixture);
+
+    expect(result.exitCode).toBe(0);
+    await expect(fs.stat(path.join(vivoOutputDir, 'package.json'))).resolves.toBeTruthy();
+    await expect(fs.stat(path.join(vivoOutputDir, 'src/manifest.json'))).resolves.toBeTruthy();
+    await expect(fs.stat(path.join(vivoOutputDir, 'src/game.js'))).resolves.toBeTruthy();
+    await expect(fs.stat(path.join(vivoOutputDir, 'src/assets/piece-shield.txt'))).resolves.toBeTruthy();
+    await expect(fs.stat(path.join(vivoOutputDir, 'src/assets/nested/readme.txt'))).resolves.toBeTruthy();
+
+    const packageJson = JSON.parse(await fs.readFile(path.join(vivoOutputDir, 'package.json'), 'utf8'));
+    expect(packageJson.scripts).toMatchObject({
+      build: 'mg-service build',
+      release: 'mg-service release',
+      watch: 'mg-service watch',
+      server: 'mg-service server',
+    });
+    expect(packageJson.devDependencies).toMatchObject({
+      '@vivo-minigame/cli-service': '1.27.13',
+    });
+
+    const manifest = JSON.parse(await fs.readFile(path.join(vivoOutputDir, 'src/manifest.json'), 'utf8'));
+    expect(manifest).toMatchObject({
+      package: 'com.minipack.gonglianfangxian',
+      name: '共联防线',
+      versionName: '1.0.0',
+      versionCode: 1,
+      minPlatformVersion: 1060,
+      deviceOrientation: 'portrait',
+      type: 'game',
+      config: {
+        logLevel: 'debug',
+      },
+    });
+
+    const gameJs = await fs.readFile(path.join(vivoOutputDir, 'src/game.js'), 'utf8');
+    expect(gameJs).toContain('var qg = root.qg || {};');
+    expect(gameJs).toContain('qg.createCanvas');
+    expect(gameJs).toContain('qg.createInnerAudioContext');
+    expect(gameJs).toContain('qg.createRewardedVideoAd');
+    expect(gameJs).toContain('haptics: haptics');
+    expect(gameJs).toContain('[mini-pack:vivo]');
+    expect(gameJs).toContain('musicAudio.src = musicPath(name);');
+    expect(gameJs).toContain("'.mp3'");
+
+    const report = JSON.parse(await fs.readFile(path.join(vivoOutputDir, 'build-report.json'), 'utf8'));
+    expect(report).toMatchObject({
+      tool: 'mini-pack',
+      platform: 'vivo',
+      title: '共联防线',
+      outDir: 'builds/vivo',
+      bundle: {
+        file: 'game.js',
+      },
+      assets: {
+        count: 2,
+      },
+    });
+
     await expect(fs.readFile(path.join(validFixture, 'game/src/main.ts'), 'utf8')).resolves.toBe(sourceBefore);
   });
 });

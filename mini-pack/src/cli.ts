@@ -30,11 +30,13 @@ export async function main(argv = process.argv): Promise<void> {
     .requiredOption('--platform <platform>', 'target platform')
     .option('--project-root <path>', 'project root that contains game.config.ts')
     .option('--out-dir <path>', 'override output directory, resolved from the current working directory')
-    .action(async (options: { platform: string; projectRoot?: string; outDir?: string }) => {
+    .option('--skip-vivo-rpk', 'generate vivo project files without invoking mg-service')
+    .action(async (options: { platform: string; projectRoot?: string; outDir?: string; skipVivoRpk?: boolean }) => {
       await runBuildCommand({
         platform: options.platform,
         projectRoot: options.projectRoot,
         outDir: options.outDir,
+        skipVivoRpk: options.skipVivoRpk,
       });
     });
 

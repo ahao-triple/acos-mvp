@@ -11,6 +11,7 @@ export interface BuildCommandOptions {
   platform: string;
   projectRoot?: string;
   outDir?: string;
+  skipVivoRpk?: boolean;
 }
 
 export async function runBuildCommand(options: BuildCommandOptions): Promise<void> {
@@ -19,7 +20,9 @@ export async function runBuildCommand(options: BuildCommandOptions): Promise<voi
     projectRoot: options.projectRoot,
     platform: options.platform as PlatformName,
   });
-  const report = await builder.build(applyOutDirOverride(config, options.outDir));
+  const report = await builder.build(applyOutDirOverride(config, options.outDir), {
+    skipVivoRpk: options.skipVivoRpk === true,
+  });
 
   for (const warning of report.warnings) {
     logger.warn(warning);
