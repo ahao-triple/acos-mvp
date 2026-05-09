@@ -387,4 +387,74 @@ describe('game controller', () => {
 
     expect(controller.getViewState().camera).toMatchObject({ scale: 1, x: 0, y: 0 });
   });
+
+  it('focuses the board camera when hint selects an off-center cell', () => {
+    const advancedLevel: LevelConfig = {
+      ...levels()[0],
+      id: 'level-12',
+      levelNo: 12,
+      title: 'Twelve',
+      board: {
+        width: 9,
+        height: 9,
+        allowPan: true,
+        allowZoom: true,
+        initialZoom: 1,
+      },
+      cells: [{ index: 0, direction: 0 }],
+    };
+    const controller = new GameController({
+      levels: [advancedLevel],
+      save: {
+        ...defaultSave(),
+        currentLevel: 12,
+        highestUnlockedLevel: 12,
+      },
+      platform: createWebPlatformAdapter(),
+    });
+
+    expect(controller.useHint().indexes).toEqual([0]);
+    expect(controller.getViewState().camera.scale).toBe(1.35);
+    expect(controller.getViewState().camera.x).not.toBe(0);
+    expect(controller.getViewState().camera.y).not.toBe(0);
+  });
+
+  it('focuses the board camera when magnet is aimed', () => {
+    const advancedLevel: LevelConfig = {
+      ...levels()[0],
+      id: 'level-12',
+      levelNo: 12,
+      title: 'Twelve',
+      board: {
+        width: 9,
+        height: 9,
+        allowPan: true,
+        allowZoom: true,
+        initialZoom: 1,
+      },
+      cellsTarget: 4,
+      cells: [
+        { index: 0, direction: 1 },
+        { index: 1, direction: 1 },
+        { index: 2, direction: 1 },
+        { index: 80, direction: 2 },
+      ],
+    };
+    const controller = new GameController({
+      levels: [advancedLevel],
+      save: {
+        ...defaultSave(),
+        currentLevel: 12,
+        highestUnlockedLevel: 12,
+      },
+      platform: createWebPlatformAdapter(),
+    });
+
+    controller.selectTool('magnet');
+    expect(controller.tapCell(0).type).toBe('tool');
+
+    expect(controller.getViewState().camera.scale).toBe(1.35);
+    expect(controller.getViewState().camera.x).not.toBe(0);
+    expect(controller.getViewState().camera.y).not.toBe(0);
+  });
 });

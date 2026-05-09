@@ -15,7 +15,8 @@ import { applyBomb, applyHammer, applyMagnet } from '../core/tools';
 import type { BoardState } from '../core/types';
 import { zhText } from '../i18n/zh';
 import type { PlatformAdapter } from '../platform/types';
-import { createBoardCamera, panCamera, resetCamera, zoomCamera, type BoardCameraState } from '../render/camera';
+import { createBoardCamera, focusCameraOnBoardPoint, panCamera, resetCamera, zoomCamera, type BoardCameraState } from '../render/camera';
+import { BOARD_BOX, boardLayout, cellRect } from '../render/layout';
 
 export type GameScreen = 'loading' | 'playing' | 'win' | 'failed' | 'levels' | 'error';
 export type FeedbackEventType = 'clear' | 'invalid' | 'win' | 'failed' | 'tool' | 'none';
@@ -216,6 +217,7 @@ export class GameController {
     if (hint.kind === 'secret' && !hint.revealed) {
       this.board = revealCellDirection(this.board, hint.index);
     }
+    this.focusCameraOnCell(hint.index);
     this.persist();
     return this.setFeedback({ type: 'tool', indexes: [hint.index], sound: 'hint' });
   }
@@ -328,6 +330,9 @@ export class GameController {
     if (result.removed.length === 0) {
       return this.setFeedback({ type: 'invalid', indexes: [index], sound: 'invalid' });
     }
+    if (tool === 'magnet') {
+      this.focusCameraOnCell(index);
+    }
     this.save = spendTool(this.save, tool);
     this.board = result.board;
     for (const removed of result.removed) {
@@ -367,6 +372,19 @@ export class GameController {
       allowZoom: level.board.allowZoom,
       initialZoom: level.board.initialZoom,
     });
+  }
+
+  private focusCameraOnCell(index: number): void {
+    const cell = this.board.cellsByIndex.get(index);
+    if (!cell) {
+      return;
+    }
+    const layout = boardLayout(this.board.level.board);
+    const rect = cellRect(layout, cell.index, this.board.width);
+    this.camera = focusCameraOnBoardPoint(this.camera, {
+      x: rect.x + rect.width / 2 - BOARD_BOX.x,
+      y: rect.y + rect.height / 2 - BOARD_BOX.y,
+    }, 1.35);
   }
 
   private setFeedback(feedback: FeedbackEvent): FeedbackEvent {

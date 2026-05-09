@@ -95,6 +95,19 @@ export function cameraScreenToBoardPoint(camera: BoardCameraState, point: { x: n
   };
 }
 
+export function focusCameraOnBoardPoint(camera: BoardCameraState, point: { x: number; y: number }, scale: number): BoardCameraState {
+  if (!camera.canZoom) {
+    return camera;
+  }
+  const nextScale = clamp(scale, camera.minScale, camera.maxScale);
+  return clampCamera({
+    ...camera,
+    scale: nextScale,
+    x: (BOARD_CENTER - point.x) * nextScale,
+    y: (BOARD_CENTER - point.y) * nextScale,
+  });
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
