@@ -1,0 +1,511 @@
+{
+  "id": "level_015_compass",
+  "levelNo": 15,
+  "title": "Compass",
+  "subject": "compass",
+  "maskImage": "assets/levels/masks/level-015-compass-mask.png",
+  "revealImage": "assets/levels/reveal/level-015-compass.png",
+  "thumbnail": "assets/levels/thumbs/level-015-compass-thumb.png",
+  "board": {
+    "width": 13,
+    "height": 13,
+    "allowPan": true,
+    "allowZoom": true,
+    "initialZoom": 1
+  },
+  "moves": 200,
+  "cellsTarget": 108,
+  "mechanics": [
+    "lockedArea",
+    "goldenIntro"
+  ],
+  "idleHintDelayMs": 8000,
+  "guidance": {
+    "introCue": "none",
+    "weakHintEnabled": true,
+    "revealFocus": true,
+    "firstTapIndex": 17
+  },
+  "cells": [
+    {
+      "index": 17,
+      "direction": 0
+    },
+    {
+      "index": 18,
+      "direction": 0
+    },
+    {
+      "index": 19,
+      "direction": 0
+    },
+    {
+      "index": 20,
+      "direction": 0
+    },
+    {
+      "index": 21,
+      "direction": 0
+    },
+    {
+      "index": 22,
+      "direction": 0
+    },
+    {
+      "index": 28,
+      "direction": 0
+    },
+    {
+      "index": 29,
+      "direction": 0
+    },
+    {
+      "index": 30,
+      "direction": 0
+    },
+    {
+      "index": 31,
+      "direction": 0
+    },
+    {
+      "index": 32,
+      "direction": 0
+    },
+    {
+      "index": 33,
+      "direction": 0
+    },
+    {
+      "index": 34,
+      "direction": 0
+    },
+    {
+      "index": 35,
+      "direction": 0
+    },
+    {
+      "index": 36,
+      "direction": 0
+    },
+    {
+      "index": 40,
+      "direction": 3
+    },
+    {
+      "index": 41,
+      "direction": 3
+    },
+    {
+      "index": 42,
+      "direction": 0
+    },
+    {
+      "index": 43,
+      "direction": 0
+    },
+    {
+      "index": 44,
+      "direction": 0
+    },
+    {
+      "index": 45,
+      "direction": 0
+    },
+    {
+      "index": 46,
+      "direction": 0
+    },
+    {
+      "index": 47,
+      "direction": 0
+    },
+    {
+      "index": 48,
+      "direction": 0
+    },
+    {
+      "index": 49,
+      "direction": 1
+    },
+    {
+      "index": 50,
+      "direction": 1
+    },
+    {
+      "index": 53,
+      "direction": 3
+    },
+    {
+      "index": 54,
+      "direction": 3
+    },
+    {
+      "index": 55,
+      "direction": 3
+    },
+    {
+      "index": 56,
+      "direction": 0
+    },
+    {
+      "index": 57,
+      "direction": 0
+    },
+    {
+      "index": 58,
+      "direction": 0
+    },
+    {
+      "index": 59,
+      "direction": 0
+    },
+    {
+      "index": 60,
+      "direction": 0
+    },
+    {
+      "index": 61,
+      "direction": 1
+    },
+    {
+      "index": 62,
+      "direction": 1
+    },
+    {
+      "index": 63,
+      "direction": 1
+    },
+    {
+      "index": 66,
+      "direction": 3
+    },
+    {
+      "index": 67,
+      "direction": 3
+    },
+    {
+      "index": 68,
+      "direction": 3
+    },
+    {
+      "index": 69,
+      "direction": 3
+    },
+    {
+      "index": 70,
+      "direction": 0
+    },
+    {
+      "index": 71,
+      "direction": 0,
+      "kind": "golden"
+    },
+    {
+      "index": 72,
+      "direction": 0
+    },
+    {
+      "index": 73,
+      "direction": 1
+    },
+    {
+      "index": 74,
+      "direction": 1
+    },
+    {
+      "index": 75,
+      "direction": 1
+    },
+    {
+      "index": 76,
+      "direction": 1,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 79,
+      "direction": 3
+    },
+    {
+      "index": 80,
+      "direction": 3
+    },
+    {
+      "index": 81,
+      "direction": 3
+    },
+    {
+      "index": 82,
+      "direction": 3
+    },
+    {
+      "index": 83,
+      "direction": 3,
+      "kind": "golden"
+    },
+    {
+      "index": 84,
+      "direction": 2,
+      "kind": "golden"
+    },
+    {
+      "index": 85,
+      "direction": 1,
+      "kind": "golden"
+    },
+    {
+      "index": 86,
+      "direction": 1
+    },
+    {
+      "index": 87,
+      "direction": 1
+    },
+    {
+      "index": 88,
+      "direction": 1,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 89,
+      "direction": 1,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 92,
+      "direction": 3
+    },
+    {
+      "index": 93,
+      "direction": 3
+    },
+    {
+      "index": 94,
+      "direction": 3
+    },
+    {
+      "index": 95,
+      "direction": 3
+    },
+    {
+      "index": 96,
+      "direction": 2
+    },
+    {
+      "index": 97,
+      "direction": 2
+    },
+    {
+      "index": 98,
+      "direction": 2
+    },
+    {
+      "index": 99,
+      "direction": 1
+    },
+    {
+      "index": 100,
+      "direction": 1,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 101,
+      "direction": 1,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 102,
+      "direction": 1,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 105,
+      "direction": 3
+    },
+    {
+      "index": 106,
+      "direction": 3
+    },
+    {
+      "index": 107,
+      "direction": 3
+    },
+    {
+      "index": 108,
+      "direction": 2
+    },
+    {
+      "index": 109,
+      "direction": 2
+    },
+    {
+      "index": 110,
+      "direction": 2
+    },
+    {
+      "index": 111,
+      "direction": 2
+    },
+    {
+      "index": 112,
+      "direction": 2
+    },
+    {
+      "index": 113,
+      "direction": 1,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 114,
+      "direction": 1,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 115,
+      "direction": 1,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 118,
+      "direction": 3
+    },
+    {
+      "index": 119,
+      "direction": 3
+    },
+    {
+      "index": 120,
+      "direction": 2
+    },
+    {
+      "index": 121,
+      "direction": 2
+    },
+    {
+      "index": 122,
+      "direction": 2
+    },
+    {
+      "index": 123,
+      "direction": 2
+    },
+    {
+      "index": 124,
+      "direction": 2
+    },
+    {
+      "index": 125,
+      "direction": 2,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 126,
+      "direction": 2,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 127,
+      "direction": 1,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 128,
+      "direction": 1,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 132,
+      "direction": 2
+    },
+    {
+      "index": 133,
+      "direction": 2
+    },
+    {
+      "index": 134,
+      "direction": 2
+    },
+    {
+      "index": 135,
+      "direction": 2
+    },
+    {
+      "index": 136,
+      "direction": 2
+    },
+    {
+      "index": 137,
+      "direction": 2,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 138,
+      "direction": 2,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 139,
+      "direction": 2,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 140,
+      "direction": 2,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 146,
+      "direction": 2
+    },
+    {
+      "index": 147,
+      "direction": 2
+    },
+    {
+      "index": 148,
+      "direction": 2
+    },
+    {
+      "index": 149,
+      "direction": 2,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 150,
+      "direction": 2,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 151,
+      "direction": 2,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 152,
+      "direction": 2,
+      "kind": "locked",
+      "unlockGroup": 1
+    }
+  ],
+  "artStatus": "programmatic-placeholder",
+  "sourceImagegenFile": null
+}

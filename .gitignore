@@ -9,6 +9,7 @@ builds/
 dist/
 mini-pack/dist/
 games/*/game/dist/
+games/tap-gallery/game/public/
 
 # Local environment
 .env
