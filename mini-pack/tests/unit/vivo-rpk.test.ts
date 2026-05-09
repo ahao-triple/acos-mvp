@@ -21,23 +21,25 @@ afterEach(() => {
 
 describe('createVivoCliCommand', () => {
   test('uses shell only for the PATH mgs command on Windows', () => {
-    const command = createVivoCliCommand('win32');
+    const packageRoot = path.win32.join('C:\\', 'Users', 'Jane Doe', 'repo', 'mini-pack');
+    const command = createVivoCliCommand(packageRoot, 'win32');
 
-    expect(command).toEqual({
-      command: 'mgs',
-      args: ['build'],
-      spawnOptions: { shell: true },
-    });
+    expect(command.command).toBe('mgs');
+    expect(command.args).toEqual(['build']);
+    expect(command.spawnOptions.shell).toBe(true);
+    expect(command.spawnOptions.env?.PATH?.startsWith(`${path.join(packageRoot, 'node_modules/.bin')}${path.delimiter}`)).toBe(
+      true,
+    );
   });
 
   test('uses the PATH mgs executable directly on non-Windows platforms', () => {
-    const command = createVivoCliCommand('darwin');
+    const packageRoot = path.join('/repo', 'mini-pack');
+    const command = createVivoCliCommand(packageRoot, 'darwin');
 
-    expect(command).toEqual({
-      command: 'mgs',
-      args: ['build'],
-      spawnOptions: { shell: false },
-    });
+    expect(command.command).toBe('mgs');
+    expect(command.args).toEqual(['build']);
+    expect(command.spawnOptions.shell).toBe(false);
+    expect(command.spawnOptions.env?.PATH?.split(path.delimiter)[0]).toBe(path.join(packageRoot, 'node_modules/.bin'));
   });
 });
 

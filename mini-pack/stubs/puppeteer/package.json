@@ -1,0 +1,6 @@
+{
+  "name": "puppeteer",
+  "version": "0.0.0-mini-pack-stub",
+  "private": true,
+  "main": "index.cjs"
+}

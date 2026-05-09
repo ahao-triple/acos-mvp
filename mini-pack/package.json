@@ -33,6 +33,7 @@
     "@types/fs-extra": "^11.0.4",
     "@types/node": "^24.10.1",
     "@vivo-minigame/cli": "1.27.23",
+    "puppeteer": "file:stubs/puppeteer",
     "typescript": "^5.9.3",
     "vitest": "^4.0.14"
   },

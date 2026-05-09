@@ -1,6 +1,7 @@
 import { spawn, type SpawnOptions } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { UserError } from '../../shared/errors.js';
 import type { LoadedGameConfig } from '../../shared/types.js';
@@ -13,7 +14,7 @@ export interface VivoRpkBuildResult {
 export interface VivoCliCommand {
   command: string;
   args: string[];
-  spawnOptions: Pick<SpawnOptions, 'shell'>;
+  spawnOptions: Pick<SpawnOptions, 'env' | 'shell'>;
 }
 
 interface VivoCliRunResult {
@@ -32,7 +33,8 @@ export async function buildVivoRpk(projectDir: string, config: LoadedGameConfig)
     return { rpkFiles: [fakeRpk] };
   }
 
-  const cliCommand = createVivoCliCommand();
+  const packageRoot = await findMiniPackRoot(path.dirname(fileURLToPath(import.meta.url)));
+  const cliCommand = createVivoCliCommand(packageRoot);
   const cliResult = await runCommand(cliCommand, projectDir);
 
   const rpkFiles = await findRpkFiles(projectDir);
@@ -57,14 +59,44 @@ export async function buildVivoRpk(projectDir: string, config: LoadedGameConfig)
   return { rpkFiles };
 }
 
-export function createVivoCliCommand(platform = process.platform): VivoCliCommand {
+export function createVivoCliCommand(packageRoot: string, platform = process.platform): VivoCliCommand {
   return {
     command: VIVO_CLI_BIN,
     args: ['build'],
     spawnOptions: {
+      env: {
+        ...process.env,
+        PATH: prependPath(path.join(packageRoot, 'node_modules/.bin'), process.env.PATH),
+      },
       shell: platform === 'win32',
     },
   };
+}
+
+function prependPath(directory: string, currentPath: string | undefined): string {
+  return currentPath ? `${directory}${path.delimiter}${currentPath}` : directory;
+}
+
+async function findMiniPackRoot(startDir: string): Promise<string> {
+  let current = startDir;
+
+  for (;;) {
+    const packageJsonPath = path.join(current, 'package.json');
+    try {
+      const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf8')) as { name?: string };
+      if (packageJson.name === 'mini-pack') {
+        return current;
+      }
+    } catch {
+      // Keep walking toward the filesystem root.
+    }
+
+    const parent = path.dirname(current);
+    if (parent === current) {
+      throw new UserError('Unable to locate the mini-pack package root.');
+    }
+    current = parent;
+  }
 }
 
 function runCommand(cliCommand: VivoCliCommand, cwd: string): Promise<VivoCliRunResult> {
@@ -90,7 +122,7 @@ function runCommand(cliCommand: VivoCliCommand, cwd: string): Promise<VivoCliRun
       reject(
         new UserError(
           `Failed to start Vivo CLI: ${error.message}`,
-          `Command: ${cliCommand.command} ${cliCommand.args.join(' ')}\nProject: ${cwd}\nInstall @vivo-minigame/cli globally so the ${VIVO_CLI_BIN} command is available.`,
+          `Command: ${cliCommand.command} ${cliCommand.args.join(' ')}\nProject: ${cwd}\nInstall mini-pack dependencies with pnpm --dir mini-pack install so the local ${VIVO_CLI_BIN} command is available.`,
         ),
       );
     });
