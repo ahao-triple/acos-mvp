@@ -116,7 +116,9 @@ describe('mini-pack build', () => {
     expect(gameJs).toContain('qg.createCanvas');
     expect(gameJs).toContain('qg.createInnerAudioContext');
     expect(gameJs).toContain('qg.createRewardedVideoAd');
+    expect(gameJs).toContain('ad.onError(onError)');
     expect(gameJs).toContain('haptics: haptics');
+    expect(gameJs).toContain('ad.offError(onError)');
     expect(gameJs).toContain('[mini-pack:vivo]');
     expect(gameJs).toContain('musicAudio.src = musicPath(name);');
     expect(gameJs).toContain("'.mp3'");

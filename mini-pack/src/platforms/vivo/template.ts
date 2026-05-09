@@ -320,25 +320,32 @@ ${bundleCode}
       }
       return new Promise(function (resolve) {
         var settled = false;
-        var onClose = function (result) {
-          if (settled) return;
-          settled = true;
+        function cleanup() {
           if (typeof ad.offClose === 'function') {
             ad.offClose(onClose);
           }
+          if (typeof ad.offError === 'function') {
+            ad.offError(onError);
+          }
+        }
+        var onClose = function (result) {
+          if (settled) return;
+          settled = true;
+          cleanup();
           resolve({ completed: Boolean(result && result.isEnded) });
         };
         var onError = function (error) {
           if (settled) return;
           settled = true;
-          if (typeof ad.offClose === 'function') {
-            ad.offClose(onClose);
-          }
+          cleanup();
           warn('Rewarded video playback failed.', error);
           resolve({ completed: false });
         };
         if (typeof ad.onClose === 'function') {
           ad.onClose(onClose);
+        }
+        if (typeof ad.onError === 'function') {
+          ad.onError(onError);
         }
         if (typeof ad.show !== 'function') {
           onError(new Error('Rewarded video show API unavailable.'));
