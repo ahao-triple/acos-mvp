@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, type SpawnOptions } from 'node:child_process';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,6 +11,12 @@ export interface VivoRpkBuildResult {
   rpkFiles: string[];
 }
 
+export interface VivoCliCommand {
+  command: string;
+  args: string[];
+  spawnOptions: Pick<SpawnOptions, 'shell'>;
+}
+
 export async function buildVivoRpk(projectDir: string, config: LoadedGameConfig): Promise<VivoRpkBuildResult> {
   if (process.env.MINI_PACK_VIVO_FAKE_RPK === '1') {
     const fakeRpk = path.join(projectDir, 'dist/debug', `${createVivoPackageName(config.douyin.projectName)}.rpk`);
@@ -19,8 +25,10 @@ export async function buildVivoRpk(projectDir: string, config: LoadedGameConfig)
     return { rpkFiles: [fakeRpk] };
   }
 
-  const cliPath = await resolveVivoCliPath();
-  await runCommand(cliPath, ['build'], projectDir);
+  const packageRoot = await findMiniPackRoot(path.dirname(fileURLToPath(import.meta.url)));
+  const cliCommand = createVivoCliCommand(packageRoot);
+  await assertVivoCliInstalled(cliCommand.command);
+  await runCommand(cliCommand, projectDir);
 
   const rpkFiles = await findRpkFiles(projectDir);
   if (rpkFiles.length === 0) {
@@ -33,14 +41,19 @@ export async function buildVivoRpk(projectDir: string, config: LoadedGameConfig)
   return { rpkFiles };
 }
 
-async function resolveVivoCliPath(): Promise<string> {
-  const packageRoot = await findMiniPackRoot(path.dirname(fileURLToPath(import.meta.url)));
-  const executable = process.platform === 'win32' ? 'mg-service.cmd' : 'mg-service';
-  const cliPath = path.join(packageRoot, 'node_modules', '.bin', executable);
+export function createVivoCliCommand(packageRoot: string, platform: NodeJS.Platform = process.platform): VivoCliCommand {
+  const executable = platform === 'win32' ? 'mg-service.cmd' : 'mg-service';
 
+  return {
+    command: path.join(packageRoot, 'node_modules', '.bin', executable),
+    args: ['build'],
+    spawnOptions: platform === 'win32' ? { shell: true } : {},
+  };
+}
+
+async function assertVivoCliInstalled(cliPath: string): Promise<void> {
   try {
     await fs.access(cliPath);
-    return cliPath;
   } catch {
     throw new UserError(
       'Vivo CLI is not installed.',
@@ -71,10 +84,11 @@ async function findMiniPackRoot(startDir: string): Promise<string> {
   }
 }
 
-function runCommand(command: string, args: string[], cwd: string): Promise<void> {
+function runCommand(cliCommand: VivoCliCommand, cwd: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = spawn(command, args, {
+    const child = spawn(cliCommand.command, cliCommand.args, {
       cwd,
+      ...cliCommand.spawnOptions,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
     let stdout = '';
@@ -95,7 +109,7 @@ function runCommand(command: string, args: string[], cwd: string): Promise<void>
       reject(
         new UserError(
           `Vivo CLI failed with exit code ${exitCode ?? 'unknown'}.`,
-          `Command: ${command} ${args.join(' ')}\nProject: ${cwd}\nstdout:\n${stdout}\nstderr:\n${stderr}`,
+          `Command: ${cliCommand.command} ${cliCommand.args.join(' ')}\nProject: ${cwd}\nstdout:\n${stdout}\nstderr:\n${stderr}`,
         ),
       );
     });
@@ -103,7 +117,7 @@ function runCommand(command: string, args: string[], cwd: string): Promise<void>
       reject(
         new UserError(
           `Failed to start Vivo CLI: ${error.message}`,
-          `Command: ${command} ${args.join(' ')}\nProject: ${cwd}`,
+          `Command: ${cliCommand.command} ${cliCommand.args.join(' ')}\nProject: ${cwd}`,
         ),
       );
     });
