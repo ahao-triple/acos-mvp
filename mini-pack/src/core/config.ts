@@ -23,7 +23,11 @@ export async function loadGameConfig(options: LoadGameConfigOptions = {}): Promi
   await assertPathExists(configFileAbs, 'Config file not found', 'Create game.config.ts in the project root.');
 
   const rawConfig = await withProjectEnv(projectRoot, () => importConfig(configFileAbs));
-  const candidate = mergeConfig(rawConfig, options.overrides);
+  const platformOverride = options.platform ? { platform: options.platform } : undefined;
+  const candidate = mergeConfig(rawConfig, {
+    ...platformOverride,
+    ...options.overrides,
+  });
   const parsed = gameConfigSchema.safeParse(candidate);
 
   if (!parsed.success) {
@@ -31,17 +35,10 @@ export async function loadGameConfig(options: LoadGameConfigOptions = {}): Promi
   }
 
   const config = parsed.data;
-  if (options.platform && config.platform !== options.platform) {
-    throw new UserError(
-      `Configured platform "${config.platform}" does not match requested platform "${options.platform}".`,
-      'Update game.config.ts or pass the matching --platform value.',
-    );
-  }
-
   const entryAbs = resolveProjectPath(projectRoot, config.entry, 'entry');
   const publicDirAbs = resolveProjectPath(projectRoot, config.publicDir, 'publicDir');
   const outDirAbs = resolveProjectPath(projectRoot, config.outDir, 'outDir');
-  const douyinMaterialsAbs = path.join(projectRoot, 'platform/douyin/materials');
+  const douyinMaterialsAbs = config.platform === 'douyin' ? path.join(projectRoot, 'platform/douyin/materials') : undefined;
 
   assertSafeOutDir(projectRoot, config.outDir, outDirAbs);
   await assertPathExists(entryAbs, `Entry file not found: ${config.entry}`, 'Create this file or update "entry" in game.config.ts.');
@@ -50,11 +47,13 @@ export async function loadGameConfig(options: LoadGameConfigOptions = {}): Promi
     `Public directory not found: ${config.publicDir}`,
     'Create this directory or update "publicDir" in game.config.ts.',
   );
-  await assertDirectoryExists(
-    douyinMaterialsAbs,
-    'Douyin materials directory not found: platform/douyin/materials',
-    'Create platform/douyin/materials before validating the Douyin package.',
-  );
+  if (douyinMaterialsAbs) {
+    await assertDirectoryExists(
+      douyinMaterialsAbs,
+      'Douyin materials directory not found: platform/douyin/materials',
+      'Create platform/douyin/materials before validating the Douyin package.',
+    );
+  }
 
   return {
     ...config,

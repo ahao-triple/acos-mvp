@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const gameConfigSchema = z
   .object({
     title: z.string().trim().min(1, 'title must not be empty'),
-    platform: z.literal('douyin'),
+    platform: z.enum(['douyin', 'vivo']),
     entry: z.string().trim().min(1, 'entry must not be empty'),
     publicDir: z.string().trim().min(1, 'publicDir must not be empty'),
     outDir: z.string().trim().min(1, 'outDir must not be empty'),

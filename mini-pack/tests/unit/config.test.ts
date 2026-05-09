@@ -32,6 +32,40 @@ describe('loadGameConfig', () => {
     );
   });
 
+  test('loads a valid config as vivo when the CLI platform overrides the file platform', async () => {
+    const config = await loadGameConfig({
+      projectRoot: fixturePath('valid-douyin-game'),
+      platform: 'vivo',
+    });
+
+    expect(config.title).toBe('共联防线');
+    expect(config.platform).toBe('vivo');
+    expect(config.entry).toBe('game/src/main.ts');
+    expect(config.publicDir).toBe('game/public');
+    expect(config.paths.entryAbs).toBe(path.join(fixturePath('valid-douyin-game'), 'game/src/main.ts'));
+    expect(config.paths.publicDirAbs).toBe(path.join(fixturePath('valid-douyin-game'), 'game/public'));
+    expect(config.paths.douyinMaterialsAbs).toBeUndefined();
+  });
+
+  test('requires Douyin materials only for Douyin builds', async () => {
+    const projectRoot = fixturePath('valid-douyin-game');
+    const materialsDir = path.join(projectRoot, 'platform/douyin/materials');
+    const hiddenDir = path.join(projectRoot, 'platform/douyin/materials-hidden-for-test');
+
+    await fs.rename(materialsDir, hiddenDir);
+    try {
+      await expect(loadGameConfig({ projectRoot, platform: 'douyin' })).rejects.toMatchObject({
+        name: 'UserError',
+      });
+
+      await expect(loadGameConfig({ projectRoot, platform: 'vivo' })).resolves.toMatchObject({
+        platform: 'vivo',
+      });
+    } finally {
+      await fs.rename(hiddenDir, materialsDir);
+    }
+  });
+
   test('rejects a missing entry file with an actionable error', async () => {
     await expect(
       loadGameConfig({

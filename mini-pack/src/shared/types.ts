@@ -1,13 +1,13 @@
 import type { GameConfig } from '../core/schema.js';
 
-export type PlatformName = 'douyin';
+export type PlatformName = 'douyin' | 'vivo';
 
 export interface ResolvedPaths {
   configFileAbs: string;
   entryAbs: string;
   publicDirAbs: string;
   outDirAbs: string;
-  douyinMaterialsAbs: string;
+  douyinMaterialsAbs?: string;
 }
 
 export type LoadedGameConfig = GameConfig & {
