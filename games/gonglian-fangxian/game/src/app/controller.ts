@@ -1,20 +1,37 @@
 import { levels } from '../config/levels';
+import { POWER_UP_COIN_COSTS } from '../config/economy';
 import { applyMove, applyPowerUp, createSession } from '../core/session';
-import type { GameSession, Position, PowerUpType } from '../core/types';
+import type { GameSession, LevelConfig, NodeReward, Position, PowerUpType } from '../core/types';
 import type { PlatformAdapter } from '../platform/types';
 import type { AudioCue, AudioCueType } from '../audio/soundEngine';
 import { debugLog } from './debugLog';
 import { createDefaultSave, loadSave, type SaveData, writeSave } from './save';
-import { claimAdItemReward, claimDesktopReward, claimFavoriteReward, claimSidebarReward, requestExtraMoves, type InventoryItem } from './rewards';
+import { claimAdItemReward, claimDesktopReward, claimDoubleCoinsReward, claimFavoriteReward, claimSidebarReward, requestExtraMoves, type InventoryItem } from './rewards';
+import { chapterProgressForSave, levelById, type ChapterProgress } from './campaign';
 
-export type Screen = 'menu' | 'levels' | 'playing' | 'paused' | 'won' | 'lost' | 'settings';
+export type Screen = 'menu' | 'levels' | 'briefing' | 'playing' | 'paused' | 'won' | 'lost' | 'settings' | 'supplies';
+
+export type RewardedAdRequest =
+  | { type: 'doubleWinReward' }
+  | { type: 'extraMovesAd' }
+  | { type: 'powerUpItem'; item: PowerUpType };
+
+export interface AdPrompt {
+  title: string;
+  request: RewardedAdRequest;
+}
 
 export type AppAction =
   | { type: 'start' }
   | { type: 'openLevels' }
   | { type: 'openSettings' }
+  | { type: 'openSupplies' }
   | { type: 'closeModal' }
+  | { type: 'requestRewardedAd'; request: RewardedAdRequest }
+  | { type: 'confirmRewardedAd' }
+  | { type: 'cancelRewardedAd' }
   | { type: 'selectLevel'; levelId: number }
+  | { type: 'beginLevel' }
   | { type: 'tapCell'; position: Position }
   | { type: 'pause' }
   | { type: 'resume' }
@@ -27,13 +44,27 @@ export type AppAction =
   | { type: 'desktopReward' }
   | { type: 'favoriteReward' }
   | { type: 'sidebarReward' }
+  | { type: 'doubleWinReward' }
   | { type: 'toggleSound' }
   | { type: 'toggleMusic' };
+
+export interface WinSummary {
+  levelId: number;
+  chapterTitle: string;
+  baseCoins: number;
+  nodeReward: NodeReward | null;
+  nextLevelId: number | null;
+  doubled: boolean;
+}
 
 export interface AppViewState {
   screen: Screen;
   save: SaveData;
   session: GameSession | null;
+  pendingLevel: LevelConfig | null;
+  winSummary: WinSummary | null;
+  adPrompt: AdPrompt | null;
+  chapterProgress: ChapterProgress[];
   feedback: string | null;
   visualCue: VisualCue | null;
   audioCue: AudioCue | null;
@@ -53,6 +84,10 @@ export class GameController {
   private feedback: string | null = null;
   private visualCue: VisualCue | null = null;
   private audioCue: AudioCue | null = null;
+  private pendingLevelId: number | null = null;
+  private winSummary: WinSummary | null = null;
+  private adPrompt: AdPrompt | null = null;
+  private doubleRewardPending = false;
   private activePowerUp: PowerUpType | null = null;
   private cueId = 0;
   private audioCueId = 0;
@@ -67,6 +102,10 @@ export class GameController {
       screen: this.screen,
       save: this.save,
       session: this.session,
+      pendingLevel: this.pendingLevelId ? levelById(this.pendingLevelId) : null,
+      winSummary: this.winSummary,
+      adPrompt: this.adPrompt,
+      chapterProgress: chapterProgressForSave(this.save.highestUnlockedLevel, this.save.completedLevelCount),
       feedback: this.feedback,
       visualCue: this.visualCue,
       audioCue: this.audioCue,
@@ -86,7 +125,7 @@ export class GameController {
 
     switch (action.type) {
       case 'start':
-        this.startLevel(this.save.highestUnlockedLevel);
+        this.openBriefing(this.save.highestUnlockedLevel);
         break;
       case 'openLevels':
         this.screen = 'levels';
@@ -94,11 +133,27 @@ export class GameController {
       case 'openSettings':
         this.screen = 'settings';
         break;
+      case 'openSupplies':
+        this.screen = 'supplies';
+        break;
       case 'closeModal':
+        this.adPrompt = null;
         this.screen = this.session?.status === 'playing' ? 'playing' : 'menu';
         break;
+      case 'requestRewardedAd':
+        this.openRewardedAdPrompt(action.request);
+        break;
+      case 'confirmRewardedAd':
+        await this.confirmRewardedAd();
+        break;
+      case 'cancelRewardedAd':
+        this.adPrompt = null;
+        break;
       case 'selectLevel':
-        this.startLevel(action.levelId);
+        this.openBriefing(action.levelId);
+        break;
+      case 'beginLevel':
+        this.beginPendingLevel();
         break;
       case 'tapCell':
         this.tapCell(action.position);
@@ -116,13 +171,16 @@ export class GameController {
         });
         this.session = null;
         this.activePowerUp = null;
+        this.pendingLevelId = null;
+        this.winSummary = null;
+        this.adPrompt = null;
         this.screen = 'menu';
         break;
       case 'retry':
-        this.startLevel(this.session?.levelId ?? this.save.highestUnlockedLevel);
+        this.openBriefing(this.session?.levelId ?? this.pendingLevelId ?? this.save.highestUnlockedLevel);
         break;
       case 'nextLevel':
-        this.startLevel(Math.min(levels.length, (this.session?.levelId ?? 1) + 1));
+        this.openBriefing(Math.min(levels.length, (this.session?.levelId ?? this.pendingLevelId ?? 1) + 1));
         break;
       case 'extraMovesAd':
         await this.requestExtraMoves();
@@ -142,6 +200,9 @@ export class GameController {
       case 'sidebarReward':
         await this.claimSidebarReward();
         break;
+      case 'doubleWinReward':
+        await this.doubleWinReward();
+        break;
       case 'toggleSound':
         this.updateSave({ ...this.save, soundEnabled: !this.save.soundEnabled });
         break;
@@ -151,11 +212,61 @@ export class GameController {
     }
   }
 
+  private openBriefing(levelId: number): void {
+    if (levelId > this.save.highestUnlockedLevel) {
+      this.pendingLevelId = null;
+      this.feedback = '该关卡尚未解锁。';
+      this.screen = 'levels';
+      return;
+    }
+
+    const level = levelById(levelId);
+    this.pendingLevelId = level.id;
+    this.session = null;
+    this.activePowerUp = null;
+    this.winSummary = null;
+    this.screen = 'briefing';
+  }
+
+  private beginPendingLevel(): void {
+    this.startLevel(this.pendingLevelId ?? this.save.highestUnlockedLevel);
+  }
+
   private startLevel(levelId: number): void {
-    const level = levels.find((candidate) => candidate.id === levelId) ?? levels[0];
+    const level = levelById(levelId);
     this.seed += 1;
+    this.pendingLevelId = level.id;
+    this.winSummary = null;
+    this.adPrompt = null;
     this.session = createSession(level, this.seed);
     this.screen = 'playing';
+  }
+
+  private openRewardedAdPrompt(request: RewardedAdRequest): void {
+    this.adPrompt = {
+      request,
+      title: rewardedAdPromptTitle(request),
+    };
+  }
+
+  private async confirmRewardedAd(): Promise<void> {
+    const request = this.adPrompt?.request;
+    this.adPrompt = null;
+    if (!request) {
+      return;
+    }
+
+    if (request.type === 'doubleWinReward') {
+      await this.doubleWinReward();
+      return;
+    }
+
+    if (request.type === 'extraMovesAd') {
+      await this.requestExtraMoves();
+      return;
+    }
+
+    await this.claimPowerUpItemFromAd(request.item);
   }
 
   private tapCell(position: Position): void {
@@ -193,31 +304,59 @@ export class GameController {
       } else if (next.status === 'lost') {
         this.screen = 'lost';
         this.emitAudio('lose');
-      } else if (next.comboCount >= 2) {
-        this.emitAudio('combo', next.comboCount);
-      } else if (next.lastEvents.length > 0) {
-        this.emitAudio('match');
       }
       if (next.comboCount >= 2) {
         this.visualCue = { type: 'combo', combo: next.comboCount, id: ++this.cueId };
       }
     } catch (error) {
       this.session = { ...this.session, selectedCell: position };
-      this.feedback = error instanceof Error ? error.message : '该位置无法交换。';
+      this.feedback = swapErrorFeedback(error);
       this.visualCue = { type: 'swapRejected', from: previous, to: position, id: ++this.cueId };
       this.emitAudio('invalid');
     }
   }
 
   private handleWin(session: GameSession): void {
-    const level = levels.find((candidate) => candidate.id === session.levelId);
+    const level = levelById(session.levelId);
+    const baseCoins = level.rewards.coins;
     const nextHighest = Math.min(levels.length, Math.max(this.save.highestUnlockedLevel, session.levelId + 1));
-    this.updateSave({
-      ...this.save,
-      highestUnlockedLevel: nextHighest,
-      coins: this.save.coins + (level?.rewards.coins ?? 0),
-    });
+    const nextLevelId = session.levelId < levels.length ? session.levelId + 1 : null;
+    const rewardSave = this.addNodeReward(
+      {
+        ...this.save,
+        highestUnlockedLevel: nextHighest,
+        completedLevelCount: Math.min(levels.length, Math.max(this.save.completedLevelCount, session.levelId)),
+        coins: this.save.coins + baseCoins,
+      },
+      level.nodeReward,
+    );
+
+    this.updateSave(rewardSave);
+    this.winSummary = {
+      levelId: session.levelId,
+      chapterTitle: level.chapterTitle,
+      baseCoins,
+      nodeReward: level.nodeReward ?? null,
+      nextLevelId,
+      doubled: false,
+    };
     this.screen = 'won';
+  }
+
+  private addNodeReward(save: SaveData, reward: NodeReward | undefined): SaveData {
+    if (!reward) {
+      return save;
+    }
+
+    return {
+      ...save,
+      items: {
+        ...save.items,
+        bomb: save.items.bomb + (reward.bomb ?? 0),
+        suck: save.items.suck + (reward.suck ?? 0),
+        shuffle: save.items.shuffle + (reward.shuffle ?? 0),
+      },
+    };
   }
 
   private async requestExtraMoves(): Promise<void> {
@@ -249,27 +388,77 @@ export class GameController {
       return;
     }
 
-    let watchedAd = false;
     if (this.save.items[item] <= 0) {
-      debugLog('power_up_ad_request', {
-        item,
-        available: this.save.items[item],
-        levelId: this.session.levelId,
-      });
-      const outcome = await claimAdItemReward(this.save, item, this.platform);
-      this.updateSave(outcome.save);
-      debugLog('power_up_ad_outcome', {
-        item,
-        granted: outcome.granted,
-        available: this.save.items[item],
-        feedback: outcome.feedback,
-      });
-      if (!outcome.granted) {
-        this.feedback = outcome.feedback;
-        this.emitAudio('invalid');
+      if (this.purchasePowerUpWithCoins(item)) {
+        this.activateOwnedPowerUp(item, false);
         return;
       }
-      watchedAd = true;
+
+      const shortage = POWER_UP_COIN_COSTS[item] - this.save.coins;
+      this.feedback = `金币不足，还差 ${shortage} 金币。`;
+      this.openRewardedAdPrompt({ type: 'powerUpItem', item });
+      return;
+    }
+
+    this.activateOwnedPowerUp(item, false);
+  }
+
+  private purchasePowerUpWithCoins(item: PowerUpType): boolean {
+    const cost = POWER_UP_COIN_COSTS[item];
+    if (this.save.coins < cost) {
+      return false;
+    }
+
+    this.updateSave({
+      ...this.save,
+      coins: this.save.coins - cost,
+      items: {
+        ...this.save.items,
+        [item]: this.save.items[item] + 1,
+      },
+    });
+    debugLog('power_up_coin_purchase', {
+      item,
+      cost,
+      coins: this.save.coins,
+      available: this.save.items[item],
+      levelId: this.session?.levelId ?? null,
+    });
+    return true;
+  }
+
+  private async claimPowerUpItemFromAd(item: PowerUpType): Promise<void> {
+    if (!this.session || this.screen !== 'playing') {
+      this.feedback = '进入关卡后才能使用道具。';
+      this.emitAudio('invalid');
+      return;
+    }
+
+    debugLog('power_up_ad_request', {
+      item,
+      available: this.save.items[item],
+      levelId: this.session.levelId,
+    });
+    const outcome = await claimAdItemReward(this.save, item, this.platform);
+    this.updateSave(outcome.save);
+    debugLog('power_up_ad_outcome', {
+      item,
+      granted: outcome.granted,
+      available: this.save.items[item],
+      feedback: outcome.feedback,
+    });
+    if (!outcome.granted) {
+      this.feedback = outcome.feedback;
+      this.emitAudio('invalid');
+      return;
+    }
+
+    this.activateOwnedPowerUp(item, true);
+  }
+
+  private activateOwnedPowerUp(item: PowerUpType, watchedAd: boolean): void {
+    if (!this.session) {
+      return;
     }
 
     if (item === 'shuffle') {
@@ -364,6 +553,33 @@ export class GameController {
     this.emitAudio(outcome.granted ? 'reward' : 'invalid');
   }
 
+  private async doubleWinReward(): Promise<void> {
+    if (!this.winSummary || this.screen !== 'won') {
+      this.feedback = '通关后才能领取翻倍奖励。';
+      this.emitAudio('invalid');
+      return;
+    }
+
+    if (this.winSummary.doubled || this.doubleRewardPending) {
+      this.feedback = this.doubleRewardPending ? '翻倍奖励领取中。' : '翻倍奖励已领取。';
+      this.emitAudio('invalid');
+      return;
+    }
+
+    this.doubleRewardPending = true;
+    try {
+      const outcome = await claimDoubleCoinsReward(this.save, this.winSummary.baseCoins, this.platform);
+      this.feedback = outcome.feedback;
+      this.emitAudio(outcome.granted ? 'reward' : 'invalid');
+      if (outcome.granted) {
+        this.updateSave(outcome.save);
+        this.winSummary = { ...this.winSummary, doubled: true };
+      }
+    } finally {
+      this.doubleRewardPending = false;
+    }
+  }
+
   private updateSave(save: SaveData): void {
     this.save = createDefaultSave();
     this.save = { ...this.save, ...save, items: { ...this.save.items, ...save.items } };
@@ -377,4 +593,29 @@ export class GameController {
       id: ++this.audioCueId,
     };
   }
+}
+
+function rewardedAdPromptTitle(request: RewardedAdRequest): string {
+  if (request.type === 'doubleWinReward') {
+    return '观看视频让本关金币奖励翻倍';
+  }
+
+  if (request.type === 'extraMovesAd') {
+    return '观看视频领取 5 步补给';
+  }
+
+  const labels: Record<PowerUpType, string> = {
+    bomb: '炸开',
+    suck: '吸走',
+    shuffle: '重排',
+  };
+  return `观看视频领取${labels[request.item]}道具`;
+}
+
+function swapErrorFeedback(error: unknown): string {
+  if (error instanceof Error && error.message === 'Cells must be adjacent') {
+    return '只能交换相邻格子。';
+  }
+
+  return '该位置无法交换。';
 }

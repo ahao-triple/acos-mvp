@@ -49,6 +49,7 @@ export interface GameRuntime {
   storage: RuntimeStorage;
   audio: RuntimeAudio;
   ads: RuntimeAds;
+  haptics?: RuntimeHaptics;
   rewards: RuntimeRewards;
   logger: RuntimeLogger;
 }
@@ -69,6 +70,10 @@ export interface RuntimeAudio {
 export interface RuntimeAds {
   isRewardedVideoReady(slot: RewardedVideoSlot): boolean;
   showRewardedVideo(slot: RewardedVideoSlot): Promise<RewardedVideoResult>;
+}
+
+export interface RuntimeHaptics {
+  trigger(kind: 'short' | 'long'): void;
 }
 
 export type RewardedVideoSlot = 'add-steps' | 'claim-reward';

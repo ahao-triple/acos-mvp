@@ -1,4 +1,4 @@
-import type { PlatformAdapter, PlatformResult } from './types';
+import type { HapticKind, PlatformAdapter, PlatformResult } from './types';
 
 interface DouyinRewardedVideoAd {
   show(): Promise<void>;
@@ -16,6 +16,8 @@ interface DouyinApi {
   getEnterOptionsSync?: () => DouyinLaunchOptions;
   getLaunchOptionsSync?: () => DouyinLaunchOptions;
   onShow?: (listener: (options: DouyinLaunchOptions) => void) => void;
+  vibrateShort?: (options?: DouyinCallbackOptions) => void;
+  vibrateLong?: (options?: DouyinCallbackOptions) => void;
   getStorageSync?: (key: string) => string;
   setStorageSync?: (key: string, value: string) => void;
   removeStorageSync?: (key: string) => void;
@@ -140,6 +142,9 @@ export function createDouyinPlatformAdapter(adUnitId: string): PlatformAdapter {
         isSidebarEntry: sidebarEntry,
       };
     },
+    triggerHaptic(kind) {
+      triggerDouyinHaptic(tt, kind);
+    },
   };
 }
 
@@ -149,6 +154,18 @@ export function canUseDouyinAdapter(): boolean {
 
 function readDouyinApi(): DouyinApi | undefined {
   return (globalThis as typeof globalThis & { tt?: DouyinApi }).tt;
+}
+
+function triggerDouyinHaptic(tt: DouyinApi | undefined, kind: HapticKind): void {
+  try {
+    if (kind === 'short') {
+      tt?.vibrateShort?.({});
+      return;
+    }
+    tt?.vibrateLong?.({});
+  } catch {
+    return;
+  }
 }
 
 function requestSidebarEntry(api: DouyinApi['navigateToScene'] | undefined): Promise<PlatformResult> {

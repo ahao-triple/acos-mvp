@@ -8,8 +8,8 @@ describe('level sessions', () => {
     const session = createSession(levels[0], 101);
 
     expect(session.levelId).toBe(1);
-    expect(session.board).toHaveLength(7);
-    expect(session.board[0]).toHaveLength(7);
+    expect(session.board).toHaveLength(10);
+    expect(session.board[0]).toHaveLength(10);
     expect(session.movesLeft).toBe(levels[0].moves);
     expect(session.status).toBe('playing');
   });

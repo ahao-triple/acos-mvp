@@ -80,6 +80,34 @@ export async function claimAdItemReward(save: SaveData, item: InventoryItem, pla
   };
 }
 
+export async function claimDoubleCoinsReward(save: SaveData, coins: number, platform: PlatformAdapter): Promise<SaveRewardOutcome> {
+  const result = await platform.showRewardedAd('reward');
+  debugLog('rewarded_ad_result', {
+    reason: 'double_win_coins',
+    coins,
+    status: result.status,
+    fallbackGrant: shouldGrantAdFallback(result),
+    message: result.message ?? null,
+  });
+
+  if (result.status !== 'success' && !shouldGrantAdFallback(result)) {
+    return {
+      granted: false,
+      feedback: adFeedback(result),
+      save,
+    };
+  }
+
+  return {
+    granted: true,
+    feedback: result.status === 'success' ? '奖励已翻倍。' : adFallbackRewardFeedback(result, '翻倍金币'),
+    save: {
+      ...save,
+      coins: save.coins + coins,
+    },
+  };
+}
+
 export async function claimDesktopReward(save: SaveData, platform: PlatformAdapter): Promise<SaveRewardOutcome> {
   if (save.desktopRewardClaimed) {
     return { granted: false, feedback: '加桌奖励已领取。', save };
@@ -167,16 +195,16 @@ export async function claimSidebarReward(save: SaveData, platform: PlatformAdapt
 }
 
 function adFeedback(result: PlatformResult): string {
+  if (result.status === 'cancelled') {
+    return '未完整观看，暂未获得奖励。';
+  }
+
   if (result.message) {
     return result.message;
   }
 
   if (result.status === 'unsupported') {
     return '当前环境暂不支持广告，稍后再试。';
-  }
-
-  if (result.status === 'cancelled') {
-    return '未完整观看，暂未获得奖励。';
   }
 
   return '广告暂时不可用，稍后再试。';

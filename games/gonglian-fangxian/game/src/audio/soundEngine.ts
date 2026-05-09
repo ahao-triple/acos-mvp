@@ -1,4 +1,4 @@
-import { INITIAL_SOUND_ASSET_TYPES, soundAssetForCue, type SoundAsset } from './soundAssets';
+import { INITIAL_SOUND_ASSET_TYPES, MUSIC_ASSET, soundAssetForCue, type MusicAsset, type SoundAsset } from './soundAssets';
 
 export type AudioCueType = 'button' | 'select' | 'invalid' | 'match' | 'combo' | 'win' | 'lose' | 'reward';
 
@@ -52,11 +52,18 @@ export interface SoundAssetPlayer {
   play(volume: number): Promise<void>;
 }
 
+export interface MusicPlayer {
+  play(volume: number): Promise<void>;
+  pause(): void;
+}
+
 type SoundAssetPlayerFactory = (asset: SoundAsset) => SoundAssetPlayer | null;
+type MusicPlayerFactory = (asset: MusicAsset) => MusicPlayer | null;
 
 export interface SoundEngineOptions {
   createContext?: AudioContextFactory;
   createAssetPlayer?: SoundAssetPlayerFactory;
+  createMusicPlayer?: MusicPlayerFactory;
 }
 
 const SOUND_PROFILES: Record<AudioCueType, SoundTone[]> = {
@@ -107,12 +114,17 @@ export class SoundEngine {
   private context: SynthAudioContext | null = null;
   private lastCueId = 0;
   private readonly assetPlayers = new Map<AudioCueType, SoundAssetPlayer | null>();
+  private musicPlayer: MusicPlayer | null | undefined;
+  private musicPlaying = false;
+  private musicPlayBlocked = false;
   private readonly createContext: AudioContextFactory;
   private readonly createAssetPlayer: SoundAssetPlayerFactory;
+  private readonly createMusicPlayer: MusicPlayerFactory;
 
   constructor(options: SoundEngineOptions = {}) {
     this.createContext = options.createContext ?? createBrowserAudioContext;
     this.createAssetPlayer = options.createAssetPlayer ?? createBrowserAssetPlayer;
+    this.createMusicPlayer = options.createMusicPlayer ?? createBrowserMusicPlayer;
   }
 
   preloadInitialAssets(): void {
@@ -123,6 +135,7 @@ export class SoundEngine {
 
   async unlock(): Promise<boolean> {
     const context = this.ensureContext();
+    this.musicPlayBlocked = false;
     if (!context) {
       return false;
     }
@@ -160,6 +173,39 @@ export class SoundEngine {
     return true;
   }
 
+  async syncMusic(enabled: boolean): Promise<boolean> {
+    const player = this.musicPlayerFor();
+    if (!player) {
+      return false;
+    }
+
+    if (!enabled) {
+      if (!this.musicPlaying) {
+        this.musicPlayBlocked = false;
+        return false;
+      }
+
+      player.pause();
+      this.musicPlaying = false;
+      this.musicPlayBlocked = false;
+      return true;
+    }
+
+    if (this.musicPlaying || this.musicPlayBlocked) {
+      return false;
+    }
+
+    try {
+      await player.play(MUSIC_ASSET.volume);
+      this.musicPlaying = true;
+      return true;
+    } catch {
+      this.musicPlaying = false;
+      this.musicPlayBlocked = true;
+      return false;
+    }
+  }
+
   private ensureContext(): SynthAudioContext | null {
     if (!this.context) {
       this.context = this.createContext();
@@ -172,6 +218,13 @@ export class SoundEngine {
       this.assetPlayers.set(type, this.createAssetPlayer(soundAssetForCue(type)));
     }
     return this.assetPlayers.get(type) ?? null;
+  }
+
+  private musicPlayerFor(): MusicPlayer | null {
+    if (this.musicPlayer === undefined) {
+      this.musicPlayer = this.createMusicPlayer(MUSIC_ASSET);
+    }
+    return this.musicPlayer;
   }
 
   private async tryPlayAsset(cue: AudioCue): Promise<boolean> {
@@ -233,6 +286,14 @@ function createBrowserAssetPlayer(asset: SoundAsset): SoundAssetPlayer | null {
   return new BrowserSoundAssetPlayer(asset.src);
 }
 
+function createBrowserMusicPlayer(asset: MusicAsset): MusicPlayer | null {
+  if (typeof Audio === 'undefined') {
+    return null;
+  }
+
+  return new BrowserMusicPlayer(asset);
+}
+
 class BrowserSoundAssetPlayer implements SoundAssetPlayer {
   private readonly pool: HTMLAudioElement[];
 
@@ -257,5 +318,24 @@ class BrowserSoundAssetPlayer implements SoundAssetPlayer {
     const audio = new Audio(this.src);
     audio.preload = 'auto';
     return audio;
+  }
+}
+
+class BrowserMusicPlayer implements MusicPlayer {
+  private readonly audio: HTMLAudioElement;
+
+  constructor(asset: MusicAsset) {
+    this.audio = new Audio(asset.src);
+    this.audio.loop = asset.loop;
+    this.audio.preload = 'auto';
+  }
+
+  async play(volume: number): Promise<void> {
+    this.audio.volume = volume;
+    await this.audio.play();
+  }
+
+  pause(): void {
+    this.audio.pause();
   }
 }

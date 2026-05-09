@@ -22,6 +22,14 @@ describe('mini-pack build', () => {
     const gameJs = await fs.readFile(path.join(outputDir, 'game.js'), 'utf8');
     expect(gameJs).toContain('createInnerAudioContext');
     expect(gameJs).toContain('assets/audio/');
+    expect(gameJs).toContain("musicAudio.src = musicPath(name);");
+    expect(gameJs).toContain("'.mp3'");
+    expect(gameJs).not.toContain('musicAudio.src = sfxPath(name);');
+    expect(gameJs).toContain('var haptics = {');
+    expect(gameJs).toContain("info('Haptic platform call.'");
+    expect(gameJs).toContain("info('Haptic platform success.'");
+    expect(gameJs).toContain("warn('Haptic platform failed.'");
+    expect(gameJs).toContain('haptics: haptics');
     expect(gameJs).toContain('navigateToScene');
     expect(gameJs).toContain('onShow');
     expect(gameJs).toContain('021036');

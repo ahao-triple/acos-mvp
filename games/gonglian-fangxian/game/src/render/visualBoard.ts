@@ -41,9 +41,13 @@ interface InternalTile {
 const MOVE_MS = 520;
 const SPAWN_MS = 620;
 const REMOVE_MS = 520;
+const MIN_FALL_MS = 160;
+const FALL_PX_PER_MS = 0.36;
 
 export class VisualBoardModel {
   private readonly tiles = new Map<string, InternalTile>();
+  private readonly finaleBlockedIds = new Set<string>();
+  private hasSynced = false;
 
   constructor(private readonly metrics: VisualBoardMetrics) {}
 
@@ -52,6 +56,8 @@ export class VisualBoardModel {
     const moved: VisualTile[] = [];
     const removed: VisualTile[] = [];
     const seen = new Set<string>();
+    const occupiedBefore = this.occupiedPositions();
+    const stackedSpawnRowsByCol = this.collectStackedSpawnRows(board, occupiedBefore);
 
     for (let row = 0; row < board.length; row += 1) {
       for (let col = 0; col < board[row].length; col += 1) {
@@ -62,20 +68,26 @@ export class VisualBoardModel {
         }
 
         seen.add(id);
+        if (this.finaleBlockedIds.has(id)) {
+          continue;
+        }
+
         const target = this.cellCenter(row, col);
         const existing = this.tiles.get(id);
 
         if (!existing) {
+          const specialSpawn = cell.kind === 'special';
+          const spawn = specialSpawn ? { y: target.y, durationMs: SPAWN_MS } : this.spawnStart(row, col, target.y, stackedSpawnRowsByCol);
           const tile: InternalTile = {
             id,
             cell,
             row,
             col,
             removed: false,
-            x: tweenNumber(target.x, target.x, nowMs, SPAWN_MS, easeOutCubic),
-            y: tweenNumber(target.y - this.metrics.cellSize * 1.55, target.y, nowMs, SPAWN_MS, easeBackOut),
-            scale: tweenNumber(0.72, 1, nowMs, SPAWN_MS, easeBackOut),
-            alpha: tweenNumber(0, 1, nowMs, SPAWN_MS, easeOutCubic),
+            x: tweenNumber(target.x, target.x, nowMs, spawn.durationMs, easeOutCubic),
+            y: tweenNumber(spawn.y, target.y, nowMs, spawn.durationMs, easeBackOut),
+            scale: tweenNumber(specialSpawn ? 0.32 : 0.72, 1, nowMs, spawn.durationMs, easeBackOut),
+            alpha: tweenNumber(0, 1, nowMs, spawn.durationMs, easeOutCubic),
           };
           this.tiles.set(id, tile);
           added.push(this.sample(tile, nowMs));
@@ -86,10 +98,11 @@ export class VisualBoardModel {
         existing.cell = cell;
         existing.removed = false;
         if (existing.row !== row || existing.col !== col) {
-          existing.x = tweenNumber(current.x, target.x, nowMs, MOVE_MS, easeInOutSine);
-          existing.y = tweenNumber(current.y, target.y, nowMs, MOVE_MS, easeInOutSine);
-          existing.scale = tweenNumber(current.scale, 1, nowMs, MOVE_MS, easeOutCubic);
-          existing.alpha = tweenNumber(current.alpha, 1, nowMs, MOVE_MS, easeOutCubic);
+          const moveDurationMs = this.moveDuration(existing, row, col, current, target);
+          existing.x = tweenNumber(current.x, target.x, nowMs, moveDurationMs, easeInOutSine);
+          existing.y = tweenNumber(current.y, target.y, nowMs, moveDurationMs, easeInOutSine);
+          existing.scale = tweenNumber(current.scale, 1, nowMs, moveDurationMs, easeOutCubic);
+          existing.alpha = tweenNumber(current.alpha, 1, nowMs, moveDurationMs, easeOutCubic);
           moved.push(this.sample(existing, nowMs));
         }
         existing.row = row;
@@ -111,6 +124,7 @@ export class VisualBoardModel {
       removed.push(this.sample(tile, nowMs));
     }
 
+    this.hasSynced = true;
     return { added, moved, removed };
   }
 
@@ -127,6 +141,31 @@ export class VisualBoardModel {
     }
 
     return result;
+  }
+
+  blastAll(nowMs: number): VisualTile[] {
+    const blasted: VisualTile[] = [];
+
+    for (const tile of this.tiles.values()) {
+      if (tile.removed) {
+        continue;
+      }
+
+      const current = this.sample(tile, nowMs);
+      tile.removed = true;
+      this.finaleBlockedIds.add(tile.id);
+      tile.x = tweenNumber(current.x, current.x, nowMs, REMOVE_MS, easeOutCubic);
+      tile.y = tweenNumber(current.y, current.y, nowMs, REMOVE_MS, easeOutCubic);
+      tile.scale = tweenNumber(current.scale, 0.02, nowMs, REMOVE_MS, easeInOutSine);
+      tile.alpha = tweenNumber(current.alpha, 0, nowMs, REMOVE_MS, easeOutCubic);
+      blasted.push({ ...current, removed: true });
+    }
+
+    return blasted;
+  }
+
+  clearFinaleBlocks(): void {
+    this.finaleBlockedIds.clear();
   }
 
   isBusy(nowMs: number): boolean {
@@ -158,6 +197,74 @@ export class VisualBoardModel {
     const target = this.cellCenter(tile.row, tile.col);
     return Math.abs(tile.x - target.x) < 0.01 && Math.abs(tile.y - target.y) < 0.01;
   }
+
+  private occupiedPositions(): Set<string> {
+    const occupied = new Set<string>();
+    for (const tile of this.tiles.values()) {
+      if (!tile.removed) {
+        occupied.add(positionKey(tile.row, tile.col));
+      }
+    }
+    return occupied;
+  }
+
+  private collectStackedSpawnRows(board: Board, occupiedBefore: Set<string>): Map<number, number[]> {
+    const rowsByCol = new Map<number, number[]>();
+    if (!this.hasSynced) {
+      return rowsByCol;
+    }
+
+    for (let row = 0; row < board.length; row += 1) {
+      for (let col = 0; col < board[row].length; col += 1) {
+        const cell = board[row][col];
+        const id = visualId(cell, { row, col });
+        if (
+          !id ||
+          this.tiles.has(id) ||
+          this.finaleBlockedIds.has(id) ||
+          cell.kind === 'special' ||
+          occupiedBefore.has(positionKey(row, col))
+        ) {
+          continue;
+        }
+
+        rowsByCol.set(col, [...(rowsByCol.get(col) ?? []), row]);
+      }
+    }
+
+    for (const rows of rowsByCol.values()) {
+      rows.sort((a, b) => a - b);
+    }
+
+    return rowsByCol;
+  }
+
+  private moveDuration(existing: InternalTile, row: number, col: number, current: VisualTile, target: { x: number; y: number }): number {
+    if (existing.col === col && row > existing.row && target.y > current.y) {
+      return fallDurationForDistance(target.y - current.y, MOVE_MS);
+    }
+
+    return MOVE_MS;
+  }
+
+  private spawnStart(row: number, col: number, targetY: number, stackedSpawnRowsByCol: Map<number, number[]>): { y: number; durationMs: number } {
+    const rows = stackedSpawnRowsByCol.get(col);
+    const stackIndex = rows?.indexOf(row) ?? -1;
+    if (!rows || stackIndex < 0) {
+      return { y: targetY - this.metrics.cellSize * 1.55, durationMs: SPAWN_MS };
+    }
+
+    const y = this.metrics.startY - (rows.length - stackIndex) * (this.metrics.cellSize + this.metrics.gap);
+    return { y, durationMs: fallDurationForDistance(targetY - y, SPAWN_MS) };
+  }
+}
+
+function positionKey(row: number, col: number): string {
+  return `${row}:${col}`;
+}
+
+function fallDurationForDistance(distancePx: number, maxDurationMs: number): number {
+  return Math.min(maxDurationMs, Math.max(MIN_FALL_MS, Math.round(Math.max(0, distancePx) / FALL_PX_PER_MS)));
 }
 
 export function visualId(cell: BoardCell, position: Position): string | null {

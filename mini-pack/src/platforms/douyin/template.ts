@@ -35,6 +35,12 @@ ${bundleCode}
     }
   }
 
+  function info(message, data) {
+    if (typeof console !== 'undefined' && typeof console.info === 'function') {
+      console.info('[mini-pack]', message, data === undefined ? '' : data);
+    }
+  }
+
   var root = typeof globalThis !== 'undefined' ? globalThis : this;
   var tt = root.tt || {};
   var rewardedAdUnitId = ${rewardedAdUnitId};
@@ -203,6 +209,10 @@ ${bundleCode}
     return 'assets/audio/' + String(name).replace(/[^a-z0-9_-]/gi, '') + '.wav';
   }
 
+  function musicPath(name) {
+    return 'assets/audio/' + String(name).replace(/[^a-z0-9_-]/gi, '') + '.mp3';
+  }
+
   var audio = {
     playSfx: function (name) {
       if (muted) {
@@ -241,7 +251,7 @@ ${bundleCode}
           return Promise.resolve();
         }
         musicAudio.loop = Boolean(loop);
-        musicAudio.src = sfxPath(name);
+        musicAudio.src = musicPath(name);
         if (typeof musicAudio.play === 'function') {
           musicAudio.play();
         }
@@ -548,6 +558,36 @@ ${bundleCode}
     }
   };
 
+  var haptics = {
+    trigger: function (kind) {
+      var apiName = kind === 'long' ? 'vibrateLong' : 'vibrateShort';
+      var api = tt && tt[apiName];
+      var data = { kind: kind, apiName: apiName, supported: typeof api === 'function' };
+      info('Haptic platform call.', data);
+
+      if (typeof api !== 'function') {
+        warn('Haptic platform API unavailable.', data);
+        return;
+      }
+
+      try {
+        api({
+          success: function (result) {
+            info('Haptic platform success.', { kind: kind, apiName: apiName, result: result });
+          },
+          fail: function (error) {
+            warn('Haptic platform failed.', { kind: kind, apiName: apiName, error: error });
+          },
+          complete: function (result) {
+            info('Haptic platform complete.', { kind: kind, apiName: apiName, result: result });
+          }
+        });
+      } catch (error) {
+        warn('Haptic platform threw.', { kind: kind, apiName: apiName, error: error });
+      }
+    }
+  };
+
   var logger = {
     info: function (message, data) {
       if (typeof console !== 'undefined' && typeof console.info === 'function') console.info(message, data);
@@ -571,6 +611,7 @@ ${bundleCode}
     audio: audio,
     ads: ads,
     rewards: rewards,
+    haptics: haptics,
     logger: logger
   });
   root.__MiniPackGameApp = app;

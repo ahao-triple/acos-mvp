@@ -22,7 +22,21 @@ export function createWebPlatformAdapter(): PlatformAdapter {
     getLaunchContext() {
       return { isSidebarEntry: false };
     },
+    triggerHaptic(kind) {
+      triggerWebHaptic(kind);
+    },
   };
+}
+
+function triggerWebHaptic(kind: 'short' | 'long'): void {
+  const browserNavigator = typeof navigator === 'undefined'
+    ? null
+    : navigator as Navigator & { vibrate?: (pattern: number | number[]) => boolean };
+  try {
+    browserNavigator?.vibrate?.(kind === 'short' ? 24 : 70);
+  } catch {
+    return;
+  }
 }
 
 function getWebStorage(): Storage {

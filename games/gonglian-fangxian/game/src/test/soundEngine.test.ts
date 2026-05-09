@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { SOUND_ASSETS, INITIAL_SOUND_ASSET_TYPES, SOUND_ASSET_BUDGET_BYTES } from '../audio/soundAssets';
+import { SOUND_ASSETS, INITIAL_SOUND_ASSET_TYPES, MUSIC_ASSET, SOUND_ASSET_BUDGET_BYTES } from '../audio/soundAssets';
 import {
   SoundEngine,
   soundPlanForCue,
@@ -14,6 +14,13 @@ describe('sound engine', () => {
     expect(Object.values(SOUND_ASSETS).every((asset) => asset.src.startsWith('/audio/') && asset.src.endsWith('.wav'))).toBe(true);
     expect(INITIAL_SOUND_ASSET_TYPES).toEqual(['button', 'select', 'invalid', 'match']);
     expect(SOUND_ASSET_BUDGET_BYTES).toBeLessThanOrEqual(900_000);
+  });
+
+  test('declares a looped mp3 music asset', () => {
+    expect(MUSIC_ASSET.src).toBe('/audio/bgm.mp3');
+    expect(MUSIC_ASSET.src.endsWith('.mp3')).toBe(true);
+    expect(MUSIC_ASSET.loop).toBe(true);
+    expect(MUSIC_ASSET.volume).toBeLessThan(0.4);
   });
 
   test('keeps generated tone plans available as a fallback', () => {
@@ -64,6 +71,20 @@ describe('sound engine', () => {
     await expect(engine.play(cue, true)).resolves.toBe(false);
     expect(played).toEqual(['button']);
     expect(scheduled).not.toContain('start');
+  });
+
+  test('starts and stops looped background music from the music setting', async () => {
+    const events: string[] = [];
+    const engine = new SoundEngine({
+      createContext: () => fakeContext([]),
+      createMusicPlayer: (asset) => fakeMusicPlayer(asset.src, events),
+    });
+
+    await expect(engine.syncMusic(true)).resolves.toBe(true);
+    await expect(engine.syncMusic(true)).resolves.toBe(false);
+    await expect(engine.syncMusic(false)).resolves.toBe(true);
+
+    expect(events).toEqual(['play:/audio/bgm.mp3:0.22', 'pause:/audio/bgm.mp3']);
   });
 });
 
@@ -128,6 +149,17 @@ function fakeContext(scheduled: string[]): SynthAudioContext {
           scheduled.push('gain-connect');
         },
       };
+    },
+  };
+}
+
+function fakeMusicPlayer(src: string, events: string[]) {
+  return {
+    async play(volume: number) {
+      events.push(`play:${src}:${volume}`);
+    },
+    pause() {
+      events.push(`pause:${src}`);
     },
   };
 }

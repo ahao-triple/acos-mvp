@@ -1,5 +1,5 @@
 import type { SoundEngineOptions } from '../audio/soundEngine';
-import type { PlatformAdapter, PlatformResult } from './types';
+import type { HapticKind, PlatformAdapter, PlatformResult } from './types';
 
 export type MiniPackRewardedVideoSlot = 'add-steps' | 'claim-reward';
 
@@ -26,6 +26,9 @@ export interface MiniPackGameRuntime {
   ads: {
     isRewardedVideoReady(slot: MiniPackRewardedVideoSlot): boolean;
     showRewardedVideo(slot: MiniPackRewardedVideoSlot): Promise<{ completed: boolean }>;
+  };
+  haptics?: {
+    trigger(kind: HapticKind): void;
   };
   rewards: {
     canAddDesktop(): Promise<boolean>;
@@ -116,6 +119,21 @@ export function createMiniPackPlatformAdapter(runtime: MiniPackGameRuntime): Pla
     getLaunchContext() {
       return { isSidebarEntry: false };
     },
+    triggerHaptic(kind) {
+      const supported = Boolean(runtime.haptics);
+      runtimeDebugLog(runtime, 'haptic_bridge_request', { kind, supported });
+      if (!runtime.haptics) {
+        runtimeDebugLog(runtime, 'haptic_bridge_missing', { kind });
+        return;
+      }
+
+      try {
+        runtime.haptics.trigger(kind);
+        runtimeDebugLog(runtime, 'haptic_bridge_forwarded', { kind });
+      } catch (error) {
+        runtime.logger.warn('[GLFX] haptic_bridge_failed', { kind, message: errorMessage(error) });
+      }
+    },
   };
 }
 
@@ -126,6 +144,14 @@ export function createMiniPackSoundOptions(runtime: MiniPackGameRuntime): SoundE
       preload() {},
       async play() {
         await runtime.audio.playSfx(asset.type);
+      },
+    }),
+    createMusicPlayer: () => ({
+      async play() {
+        await runtime.audio.playMusic('bgm', true);
+      },
+      pause() {
+        runtime.audio.stopMusic();
       },
     }),
   };
