@@ -2,6 +2,7 @@ import type { GameController, ToolName } from '../app/controller';
 import type { AssetManifest } from '../assets/types';
 import { resolveAssetUrl } from '../assets/loader';
 import type { BoardCell, Direction } from '../core/types';
+import { feedbackCellMotion, feedbackProgress, hintPulse, revealMotion } from './animation';
 import { cellPresentation, formatTimerRemaining, type CellTone } from './cellPresentation';
 import { BOARD_BOX, DESIGN_HEIGHT, DESIGN_WIDTH, boardLayout, cellRect, viewportScale } from './layout';
 import { ImageCache } from './imageCache';
@@ -123,23 +124,37 @@ export class CanvasRenderer {
 
   private drawBoard(): void {
     const view = this.controller.getViewState();
+    const now = Date.now();
+    const animation = view.feedback.animation;
+    const animationProgress = feedbackProgress(animation, now);
     this.roundRect(BOARD_BOX.x - 16, BOARD_BOX.y - 16, BOARD_BOX.size + 32, BOARD_BOX.size + 32, 34, 'rgba(255, 255, 255, 0.72)', 'rgba(35, 49, 66, 0.14)');
     const reveal = this.imageCache.get(resolveAssetUrl(this.assetBase, view.level.revealImage));
     if (reveal?.complete && reveal.naturalWidth > 0) {
+      const motion = view.screen === 'win' && animation?.kind === 'reveal'
+        ? revealMotion(animationProgress.progress)
+        : { scale: 1, alpha: view.screen === 'win' ? 1 : 0.18 + view.progress * 0.42 };
+      const size = BOARD_BOX.size * motion.scale;
+      const x = BOARD_BOX.x + (BOARD_BOX.size - size) / 2;
+      const y = BOARD_BOX.y + (BOARD_BOX.size - size) / 2;
       this.ctx.save();
-      this.ctx.globalAlpha = view.screen === 'win' ? 1 : 0.18 + view.progress * 0.42;
-      this.ctx.drawImage(reveal, BOARD_BOX.x, BOARD_BOX.y, BOARD_BOX.size, BOARD_BOX.size);
+      this.ctx.globalAlpha = motion.alpha;
+      this.ctx.drawImage(reveal, x, y, size, size);
       this.ctx.restore();
     } else {
       this.roundRect(BOARD_BOX.x, BOARD_BOX.y, BOARD_BOX.size, BOARD_BOX.size, 20, '#eef7ff');
     }
 
     const layout = boardLayout(view.level.board);
+    const feedbackIndexes = new Set(view.feedback.indexes ?? []);
     for (const cell of view.board.cells) {
+      const rect = cellRect(layout, cell.index, view.board.width);
+      const isFeedbackCell = feedbackIndexes.has(cell.index) && animation && animationProgress.active;
       if (cell.cleared) {
+        if (isFeedbackCell && (animation.kind === 'fly' || animation.kind === 'pulse')) {
+          this.drawAnimatedCell(cell, rect, animation.kind, animationProgress.progress);
+        }
         continue;
       }
-      const rect = cellRect(layout, cell.index, view.board.width);
       this.hits.push({
         type: 'cell',
         index: cell.index,
@@ -150,23 +165,47 @@ export class CanvasRenderer {
           height: rect.height + layout.gap,
         },
       });
-      this.drawCell(cell, rect);
+      if (isFeedbackCell && (animation.kind === 'shake' || animation.kind === 'pulse')) {
+        this.drawAnimatedCell(cell, rect, animation.kind, animationProgress.progress);
+      } else {
+        this.drawCell(cell, rect);
+      }
       if (view.weakHint.active && view.weakHint.index === cell.index) {
-        this.drawHintRing(rect, 'rgba(255, 122, 104, 0.9)');
+        this.drawHintRing(rect, 'rgba(255, 122, 104, 0.9)', now);
       }
       if (view.guidance?.index === cell.index) {
-        this.drawHintRing(rect, 'rgba(33, 166, 122, 0.95)');
+        this.drawHintRing(rect, 'rgba(33, 166, 122, 0.95)', now);
         this.text(view.guidance.label, rect.x + rect.width / 2, rect.y - 24, 22, 800, theme.good, 'center');
       }
     }
   }
 
-  private drawHintRing(rect: Rect, color: string): void {
+  private drawHintRing(rect: Rect, color: string, now: number): void {
+    const pulse = hintPulse(now);
+    const width = (rect.width + 14) * pulse.scale;
+    const height = (rect.height + 14) * pulse.scale;
+    const x = rect.x + rect.width / 2 - width / 2;
+    const y = rect.y + rect.height / 2 - height / 2;
     this.ctx.save();
+    this.ctx.globalAlpha = pulse.alpha;
     this.ctx.strokeStyle = color;
-    this.ctx.lineWidth = 5;
+    this.ctx.lineWidth = pulse.lineWidth;
     this.ctx.setLineDash([12, 8]);
-    this.roundRect(rect.x - 7, rect.y - 7, rect.width + 14, rect.height + 14, Math.max(8, rect.width * 0.18), 'rgba(255, 255, 255, 0)', color);
+    this.ctx.lineDashOffset = pulse.dashOffset;
+    this.roundRect(x, y, width, height, Math.max(8, rect.width * 0.18), 'rgba(255, 255, 255, 0)', color);
+    this.ctx.restore();
+  }
+
+  private drawAnimatedCell(cell: BoardCell, rect: Rect, kind: 'fly' | 'shake' | 'pulse', progress: number): void {
+    const motion = feedbackCellMotion(kind, cell.direction, progress, rect.width);
+    const cx = rect.x + rect.width / 2;
+    const cy = rect.y + rect.height / 2;
+    this.ctx.save();
+    this.ctx.globalAlpha = motion.alpha;
+    this.ctx.translate(cx + motion.offsetX, cy + motion.offsetY);
+    this.ctx.scale(motion.scale, motion.scale);
+    this.ctx.translate(-cx, -cy);
+    this.drawCell(cell, rect);
     this.ctx.restore();
   }
 
