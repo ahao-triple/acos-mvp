@@ -17,6 +17,7 @@ export function createBoard(level: LevelConfig): BoardState {
       row,
       col,
       cleared: false,
+      revealed: cell.kind !== 'secret',
     };
   });
   return makeBoard(level, cells);
@@ -25,6 +26,9 @@ export function createBoard(level: LevelConfig): BoardState {
 export function canClearCell(board: BoardState, index: number): boolean {
   const cell = board.cellsByIndex.get(index);
   if (!cell || cell.cleared) {
+    return false;
+  }
+  if (cell.kind === 'locked' && !isLockedCellUnlocked(board, cell)) {
     return false;
   }
 
@@ -49,6 +53,14 @@ export function clearCell(board: BoardState, index: number): BoardState {
   return clearCells(board, [index]);
 }
 
+export function revealCellDirection(board: BoardState, index: number): BoardState {
+  if (!board.cellsByIndex.has(index)) {
+    return board;
+  }
+  const cells = board.cells.map((cell) => (cell.index === index ? { ...cell, revealed: true } : cell));
+  return makeBoard(board.level, cells);
+}
+
 export function clearCells(board: BoardState, indexes: number[]): BoardState {
   const remove = new Set(indexes);
   const cells = board.cells.map((cell) => (remove.has(cell.index) ? { ...cell, cleared: true } : cell));
@@ -69,6 +81,12 @@ export function isBoardComplete(board: BoardState): boolean {
 
 export function activeCellCount(board: BoardState): number {
   return board.cells.filter((cell) => !cell.cleared).length;
+}
+
+function isLockedCellUnlocked(board: BoardState, cell: BoardCell): boolean {
+  const threshold = Math.max(1, cell.unlockGroup ?? 1);
+  const clearedNormalCount = board.cells.filter((candidate) => candidate.kind !== 'locked' && candidate.cleared).length;
+  return clearedNormalCount >= threshold;
 }
 
 function makeBoard(level: LevelConfig, cells: BoardCell[]): BoardState {

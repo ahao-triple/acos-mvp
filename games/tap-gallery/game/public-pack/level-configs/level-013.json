@@ -1,0 +1,437 @@
+{
+  "id": "level_013_hot_air_balloon",
+  "levelNo": 13,
+  "title": "Hot Air Balloon",
+  "subject": "hot air balloon",
+  "maskImage": "assets/levels/reveal/level-013-hot-air-balloon.png",
+  "revealImage": "assets/levels/reveal/level-013-hot-air-balloon.png",
+  "thumbnail": "assets/levels/thumbs/level-013-hot-air-balloon-thumb.png",
+  "board": {
+    "width": 12,
+    "height": 12,
+    "allowPan": true,
+    "allowZoom": true,
+    "initialZoom": 1
+  },
+  "moves": 175,
+  "cellsTarget": 92,
+  "mechanics": [
+    "lockedArea",
+    "twoUnlockGroups"
+  ],
+  "idleHintDelayMs": 8000,
+  "guidance": {
+    "introCue": "none",
+    "weakHintEnabled": true,
+    "revealFocus": true,
+    "firstTapIndex": 5
+  },
+  "cells": [
+    {
+      "index": 5,
+      "direction": 0
+    },
+    {
+      "index": 6,
+      "direction": 0
+    },
+    {
+      "index": 15,
+      "direction": 0
+    },
+    {
+      "index": 16,
+      "direction": 0
+    },
+    {
+      "index": 17,
+      "direction": 0
+    },
+    {
+      "index": 18,
+      "direction": 0
+    },
+    {
+      "index": 19,
+      "direction": 0
+    },
+    {
+      "index": 20,
+      "direction": 0
+    },
+    {
+      "index": 26,
+      "direction": 0
+    },
+    {
+      "index": 27,
+      "direction": 0
+    },
+    {
+      "index": 28,
+      "direction": 0
+    },
+    {
+      "index": 29,
+      "direction": 0
+    },
+    {
+      "index": 30,
+      "direction": 0
+    },
+    {
+      "index": 31,
+      "direction": 0
+    },
+    {
+      "index": 32,
+      "direction": 0
+    },
+    {
+      "index": 33,
+      "direction": 0
+    },
+    {
+      "index": 38,
+      "direction": 3
+    },
+    {
+      "index": 39,
+      "direction": 0
+    },
+    {
+      "index": 40,
+      "direction": 0
+    },
+    {
+      "index": 41,
+      "direction": 0
+    },
+    {
+      "index": 42,
+      "direction": 0
+    },
+    {
+      "index": 43,
+      "direction": 0
+    },
+    {
+      "index": 44,
+      "direction": 0
+    },
+    {
+      "index": 45,
+      "direction": 1
+    },
+    {
+      "index": 49,
+      "direction": 3
+    },
+    {
+      "index": 50,
+      "direction": 3
+    },
+    {
+      "index": 51,
+      "direction": 3
+    },
+    {
+      "index": 52,
+      "direction": 0
+    },
+    {
+      "index": 53,
+      "direction": 0
+    },
+    {
+      "index": 54,
+      "direction": 0
+    },
+    {
+      "index": 55,
+      "direction": 0
+    },
+    {
+      "index": 56,
+      "direction": 1
+    },
+    {
+      "index": 57,
+      "direction": 1
+    },
+    {
+      "index": 58,
+      "direction": 1
+    },
+    {
+      "index": 61,
+      "direction": 3
+    },
+    {
+      "index": 62,
+      "direction": 3
+    },
+    {
+      "index": 63,
+      "direction": 3
+    },
+    {
+      "index": 64,
+      "direction": 3
+    },
+    {
+      "index": 65,
+      "direction": 0
+    },
+    {
+      "index": 66,
+      "direction": 0
+    },
+    {
+      "index": 67,
+      "direction": 1
+    },
+    {
+      "index": 68,
+      "direction": 1
+    },
+    {
+      "index": 69,
+      "direction": 1
+    },
+    {
+      "index": 70,
+      "direction": 1,
+      "kind": "locked",
+      "unlockGroup": 2
+    },
+    {
+      "index": 73,
+      "direction": 3
+    },
+    {
+      "index": 74,
+      "direction": 3
+    },
+    {
+      "index": 75,
+      "direction": 3
+    },
+    {
+      "index": 76,
+      "direction": 3
+    },
+    {
+      "index": 77,
+      "direction": 2
+    },
+    {
+      "index": 78,
+      "direction": 2
+    },
+    {
+      "index": 79,
+      "direction": 1
+    },
+    {
+      "index": 80,
+      "direction": 1
+    },
+    {
+      "index": 81,
+      "direction": 1,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 82,
+      "direction": 1,
+      "kind": "locked",
+      "unlockGroup": 2
+    },
+    {
+      "index": 85,
+      "direction": 3
+    },
+    {
+      "index": 86,
+      "direction": 3
+    },
+    {
+      "index": 87,
+      "direction": 3
+    },
+    {
+      "index": 88,
+      "direction": 2
+    },
+    {
+      "index": 89,
+      "direction": 2
+    },
+    {
+      "index": 90,
+      "direction": 2
+    },
+    {
+      "index": 91,
+      "direction": 2
+    },
+    {
+      "index": 92,
+      "direction": 1,
+      "kind": "locked",
+      "unlockGroup": 2
+    },
+    {
+      "index": 93,
+      "direction": 1,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 94,
+      "direction": 1,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 97,
+      "direction": 3
+    },
+    {
+      "index": 98,
+      "direction": 3
+    },
+    {
+      "index": 99,
+      "direction": 2
+    },
+    {
+      "index": 100,
+      "direction": 2
+    },
+    {
+      "index": 101,
+      "direction": 2
+    },
+    {
+      "index": 102,
+      "direction": 2
+    },
+    {
+      "index": 103,
+      "direction": 2
+    },
+    {
+      "index": 104,
+      "direction": 2,
+      "kind": "locked",
+      "unlockGroup": 2
+    },
+    {
+      "index": 105,
+      "direction": 1,
+      "kind": "locked",
+      "unlockGroup": 2
+    },
+    {
+      "index": 106,
+      "direction": 1,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 110,
+      "direction": 2
+    },
+    {
+      "index": 111,
+      "direction": 2
+    },
+    {
+      "index": 112,
+      "direction": 2
+    },
+    {
+      "index": 113,
+      "direction": 2
+    },
+    {
+      "index": 114,
+      "direction": 2
+    },
+    {
+      "index": 115,
+      "direction": 2,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 116,
+      "direction": 2,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 117,
+      "direction": 2,
+      "kind": "locked",
+      "unlockGroup": 2
+    },
+    {
+      "index": 123,
+      "direction": 2
+    },
+    {
+      "index": 124,
+      "direction": 2
+    },
+    {
+      "index": 125,
+      "direction": 2
+    },
+    {
+      "index": 126,
+      "direction": 2,
+      "kind": "locked",
+      "unlockGroup": 2
+    },
+    {
+      "index": 127,
+      "direction": 2,
+      "kind": "locked",
+      "unlockGroup": 2
+    },
+    {
+      "index": 128,
+      "direction": 2,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 136,
+      "direction": 2
+    },
+    {
+      "index": 137,
+      "direction": 2,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 138,
+      "direction": 2,
+      "kind": "locked",
+      "unlockGroup": 1
+    },
+    {
+      "index": 139,
+      "direction": 2,
+      "kind": "locked",
+      "unlockGroup": 2
+    }
+  ],
+  "artStatus": "imagegen",
+  "sourceImagegenFile": "ig_01a85e89cd76e8490169feacbb31ac81919bae170ed4f91be4.png"
+}

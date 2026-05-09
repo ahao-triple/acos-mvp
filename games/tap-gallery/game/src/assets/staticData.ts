@@ -1,5 +1,5 @@
-import manifestJson from '../../public-runtime/asset-manifest.json';
-import levelsJson from '../../public-runtime/level-configs/levels.json';
+import manifestJson from '../../public-pack/asset-manifest.json';
+import levelsJson from '../../public-pack/level-configs/levels.json';
 
 import { parseAssetManifest, parseLevelConfig } from './loader';
 import type { AssetManifest, LevelConfig } from './types';

@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import { parseAssetManifest, parseLevelConfig, resolveAssetUrl } from '../assets/loader';
+import manifestJson from '../../public-pack/asset-manifest.json';
+import levelsJson from '../../public-pack/level-configs/levels.json';
+
+const bundledFiles = new Set(
+  Object.keys(import.meta.glob('../../public-pack/**/*', { eager: true, query: '?url', import: 'default' }))
+    .map((path) => path.replace('../../public-pack/', '')),
+);
 
 describe('asset loading helpers', () => {
   it('resolves relative asset paths against a base URL', () => {
@@ -26,5 +33,19 @@ describe('asset loading helpers', () => {
       board: { width: 2, height: 2 },
       cells: [{ index: 1, direction: 9 }],
     })).toThrow(/invalid cell/);
+  });
+
+  it('keeps bundled runtime asset references inside public-pack', () => {
+    const manifest = parseAssetManifest(manifestJson);
+    const levels = (levelsJson as unknown[]).map(parseLevelConfig);
+    const referenced = [
+      manifest.levelConfigIndex,
+      ...manifest.levels.flatMap((level) => [level.config, level.maskImage, level.revealImage, level.thumbnail]),
+      ...levels.flatMap((level) => [level.maskImage, level.revealImage, level.thumbnail]),
+    ];
+
+    for (const relativePath of referenced) {
+      expect(bundledFiles.has(relativePath), relativePath).toBe(true);
+    }
   });
 });

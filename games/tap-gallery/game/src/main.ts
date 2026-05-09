@@ -44,6 +44,7 @@ export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
       return;
     }
     if (!paused) {
+      controller.tick();
       renderer.render();
       const view = controller.getViewState();
       if (view.feedback !== lastFeedback) {

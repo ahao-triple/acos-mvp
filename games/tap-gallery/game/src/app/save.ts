@@ -20,6 +20,7 @@ export interface TapGallerySave {
   completedLevels: number[];
   coins: number;
   energy: number;
+  lastEnergyAtMs: number;
   tools: SaveToolInventory;
   settings: SaveSettings;
 }
@@ -34,6 +35,7 @@ export function defaultSave(): TapGallerySave {
     completedLevels: [],
     coins: 120,
     energy: 5,
+    lastEnergyAtMs: 0,
     tools: {
       hint: 3,
       bomb: 1,
@@ -78,6 +80,37 @@ export function markLevelComplete(save: TapGallerySave, levelNo: number, reward:
   });
 }
 
+export function recoverEnergy(save: TapGallerySave, nowMs: number, maxEnergy = 5): TapGallerySave {
+  if (save.energy >= maxEnergy) {
+    return {
+      ...save,
+      energy: maxEnergy,
+      lastEnergyAtMs: nowMs,
+    };
+  }
+  const elapsedMs = Math.max(0, nowMs - save.lastEnergyAtMs);
+  const recovered = Math.floor(elapsedMs / 600_000);
+  if (recovered <= 0) {
+    return save;
+  }
+  const energy = Math.min(maxEnergy, save.energy + recovered);
+  return {
+    ...save,
+    energy,
+    lastEnergyAtMs: energy >= maxEnergy ? nowMs : save.lastEnergyAtMs + recovered * 600_000,
+  };
+}
+
+export function consumeEnergy(save: TapGallerySave): TapGallerySave | null {
+  if (save.energy <= 0) {
+    return null;
+  }
+  return {
+    ...save,
+    energy: save.energy - 1,
+  };
+}
+
 export function spendTool(save: TapGallerySave, tool: keyof SaveToolInventory): TapGallerySave {
   if (save.tools[tool] <= 0) {
     return save;
@@ -89,6 +122,10 @@ export function spendTool(save: TapGallerySave, tool: keyof SaveToolInventory): 
       [tool]: save.tools[tool] - 1,
     },
   };
+}
+
+export function canSpendTool(save: TapGallerySave, tool: keyof SaveToolInventory): boolean {
+  return save.tools[tool] > 0;
 }
 
 export function addTools(base: SaveToolInventory, delta: Partial<SaveToolInventory>): SaveToolInventory {
@@ -119,6 +156,7 @@ function sanitizeSave(value: unknown): TapGallerySave {
     completedLevels: [...new Set(completedLevels)].sort((a, b) => a - b),
     coins: readNonNegativeInteger(value.coins) ?? base.coins,
     energy: readNonNegativeInteger(value.energy) ?? base.energy,
+    lastEnergyAtMs: readNonNegativeInteger(value.lastEnergyAtMs) ?? base.lastEnergyAtMs,
     tools: {
       hint: readNonNegativeInteger(tools.hint) ?? base.tools.hint,
       bomb: readNonNegativeInteger(tools.bomb) ?? base.tools.bomb,

@@ -1,19 +1,34 @@
 import { rewardForLevel } from './rewards';
-import { loadSave, markLevelComplete, spendTool, writeSave, type TapGallerySave } from './save';
+import {
+  canSpendTool,
+  consumeEnergy,
+  loadSave,
+  markLevelComplete,
+  recoverEnergy,
+  spendTool,
+  writeSave,
+  type TapGallerySave,
+} from './save';
 import type { LevelConfig } from '../assets/types';
-import { activeCellCount, canClearCell, clearCell, createBoard, findHintCell, isBoardComplete } from '../core/board';
+import { activeCellCount, canClearCell, clearCell, createBoard, findHintCell, isBoardComplete, revealCellDirection } from '../core/board';
 import { applyBomb, applyHammer, applyMagnet } from '../core/tools';
-import type { BoardState, Direction } from '../core/types';
+import type { BoardState } from '../core/types';
 import type { PlatformAdapter } from '../platform/types';
 
 export type GameScreen = 'loading' | 'playing' | 'win' | 'failed' | 'levels' | 'error';
 export type FeedbackEventType = 'clear' | 'invalid' | 'win' | 'failed' | 'tool' | 'none';
+export type FeedbackAnimationKind = 'fly' | 'shake' | 'pulse' | 'reveal';
 
 export interface FeedbackEvent {
   type: FeedbackEventType;
   indexes?: number[];
   message?: string;
   sound?: string;
+  animation?: {
+    kind: FeedbackAnimationKind;
+    startedAtMs: number;
+    durationMs: number;
+  };
 }
 
 export interface GameViewState {
@@ -26,6 +41,30 @@ export interface GameViewState {
   progress: number;
   feedback: FeedbackEvent;
   selectedTool: ToolName | null;
+  timer: {
+    freezeRemainingMs: number;
+    remainingMs: number | null;
+  };
+  guidance: {
+    type: 'firstTap';
+    index: number;
+    label: string;
+  } | null;
+  weakHint: {
+    active: boolean;
+    index: number | null;
+  };
+  reveal: {
+    canContinue: boolean;
+    elapsedMs: number;
+  };
+  levelSelect: Array<{
+    levelNo: number;
+    title: string;
+    thumbnail: string;
+    unlocked: boolean;
+    completed: boolean;
+  }>;
 }
 
 export type ToolName = 'hint' | 'bomb' | 'magnet' | 'hammer' | 'freeze';
@@ -34,6 +73,7 @@ export interface GameControllerOptions {
   levels: LevelConfig[];
   save?: TapGallerySave;
   platform: PlatformAdapter;
+  now?: () => number;
 }
 
 export class GameController {
@@ -45,7 +85,17 @@ export class GameController {
   private movesLeft: number;
   private feedback: FeedbackEvent = { type: 'none' };
   private selectedTool: ToolName | null = null;
-  private freezeCharges = 0;
+  private readonly now: () => number;
+  private freezeUntilMs = 0;
+  private lastActionMs: number;
+  private lastWeakHintMs = -Infinity;
+  private weakHintIndex: number | null = null;
+  private guidanceDismissed = false;
+  private revealStartedMs: number | null = null;
+  private extraMoveAdUsed = false;
+  private levelStartedAtMs: number;
+  private frozenTimerMs = 0;
+  private activeFreezeStartedAtMs: number | null = null;
 
   constructor(options: GameControllerOptions) {
     this.levels = [...options.levels].sort((a, b) => a.levelNo - b.levelNo);
@@ -53,10 +103,13 @@ export class GameController {
       throw new Error('GameController requires at least one level.');
     }
     this.platform = options.platform;
-    this.save = options.save ?? loadSave(options.platform.storage);
+    this.now = options.now ?? (() => Date.now());
+    this.save = recoverEnergy(options.save ?? loadSave(options.platform.storage), this.now());
     const level = this.findLevel(this.save.currentLevel) ?? this.levels[0];
     this.board = createBoard(level);
     this.movesLeft = level.moves;
+    this.lastActionMs = this.now();
+    this.levelStartedAtMs = this.now();
   }
 
   getViewState(): GameViewState {
@@ -70,7 +123,47 @@ export class GameController {
       progress: this.progress(),
       feedback: this.feedback,
       selectedTool: this.selectedTool,
+      timer: {
+        freezeRemainingMs: Math.max(0, this.freezeUntilMs - this.now()),
+        remainingMs: this.timerRemainingMs(),
+      },
+      guidance: this.currentGuidance(),
+      weakHint: {
+        active: this.weakHintIndex !== null,
+        index: this.weakHintIndex,
+      },
+      reveal: this.currentReveal(),
+      levelSelect: this.levels.map((level) => ({
+        levelNo: level.levelNo,
+        title: level.title,
+        thumbnail: level.thumbnail,
+        unlocked: level.levelNo <= this.save.highestUnlockedLevel,
+        completed: this.save.completedLevels.includes(level.levelNo),
+      })),
     };
+  }
+
+  tick(): void {
+    this.settleFreeze();
+    if (this.screen === 'playing' && this.timerRemainingMs() === 0) {
+      this.screen = 'failed';
+      this.setFeedback({ type: 'failed', message: 'Time expired.', sound: 'invalid' });
+      return;
+    }
+    if (this.screen !== 'playing') {
+      return;
+    }
+    const now = this.now();
+    const delay = this.board.level.idleHintDelayMs;
+    if (
+      this.weakHintIndex === null &&
+      this.board.level.guidance.weakHintEnabled &&
+      now - this.lastActionMs >= delay &&
+      now - this.lastWeakHintMs >= 7000
+    ) {
+      this.weakHintIndex = findHintCell(this.board)?.index ?? null;
+      this.lastWeakHintMs = now;
+    }
   }
 
   tapCell(index: number): FeedbackEvent {
@@ -78,16 +171,13 @@ export class GameController {
       return this.setFeedback({ type: 'invalid', message: 'Level is not active.', sound: 'invalid' });
     }
 
+    this.recordAction();
     if (this.selectedTool) {
       return this.applySelectedTool(index);
     }
 
     if (!canClearCell(this.board, index)) {
-      if (this.freezeCharges <= 0) {
-        this.movesLeft -= 1;
-      } else {
-        this.freezeCharges -= 1;
-      }
+      this.movesLeft -= 1;
       if (this.movesLeft <= 0) {
         this.screen = 'failed';
         return this.setFeedback({ type: 'failed', message: 'No moves left.', sound: 'invalid' });
@@ -98,6 +188,7 @@ export class GameController {
 
     this.board = clearCell(this.board, index);
     this.movesLeft -= 1;
+    this.applyCellClearBonus(index);
     if (isBoardComplete(this.board)) {
       return this.completeLevel([index]);
     }
@@ -110,43 +201,77 @@ export class GameController {
   }
 
   useHint(): FeedbackEvent {
+    this.recordAction();
     const hint = findHintCell(this.board);
     if (!hint) {
       return this.setFeedback({ type: 'invalid', message: 'No move available.', sound: 'invalid' });
     }
     this.save = spendTool(this.save, 'hint');
+    if (hint.kind === 'secret' && !hint.revealed) {
+      this.board = revealCellDirection(this.board, hint.index);
+    }
     this.persist();
     return this.setFeedback({ type: 'tool', indexes: [hint.index], sound: 'hint' });
   }
 
-  retryLevel(): void {
-    this.startLevel(this.board.level.levelNo);
+  retryLevel(): FeedbackEvent {
+    return this.startLevel(this.board.level.levelNo);
   }
 
   continueAfterWin(): void {
+    if (!this.currentReveal().canContinue) {
+      return;
+    }
     this.startLevel(Math.min(this.board.level.levelNo + 1, this.levels[this.levels.length - 1].levelNo));
   }
 
-  startLevel(levelNo: number): void {
+  openLevelSelect(): void {
+    this.screen = 'levels';
+  }
+
+  startLevel(levelNo: number): FeedbackEvent {
     const level = this.findLevel(levelNo) ?? this.levels[0];
+    if (level.levelNo > this.save.highestUnlockedLevel) {
+      return this.setFeedback({ type: 'invalid', message: 'Level is locked.', sound: 'invalid' });
+    }
+    if (!level.mechanics.includes('infiniteEnergy') && level.levelNo !== this.save.currentLevel) {
+      const nextSave = consumeEnergy(this.save);
+      if (!nextSave) {
+        return this.setFeedback({ type: 'invalid', message: 'Not enough energy.', sound: 'invalid' });
+      }
+      this.save = nextSave;
+    }
     this.board = createBoard(level);
     this.movesLeft = level.moves;
     this.screen = 'playing';
     this.feedback = { type: 'none' };
     this.selectedTool = null;
-    this.freezeCharges = 0;
+    this.freezeUntilMs = 0;
+    this.activeFreezeStartedAtMs = null;
+    this.frozenTimerMs = 0;
+    this.levelStartedAtMs = this.now();
+    this.guidanceDismissed = false;
+    this.weakHintIndex = null;
+    this.revealStartedMs = null;
+    this.lastActionMs = this.now();
+    this.extraMoveAdUsed = false;
     this.save = {
       ...this.save,
       currentLevel: level.levelNo,
     };
     this.persist();
+    return this.setFeedback({ type: 'none' });
   }
 
   async requestExtraMoves(): Promise<FeedbackEvent> {
+    if (this.extraMoveAdUsed) {
+      return this.setFeedback({ type: 'invalid', message: 'Continue already used.', sound: 'invalid' });
+    }
     const result = await this.platform.showRewardedAd('extra_moves');
     if (result.status !== 'success') {
       return this.setFeedback({ type: 'invalid', message: result.message ?? 'Extra moves unavailable.', sound: 'invalid' });
     }
+    this.extraMoveAdUsed = true;
     this.movesLeft += 8;
     this.screen = 'playing';
     return this.setFeedback({ type: 'tool', message: '+8 moves', sound: 'ad-reward' });
@@ -158,10 +283,14 @@ export class GameController {
     if (!tool) {
       return this.setFeedback({ type: 'none' });
     }
+    if (!canSpendTool(this.save, tool)) {
+      return this.setFeedback({ type: 'invalid', indexes: [index], message: 'Tool unavailable.', sound: 'invalid' });
+    }
 
     if (tool === 'freeze') {
       this.save = spendTool(this.save, 'freeze');
-      this.freezeCharges = 3;
+      this.activeFreezeStartedAtMs = this.now();
+      this.freezeUntilMs = this.now() + 5000;
       this.persist();
       return this.setFeedback({ type: 'tool', sound: 'freeze' });
     }
@@ -172,8 +301,7 @@ export class GameController {
     } else if (tool === 'hammer') {
       result = applyHammer(this.board, index);
     } else if (tool === 'magnet') {
-      const direction = this.board.cellsByIndex.get(index)?.direction ?? 0;
-      result = applyMagnet(this.board, direction as Direction);
+      result = applyMagnet(this.board, index);
     } else if (tool === 'hint') {
       return this.useHint();
     }
@@ -183,6 +311,9 @@ export class GameController {
     }
     this.save = spendTool(this.save, tool);
     this.board = result.board;
+    for (const removed of result.removed) {
+      this.applyCellClearBonus(removed);
+    }
     this.persist();
     if (isBoardComplete(this.board)) {
       return this.completeLevel(result.removed);
@@ -195,6 +326,8 @@ export class GameController {
     this.save = markLevelComplete(this.save, this.board.level.levelNo, reward);
     this.persist();
     this.screen = 'win';
+    this.guidanceDismissed = true;
+    this.revealStartedMs = this.now();
     this.platform.triggerHaptic('long');
     return this.setFeedback({ type: 'win', indexes, sound: 'win' });
   }
@@ -208,11 +341,107 @@ export class GameController {
   }
 
   private setFeedback(feedback: FeedbackEvent): FeedbackEvent {
-    this.feedback = feedback;
-    return feedback;
+    const nextFeedback = {
+      ...feedback,
+      animation: feedback.animation ?? this.defaultAnimation(feedback.type),
+    };
+    this.feedback = nextFeedback;
+    return nextFeedback;
   }
 
   private persist(): void {
     writeSave(this.platform.storage, this.save);
+  }
+
+  private applyCellClearBonus(index: number): void {
+    const cell = this.board.cellsByIndex.get(index);
+    if (!cell) {
+      return;
+    }
+    if (cell.kind === 'golden') {
+      this.movesLeft += 3;
+      this.save = {
+        ...this.save,
+        coins: this.save.coins + 10,
+      };
+      this.persist();
+    }
+    if (cell.kind === 'timer') {
+      this.levelStartedAtMs += 5000;
+    }
+  }
+
+  private recordAction(): void {
+    this.lastActionMs = this.now();
+    this.weakHintIndex = null;
+  }
+
+  private currentGuidance(): GameViewState['guidance'] {
+    const firstTapIndex = this.board.level.guidance.firstTapIndex;
+    if (
+      this.screen !== 'playing' ||
+      this.guidanceDismissed ||
+      this.board.level.guidance.introCue !== 'tap' ||
+      firstTapIndex === undefined ||
+      this.board.cellsByIndex.get(firstTapIndex)?.cleared
+    ) {
+      return null;
+    }
+
+    return {
+      type: 'firstTap',
+      index: firstTapIndex,
+      label: 'Tap',
+    };
+  }
+
+  private currentReveal(): GameViewState['reveal'] {
+    if (this.screen !== 'win' || this.revealStartedMs === null) {
+      return {
+        canContinue: false,
+        elapsedMs: 0,
+      };
+    }
+    const elapsedMs = Math.max(0, this.now() - this.revealStartedMs);
+    return {
+      canContinue: elapsedMs >= 800,
+      elapsedMs,
+    };
+  }
+
+  private timerRemainingMs(): number | null {
+    if (!this.board.level.mechanics.includes('timer') && !this.board.cells.some((cell) => cell.kind === 'timer')) {
+      return null;
+    }
+    const activeFreezeMs = this.activeFreezeStartedAtMs === null
+      ? 0
+      : Math.max(0, Math.min(this.now(), this.freezeUntilMs) - this.activeFreezeStartedAtMs);
+    const elapsedMs = Math.max(0, this.now() - this.levelStartedAtMs - this.frozenTimerMs - activeFreezeMs);
+    return Math.max(0, 30_000 - elapsedMs);
+  }
+
+  private settleFreeze(): void {
+    if (this.activeFreezeStartedAtMs === null || this.now() < this.freezeUntilMs) {
+      return;
+    }
+    this.frozenTimerMs += Math.max(0, this.freezeUntilMs - this.activeFreezeStartedAtMs);
+    this.activeFreezeStartedAtMs = null;
+  }
+
+  private defaultAnimation(type: FeedbackEventType): FeedbackEvent['animation'] | undefined {
+    const startedAtMs = this.now();
+    if (type === 'clear') {
+      return { kind: 'fly', startedAtMs, durationMs: 320 };
+    }
+    if (type === 'invalid' || type === 'failed') {
+      return { kind: 'shake', startedAtMs, durationMs: 240 };
+    }
+    if (type === 'tool') {
+      return { kind: 'pulse', startedAtMs, durationMs: 520 };
+    }
+    if (type === 'win') {
+      return { kind: 'reveal', startedAtMs, durationMs: 900 };
+    }
+    return undefined;
   }
 }

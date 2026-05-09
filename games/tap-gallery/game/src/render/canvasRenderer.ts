@@ -2,13 +2,15 @@ import type { GameController, ToolName } from '../app/controller';
 import type { AssetManifest } from '../assets/types';
 import { resolveAssetUrl } from '../assets/loader';
 import type { BoardCell, Direction } from '../core/types';
+import { cellPresentation, formatTimerRemaining, type CellTone } from './cellPresentation';
 import { BOARD_BOX, DESIGN_HEIGHT, DESIGN_WIDTH, boardLayout, cellRect, viewportScale } from './layout';
 import { ImageCache } from './imageCache';
 import { theme } from './theme';
 
 interface HitTarget {
-  type: 'cell' | 'continue' | 'retry' | 'tool' | 'hint';
+  type: 'cell' | 'continue' | 'retry' | 'tool' | 'hint' | 'levels' | 'level';
   index?: number;
+  levelNo?: number;
   tool?: ToolName;
   rect: Rect;
 }
@@ -72,9 +74,13 @@ export class CanvasRenderer {
     this.drawBackground();
     this.drawHud();
     this.drawLevelInfo();
+    if (view.screen === 'levels') {
+      this.drawLevelSelect();
+      return;
+    }
     this.drawBoard();
     this.drawTools();
-    if (view.screen === 'win') {
+    if (view.screen === 'win' && view.reveal.canContinue) {
       this.drawResult('Complete', 'Continue', 'continue');
     } else if (view.screen === 'failed') {
       this.drawResult('No moves', 'Retry', 'retry');
@@ -100,13 +106,17 @@ export class CanvasRenderer {
     this.text('Tap Gallery', 64, 86, 32, 700, theme.ink, 'left');
     this.pill(452, 48, 92, 46, `E ${save.energy}`, theme.mint);
     this.pill(562, 48, 120, 46, `$ ${save.coins}`, theme.gold);
+    this.roundRect(318, 48, 108, 46, 23, '#ffffff', 'rgba(16, 32, 51, 0.12)');
+    this.text('Levels', 372, 78, 18, 800, theme.ink, 'center');
+    this.hits.push({ type: 'levels', rect: { x: 318, y: 48, width: 108, height: 46 } });
   }
 
   private drawLevelInfo(): void {
     const view = this.controller.getViewState();
+    const timerLabel = formatTimerRemaining(view.timer.remainingMs);
     this.text(`Level ${view.level.levelNo}`, 54, 178, 24, 700, theme.muted, 'left');
     this.text(view.level.title, 54, 214, 34, 800, theme.ink, 'left');
-    this.text(`${view.movesLeft} moves`, 696, 202, 26, 700, theme.ink, 'right');
+    this.text(timerLabel ? `${timerLabel}  ${view.movesLeft} moves` : `${view.movesLeft} moves`, 696, 202, 26, 700, theme.ink, 'right');
     this.roundRect(54, 226, 642, 12, 6, 'rgba(16, 32, 51, 0.12)');
     this.roundRect(54, 226, 642 * view.progress, 12, 6, theme.coral);
   }
@@ -141,16 +151,94 @@ export class CanvasRenderer {
         },
       });
       this.drawCell(cell, rect);
+      if (view.weakHint.active && view.weakHint.index === cell.index) {
+        this.drawHintRing(rect, 'rgba(255, 122, 104, 0.9)');
+      }
+      if (view.guidance?.index === cell.index) {
+        this.drawHintRing(rect, 'rgba(33, 166, 122, 0.95)');
+        this.text(view.guidance.label, rect.x + rect.width / 2, rect.y - 24, 22, 800, theme.good, 'center');
+      }
     }
+  }
+
+  private drawHintRing(rect: Rect, color: string): void {
+    this.ctx.save();
+    this.ctx.strokeStyle = color;
+    this.ctx.lineWidth = 5;
+    this.ctx.setLineDash([12, 8]);
+    this.roundRect(rect.x - 7, rect.y - 7, rect.width + 14, rect.height + 14, Math.max(8, rect.width * 0.18), 'rgba(255, 255, 255, 0)', color);
+    this.ctx.restore();
   }
 
   private drawCell(cell: BoardCell, rect: Rect): void {
     const view = this.controller.getViewState();
+    const presentation = cellPresentation(view.board, cell);
     const highlighted = view.feedback.indexes?.includes(cell.index);
-    const fill = highlighted ? '#fff2a8' : '#ffffff';
+    const fill = highlighted ? '#fff2a8' : this.cellFill(presentation.tone);
     this.roundRect(rect.x, rect.y, rect.width, rect.height, Math.max(6, rect.width * 0.16), fill, 'rgba(16, 32, 51, 0.2)');
-    this.ctx.fillStyle = cell.kind === 'golden' ? theme.gold : cell.kind === 'bomb' ? theme.coral : theme.ink;
-    this.drawArrow(rect.x + rect.width / 2, rect.y + rect.height / 2, Math.max(10, rect.width * 0.32), cell.direction);
+
+    if (presentation.arrowVisible) {
+      this.ctx.fillStyle = this.cellInk(presentation.tone);
+      this.drawArrow(rect.x + rect.width / 2, rect.y + rect.height / 2, Math.max(10, rect.width * 0.32), cell.direction);
+    }
+    if (presentation.label) {
+      this.text(presentation.label, rect.x + rect.width / 2, rect.y + rect.height / 2, Math.max(16, rect.width * 0.18), 900, presentation.locked ? theme.muted : theme.ink, 'center');
+    }
+    if (presentation.locked) {
+      this.ctx.save();
+      this.ctx.globalAlpha = 0.62;
+      this.roundRect(rect.x + 6, rect.y + 6, rect.width - 12, rect.height - 12, Math.max(4, rect.width * 0.12), 'rgba(16, 32, 51, 0.08)', 'rgba(16, 32, 51, 0.22)');
+      this.ctx.restore();
+    }
+    if (presentation.badge) {
+      const size = Math.max(18, rect.width * 0.26);
+      const x = rect.x + rect.width - size - 4;
+      const y = rect.y + 4;
+      this.roundRect(x, y, size, size, size / 2, this.badgeFill(presentation.tone), 'rgba(16, 32, 51, 0.14)');
+      this.text(presentation.badge, x + size / 2, y + size / 2 + 1, Math.max(12, size * 0.54), 900, '#ffffff', 'center');
+    }
+  }
+
+  private cellFill(tone: CellTone): string {
+    if (tone === 'gold') {
+      return '#fff3bf';
+    }
+    if (tone === 'timer') {
+      return '#e2f3ff';
+    }
+    if (tone === 'bomb') {
+      return '#ffe0dc';
+    }
+    if (tone === 'locked') {
+      return 'rgba(255, 255, 255, 0.62)';
+    }
+    return '#ffffff';
+  }
+
+  private cellInk(tone: CellTone): string {
+    if (tone === 'gold') {
+      return '#b26a00';
+    }
+    if (tone === 'timer') {
+      return '#1676a8';
+    }
+    if (tone === 'bomb') {
+      return theme.coral;
+    }
+    return theme.ink;
+  }
+
+  private badgeFill(tone: CellTone): string {
+    if (tone === 'gold') {
+      return theme.gold;
+    }
+    if (tone === 'timer') {
+      return theme.sky;
+    }
+    if (tone === 'bomb') {
+      return theme.coral;
+    }
+    return theme.muted;
   }
 
   private drawArrow(cx: number, cy: number, size: number, direction: Direction): void {
@@ -192,6 +280,35 @@ export class CanvasRenderer {
     }
   }
 
+  private drawLevelSelect(): void {
+    const view = this.controller.getViewState();
+    this.text('Gallery', 54, 286, 34, 800, theme.ink, 'left');
+    const cols = 5;
+    const size = 108;
+    const gap = 24;
+    const startX = 54;
+    const startY = 324;
+    for (const item of view.levelSelect) {
+      const index = item.levelNo - 1;
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      const x = startX + col * (size + gap);
+      const y = startY + row * (size + 46);
+      const image = this.imageCache.get(resolveAssetUrl(this.assetBase, item.thumbnail));
+      this.roundRect(x, y, size, size, 18, item.unlocked ? '#ffffff' : 'rgba(255, 255, 255, 0.48)', 'rgba(16, 32, 51, 0.14)');
+      if (image?.complete && image.naturalWidth > 0) {
+        this.ctx.save();
+        this.ctx.globalAlpha = item.unlocked ? 1 : 0.28;
+        this.ctx.drawImage(image, x + 10, y + 10, size - 20, size - 20);
+        this.ctx.restore();
+      }
+      this.text(String(item.levelNo), x + size / 2, y + size + 24, 18, 800, item.unlocked ? theme.ink : theme.muted, 'center');
+      if (item.unlocked) {
+        this.hits.push({ type: 'level', levelNo: item.levelNo, rect: { x, y, width: size, height: size + 36 } });
+      }
+    }
+  }
+
   private drawResult(title: string, action: string, type: 'continue' | 'retry'): void {
     this.roundRect(86, 1156, 578, 118, 30, theme.panelStrong, 'rgba(16, 32, 51, 0.18)');
     this.text(title, 124, 1210, 32, 800, theme.ink, 'left');
@@ -217,6 +334,10 @@ export class CanvasRenderer {
       this.controller.useHint();
     } else if (hit.type === 'tool' && hit.tool) {
       this.controller.selectTool(hit.tool);
+    } else if (hit.type === 'levels') {
+      this.controller.openLevelSelect();
+    } else if (hit.type === 'level' && hit.levelNo !== undefined) {
+      this.controller.startLevel(hit.levelNo);
     }
   }
 

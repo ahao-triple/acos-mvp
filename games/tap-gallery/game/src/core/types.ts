@@ -4,6 +4,7 @@ export interface BoardCell extends LevelCellConfig {
   row: number;
   col: number;
   cleared: boolean;
+  revealed: boolean;
 }
 
 export interface BoardState {

@@ -4,7 +4,7 @@ export default defineGameConfig({
   title: 'Tap Gallery',
   platform: 'douyin',
   entry: 'game/src/main.ts',
-  publicDir: 'game/public-runtime',
+  publicDir: 'game/public-pack',
   outDir: 'builds/douyin',
   orientation: 'portrait',
   canvas: {
