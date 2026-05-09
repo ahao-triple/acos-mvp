@@ -349,4 +349,42 @@ describe('game controller', () => {
     controller.tick();
     expect(controller.getViewState().screen).toBe('failed');
   });
+
+  it('exposes and resets board camera state for advanced levels', () => {
+    const advancedLevel: LevelConfig = {
+      ...levels()[0],
+      id: 'level-12',
+      levelNo: 12,
+      title: 'Twelve',
+      board: {
+        width: 9,
+        height: 9,
+        allowPan: true,
+        allowZoom: true,
+        initialZoom: 1,
+      },
+      cells: [{ index: 4, direction: 0 }],
+    };
+    const save = {
+      ...defaultSave(),
+      currentLevel: 12,
+      highestUnlockedLevel: 12,
+    };
+    const controller = new GameController({
+      levels: [advancedLevel],
+      save,
+      platform: createWebPlatformAdapter(),
+    });
+
+    expect(controller.getViewState().camera).toMatchObject({ scale: 1, x: 0, y: 0, canPan: true, canZoom: true });
+
+    controller.zoomBoardCamera(1.8, { x: 330, y: 330 });
+    controller.panBoardCamera({ dx: 120, dy: 80 });
+
+    expect(controller.getViewState().camera).toMatchObject({ scale: 1.8, x: 120, y: 80 });
+
+    controller.startLevel(12);
+
+    expect(controller.getViewState().camera).toMatchObject({ scale: 1, x: 0, y: 0 });
+  });
 });

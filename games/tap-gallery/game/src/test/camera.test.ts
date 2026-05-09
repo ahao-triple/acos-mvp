@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { createBoardCamera, panCamera, resetCamera, zoomCamera } from '../render/camera';
+import { boardToCameraScreenPoint, cameraScreenToBoardPoint, createBoardCamera, panCamera, resetCamera, zoomCamera } from '../render/camera';
 
 describe('board camera', () => {
   it('starts locked at 1x for early levels', () => {
@@ -30,5 +30,16 @@ describe('board camera', () => {
     });
 
     expect(resetCamera(camera)).toMatchObject({ scale: 1, x: 0, y: 0 });
+  });
+
+  it('keeps the zoom origin stable while changing scale', () => {
+    const camera = createBoardCamera({ levelNo: 12, allowPan: true, allowZoom: true });
+    const origin = { x: 120, y: 500 };
+    const zoomed = zoomCamera(camera, 1.8, origin);
+    const boardPoint = cameraScreenToBoardPoint(zoomed, origin);
+
+    expect(boardToCameraScreenPoint(zoomed, boardPoint)).toEqual(origin);
+    expect(zoomed.x).not.toBe(0);
+    expect(zoomed.y).not.toBe(0);
   });
 });

@@ -5,6 +5,7 @@ import type { BoardCell, Direction } from '../core/types';
 import { zhText } from '../i18n/zh';
 import { feedbackCellMotion, feedbackProgress, hintPulse, revealMotion } from './animation';
 import { boardDrawOrder } from './boardDrawPlan';
+import { boardToCameraScreenPoint, type BoardCameraState } from './camera';
 import { cellPresentation, formatTimerRemaining, type CellTone } from './cellPresentation';
 import { BOARD_BOX, DESIGN_HEIGHT, DESIGN_WIDTH, boardLayout, cellRect, viewportScale } from './layout';
 import { ImageCache } from './imageCache';
@@ -25,6 +26,19 @@ interface Rect {
   height: number;
 }
 
+interface DragState {
+  pointerId: number | null;
+  start: { x: number; y: number };
+  last: { x: number; y: number };
+  moved: boolean;
+}
+
+interface PinchState {
+  distance: number;
+  origin: { x: number; y: number };
+  startScale: number;
+}
+
 export class CanvasRenderer {
   private readonly ctx: CanvasRenderingContext2D;
   private readonly imageCache = new ImageCache();
@@ -32,6 +46,8 @@ export class CanvasRenderer {
   private scale = 1;
   private offsetX = 0;
   private offsetY = 0;
+  private drag: DragState | null = null;
+  private pinch: PinchState | null = null;
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -45,13 +61,36 @@ export class CanvasRenderer {
     }
     this.ctx = ctx;
     this.onPointerDown = this.onPointerDown.bind(this);
+    this.onPointerMove = this.onPointerMove.bind(this);
+    this.onPointerUp = this.onPointerUp.bind(this);
+    this.onWheel = this.onWheel.bind(this);
+    this.onDoubleClick = this.onDoubleClick.bind(this);
+    this.onTouchStart = this.onTouchStart.bind(this);
+    this.onTouchMove = this.onTouchMove.bind(this);
+    this.onTouchEnd = this.onTouchEnd.bind(this);
     canvas.addEventListener('pointerdown', this.onPointerDown);
-    canvas.addEventListener('touchstart', this.onPointerDown, { passive: false });
+    canvas.addEventListener('pointermove', this.onPointerMove);
+    canvas.addEventListener('pointerup', this.onPointerUp);
+    canvas.addEventListener('pointercancel', this.onPointerUp);
+    canvas.addEventListener('wheel', this.onWheel, { passive: false });
+    canvas.addEventListener('dblclick', this.onDoubleClick);
+    canvas.addEventListener('touchstart', this.onTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', this.onTouchMove, { passive: false });
+    canvas.addEventListener('touchend', this.onTouchEnd);
+    canvas.addEventListener('touchcancel', this.onTouchEnd);
   }
 
   destroy(): void {
     this.canvas.removeEventListener('pointerdown', this.onPointerDown);
-    this.canvas.removeEventListener('touchstart', this.onPointerDown);
+    this.canvas.removeEventListener('pointermove', this.onPointerMove);
+    this.canvas.removeEventListener('pointerup', this.onPointerUp);
+    this.canvas.removeEventListener('pointercancel', this.onPointerUp);
+    this.canvas.removeEventListener('wheel', this.onWheel);
+    this.canvas.removeEventListener('dblclick', this.onDoubleClick);
+    this.canvas.removeEventListener('touchstart', this.onTouchStart);
+    this.canvas.removeEventListener('touchmove', this.onTouchMove);
+    this.canvas.removeEventListener('touchend', this.onTouchEnd);
+    this.canvas.removeEventListener('touchcancel', this.onTouchEnd);
   }
 
   resize(width: number, height: number, dpr: number): void {
@@ -129,6 +168,12 @@ export class CanvasRenderer {
     const animation = view.feedback.animation;
     const animationProgress = feedbackProgress(animation, now);
     this.roundRect(BOARD_BOX.x - 16, BOARD_BOX.y - 16, BOARD_BOX.size + 32, BOARD_BOX.size + 32, 34, 'rgba(255, 255, 255, 0.72)', 'rgba(35, 49, 66, 0.14)');
+    this.roundRect(BOARD_BOX.x, BOARD_BOX.y, BOARD_BOX.size, BOARD_BOX.size, 20, '#eef7ff');
+
+    this.ctx.save();
+    this.clipBoardBox();
+    this.applyBoardCamera(view.camera);
+
     const reveal = this.imageCache.get(resolveAssetUrl(this.assetBase, view.level.revealImage));
     if (reveal?.complete && reveal.naturalWidth > 0) {
       const motion = view.screen === 'win' && animation?.kind === 'reveal'
@@ -141,12 +186,11 @@ export class CanvasRenderer {
       this.ctx.globalAlpha = motion.alpha;
       this.ctx.drawImage(reveal, x, y, size, size);
       this.ctx.restore();
-    } else {
-      this.roundRect(BOARD_BOX.x, BOARD_BOX.y, BOARD_BOX.size, BOARD_BOX.size, 20, '#eef7ff');
     }
 
     const layout = boardLayout(view.level.board);
     const feedbackIndexes = new Set(view.feedback.indexes ?? []);
+    const guidanceLabels: Array<{ label: string; x: number; y: number }> = [];
     for (const item of boardDrawOrder(view.board.cells, {
       feedbackIndexes: view.feedback.indexes,
       weakHint: view.weakHint,
@@ -168,12 +212,12 @@ export class CanvasRenderer {
         this.hits.push({
           type: 'cell',
           index: cell.index,
-          rect: {
+          rect: this.cameraRect({
             x: rect.x - layout.gap / 2,
             y: rect.y - layout.gap / 2,
             width: rect.width + layout.gap,
             height: rect.height + layout.gap,
-          },
+          }, view.camera),
         });
         if (isFeedbackCell && (animation.kind === 'shake' || animation.kind === 'pulse')) {
           this.drawAnimatedCell(cell, rect, animation.kind, animationProgress.progress);
@@ -185,10 +229,48 @@ export class CanvasRenderer {
       } else {
         this.drawHintRing(rect, 'rgba(33, 166, 122, 0.95)', now);
         if (item.label) {
-          this.text(item.label, rect.x + rect.width / 2, rect.y - 24, 22, 800, theme.good, 'center');
+          const labelPoint = this.cameraPoint({ x: rect.x + rect.width / 2, y: rect.y - 24 }, view.camera);
+          guidanceLabels.push({ label: item.label, x: labelPoint.x, y: labelPoint.y });
         }
       }
     }
+    this.ctx.restore();
+    for (const label of guidanceLabels) {
+      this.text(label.label, label.x, label.y, 22, 800, theme.good, 'center');
+    }
+  }
+
+  private clipBoardBox(): void {
+    this.ctx.beginPath();
+    this.ctx.rect(BOARD_BOX.x, BOARD_BOX.y, BOARD_BOX.size, BOARD_BOX.size);
+    this.ctx.clip();
+  }
+
+  private applyBoardCamera(camera: BoardCameraState): void {
+    const centerX = BOARD_BOX.x + BOARD_BOX.size / 2;
+    const centerY = BOARD_BOX.y + BOARD_BOX.size / 2;
+    this.ctx.translate(centerX + camera.x, centerY + camera.y);
+    this.ctx.scale(camera.scale, camera.scale);
+    this.ctx.translate(-centerX, -centerY);
+  }
+
+  private cameraRect(rect: Rect, camera: BoardCameraState): Rect {
+    const topLeft = this.cameraPoint({ x: rect.x, y: rect.y }, camera);
+    const bottomRight = this.cameraPoint({ x: rect.x + rect.width, y: rect.y + rect.height }, camera);
+    return {
+      x: topLeft.x,
+      y: topLeft.y,
+      width: bottomRight.x - topLeft.x,
+      height: bottomRight.y - topLeft.y,
+    };
+  }
+
+  private cameraPoint(point: { x: number; y: number }, camera: BoardCameraState): { x: number; y: number } {
+    const transformed = boardToCameraScreenPoint(camera, { x: point.x - BOARD_BOX.x, y: point.y - BOARD_BOX.y });
+    return {
+      x: BOARD_BOX.x + transformed.x,
+      y: BOARD_BOX.y + transformed.y,
+    };
   }
 
   private drawHintRing(rect: Rect, color: string, now: number): void {
@@ -367,11 +449,142 @@ export class CanvasRenderer {
     this.hits.push({ type, rect: { x: 458, y: 1184, width: 168, height: 58 } });
   }
 
-  private onPointerDown(event: PointerEvent | TouchEvent): void {
+  private onPointerDown(event: PointerEvent): void {
     event.preventDefault?.();
     const point = this.eventToDesignPoint(event);
+    if (this.canStartBoardDrag(point)) {
+      this.drag = {
+        pointerId: event.pointerId,
+        start: point,
+        last: point,
+        moved: false,
+      };
+      return;
+    }
+    this.activateHit(point);
+  }
+
+  private onPointerMove(event: PointerEvent): void {
+    if (!this.drag || (this.drag.pointerId !== null && event.pointerId !== this.drag.pointerId)) {
+      return;
+    }
+    event.preventDefault?.();
+    this.panDragTo(this.eventToDesignPoint(event));
+  }
+
+  private onPointerUp(event: PointerEvent): void {
+    if (!this.drag || (this.drag.pointerId !== null && event.pointerId !== this.drag.pointerId)) {
+      return;
+    }
+    event.preventDefault?.();
+    const drag = this.drag;
+    this.drag = null;
+    if (!drag.moved) {
+      this.activateHit(drag.start);
+    }
+  }
+
+  private onWheel(event: WheelEvent): void {
+    const point = this.eventToDesignPoint(event);
+    const view = this.controller.getViewState();
+    if (!view.camera.canZoom || !contains(boardRect(), point)) {
+      return;
+    }
+    event.preventDefault?.();
+    const factor = event.deltaY < 0 ? 1.12 : 1 / 1.12;
+    this.controller.zoomBoardCamera(view.camera.scale * factor, this.boardLocalPoint(point));
+  }
+
+  private onDoubleClick(event: MouseEvent): void {
+    const point = this.eventToDesignPoint(event);
+    const view = this.controller.getViewState();
+    if (!view.camera.canZoom || !contains(boardRect(), point)) {
+      return;
+    }
+    event.preventDefault?.();
+    this.controller.zoomBoardCamera(view.camera.scale > 1.01 ? 1 : 1.8, this.boardLocalPoint(point));
+  }
+
+  private onTouchStart(event: TouchEvent): void {
+    event.preventDefault?.();
+    if (event.touches.length >= 2) {
+      const view = this.controller.getViewState();
+      const center = this.touchCenter(event);
+      this.pinch = view.camera.canZoom && contains(boardRect(), center)
+        ? {
+            distance: this.touchDistance(event),
+            origin: this.boardLocalPoint(center),
+            startScale: view.camera.scale,
+          }
+        : null;
+      return;
+    }
+    const point = this.eventToDesignPoint(event);
+    if (this.canStartBoardDrag(point)) {
+      this.drag = {
+        pointerId: null,
+        start: point,
+        last: point,
+        moved: false,
+      };
+      return;
+    }
+    this.activateHit(point);
+  }
+
+  private onTouchMove(event: TouchEvent): void {
+    if (this.pinch && event.touches.length >= 2) {
+      event.preventDefault?.();
+      const ratio = this.touchDistance(event) / Math.max(1, this.pinch.distance);
+      this.controller.zoomBoardCamera(this.pinch.startScale * ratio, this.pinch.origin);
+      return;
+    }
+    if (this.drag) {
+      event.preventDefault?.();
+      this.panDragTo(this.eventToDesignPoint(event));
+    }
+  }
+
+  private onTouchEnd(event: TouchEvent): void {
+    if (event.touches.length < 2) {
+      this.pinch = null;
+    }
+    if (!this.drag) {
+      return;
+    }
+    const drag = this.drag;
+    this.drag = null;
+    if (!drag.moved) {
+      this.activateHit(drag.start);
+    }
+  }
+
+  private panDragTo(point: { x: number; y: number }): void {
+    if (!this.drag) {
+      return;
+    }
+    const dx = point.x - this.drag.last.x;
+    const dy = point.y - this.drag.last.y;
+    if (Math.abs(point.x - this.drag.start.x) > 4 || Math.abs(point.y - this.drag.start.y) > 4) {
+      this.drag.moved = true;
+    }
+    if (dx !== 0 || dy !== 0) {
+      this.controller.panBoardCamera({ dx, dy });
+      this.drag.last = point;
+    }
+  }
+
+  private canStartBoardDrag(point: { x: number; y: number }): boolean {
+    const camera = this.controller.getViewState().camera;
+    return camera.canPan && camera.scale > 1 && contains(boardRect(), point);
+  }
+
+  private activateHit(point: { x: number; y: number }): void {
     const hit = [...this.hits].reverse().find((target) => contains(target.rect, point));
     if (!hit) {
+      return;
+    }
+    if (hit.type === 'cell' && !contains(boardRect(), point)) {
       return;
     }
     if (hit.type === 'cell' && hit.index !== undefined) {
@@ -391,7 +604,14 @@ export class CanvasRenderer {
     }
   }
 
-  private eventToDesignPoint(event: PointerEvent | TouchEvent): { x: number; y: number } {
+  private boardLocalPoint(point: { x: number; y: number }): { x: number; y: number } {
+    return {
+      x: point.x - BOARD_BOX.x,
+      y: point.y - BOARD_BOX.y,
+    };
+  }
+
+  private eventToDesignPoint(event: PointerEvent | TouchEvent | MouseEvent | WheelEvent): { x: number; y: number } {
     const rect = this.canvas.getBoundingClientRect?.() ?? { left: 0, top: 0 };
     const touch = 'touches' in event ? event.touches[0] ?? event.changedTouches[0] : null;
     const clientX = touch?.clientX ?? ('clientX' in event ? event.clientX : 0);
@@ -400,6 +620,22 @@ export class CanvasRenderer {
       x: (clientX - rect.left) / this.scale - this.offsetX,
       y: (clientY - rect.top) / this.scale - this.offsetY,
     };
+  }
+
+  private touchCenter(event: TouchEvent): { x: number; y: number } {
+    const first = event.touches[0];
+    const second = event.touches[1];
+    const rect = this.canvas.getBoundingClientRect?.() ?? { left: 0, top: 0 };
+    return {
+      x: ((first.clientX + second.clientX) / 2 - rect.left) / this.scale - this.offsetX,
+      y: ((first.clientY + second.clientY) / 2 - rect.top) / this.scale - this.offsetY,
+    };
+  }
+
+  private touchDistance(event: TouchEvent): number {
+    const first = event.touches[0];
+    const second = event.touches[1];
+    return Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY);
   }
 
   private roundRect(x: number, y: number, width: number, height: number, radius: number, fill: string, stroke?: string): void {
@@ -440,4 +676,13 @@ export class CanvasRenderer {
 
 function contains(rect: Rect, point: { x: number; y: number }): boolean {
   return point.x >= rect.x && point.y >= rect.y && point.x <= rect.x + rect.width && point.y <= rect.y + rect.height;
+}
+
+function boardRect(): Rect {
+  return {
+    x: BOARD_BOX.x,
+    y: BOARD_BOX.y,
+    width: BOARD_BOX.size,
+    height: BOARD_BOX.size,
+  };
 }

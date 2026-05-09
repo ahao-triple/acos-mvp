@@ -15,6 +15,7 @@ import { applyBomb, applyHammer, applyMagnet } from '../core/tools';
 import type { BoardState } from '../core/types';
 import { zhText } from '../i18n/zh';
 import type { PlatformAdapter } from '../platform/types';
+import { createBoardCamera, panCamera, resetCamera, zoomCamera, type BoardCameraState } from '../render/camera';
 
 export type GameScreen = 'loading' | 'playing' | 'win' | 'failed' | 'levels' | 'error';
 export type FeedbackEventType = 'clear' | 'invalid' | 'win' | 'failed' | 'tool' | 'none';
@@ -37,6 +38,7 @@ export interface GameViewState {
   level: LevelConfig;
   levels: LevelConfig[];
   board: BoardState;
+  camera: BoardCameraState;
   save: TapGallerySave;
   movesLeft: number;
   progress: number;
@@ -82,6 +84,7 @@ export class GameController {
   private readonly platform: PlatformAdapter;
   private save: TapGallerySave;
   private board: BoardState;
+  private camera: BoardCameraState;
   private screen: GameScreen = 'playing';
   private movesLeft: number;
   private feedback: FeedbackEvent = { type: 'none' };
@@ -108,6 +111,7 @@ export class GameController {
     this.save = recoverEnergy(options.save ?? loadSave(options.platform.storage), this.now());
     const level = this.findLevel(this.save.currentLevel) ?? this.levels[0];
     this.board = createBoard(level);
+    this.camera = this.createCameraForLevel(level);
     this.movesLeft = level.moves;
     this.lastActionMs = this.now();
     this.levelStartedAtMs = this.now();
@@ -119,6 +123,7 @@ export class GameController {
       level: this.board.level,
       levels: this.levels,
       board: this.board,
+      camera: this.camera,
       save: this.save,
       movesLeft: this.movesLeft,
       progress: this.progress(),
@@ -219,6 +224,18 @@ export class GameController {
     return this.startLevel(this.board.level.levelNo);
   }
 
+  zoomBoardCamera(scale: number, origin: { x: number; y: number }): void {
+    this.camera = zoomCamera(this.camera, scale, origin);
+  }
+
+  panBoardCamera(delta: { dx: number; dy: number }): void {
+    this.camera = panCamera(this.camera, delta);
+  }
+
+  resetBoardCamera(): void {
+    this.camera = resetCamera(this.camera);
+  }
+
   continueAfterWin(): void {
     if (!this.currentReveal().canContinue) {
       return;
@@ -243,6 +260,7 @@ export class GameController {
       this.save = nextSave;
     }
     this.board = createBoard(level);
+    this.camera = this.createCameraForLevel(level);
     this.movesLeft = level.moves;
     this.screen = 'playing';
     this.feedback = { type: 'none' };
@@ -327,6 +345,7 @@ export class GameController {
     this.save = markLevelComplete(this.save, this.board.level.levelNo, reward);
     this.persist();
     this.screen = 'win';
+    this.resetBoardCamera();
     this.guidanceDismissed = true;
     this.revealStartedMs = this.now();
     this.platform.triggerHaptic('long');
@@ -339,6 +358,15 @@ export class GameController {
 
   private findLevel(levelNo: number): LevelConfig | null {
     return this.levels.find((level) => level.levelNo === levelNo) ?? null;
+  }
+
+  private createCameraForLevel(level: LevelConfig): BoardCameraState {
+    return createBoardCamera({
+      levelNo: level.levelNo,
+      allowPan: level.board.allowPan,
+      allowZoom: level.board.allowZoom,
+      initialZoom: level.board.initialZoom,
+    });
   }
 
   private setFeedback(feedback: FeedbackEvent): FeedbackEvent {
