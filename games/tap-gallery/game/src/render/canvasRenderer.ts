@@ -3,6 +3,7 @@ import type { AssetManifest } from '../assets/types';
 import { resolveAssetUrl } from '../assets/loader';
 import type { BoardCell, Direction } from '../core/types';
 import { feedbackCellMotion, feedbackProgress, hintPulse, revealMotion } from './animation';
+import { boardDrawOrder } from './boardDrawPlan';
 import { cellPresentation, formatTimerRemaining, type CellTone } from './cellPresentation';
 import { BOARD_BOX, DESIGN_HEIGHT, DESIGN_WIDTH, boardLayout, cellRect, viewportScale } from './layout';
 import { ImageCache } from './imageCache';
@@ -146,36 +147,46 @@ export class CanvasRenderer {
 
     const layout = boardLayout(view.level.board);
     const feedbackIndexes = new Set(view.feedback.indexes ?? []);
-    for (const cell of view.board.cells) {
-      const rect = cellRect(layout, cell.index, view.board.width);
-      const isFeedbackCell = feedbackIndexes.has(cell.index) && animation && animationProgress.active;
-      if (cell.cleared) {
-        if (isFeedbackCell && (animation.kind === 'fly' || animation.kind === 'pulse')) {
-          this.drawAnimatedCell(cell, rect, animation.kind, animationProgress.progress);
-        }
+    for (const item of boardDrawOrder(view.board.cells, {
+      feedbackIndexes: view.feedback.indexes,
+      weakHint: view.weakHint,
+      guidance: view.guidance,
+    })) {
+      const cell = view.board.cellsByIndex.get(item.index);
+      if (!cell) {
         continue;
       }
-      this.hits.push({
-        type: 'cell',
-        index: cell.index,
-        rect: {
-          x: rect.x - layout.gap / 2,
-          y: rect.y - layout.gap / 2,
-          width: rect.width + layout.gap,
-          height: rect.height + layout.gap,
-        },
-      });
-      if (isFeedbackCell && (animation.kind === 'shake' || animation.kind === 'pulse')) {
-        this.drawAnimatedCell(cell, rect, animation.kind, animationProgress.progress);
-      } else {
-        this.drawCell(cell, rect);
-      }
-      if (view.weakHint.active && view.weakHint.index === cell.index) {
+      const rect = cellRect(layout, cell.index, view.board.width);
+      if (item.layer === 'cell') {
+        const isFeedbackCell = feedbackIndexes.has(cell.index) && animation && animationProgress.active;
+        if (cell.cleared) {
+          if (isFeedbackCell && (animation.kind === 'fly' || animation.kind === 'pulse')) {
+            this.drawAnimatedCell(cell, rect, animation.kind, animationProgress.progress);
+          }
+          continue;
+        }
+        this.hits.push({
+          type: 'cell',
+          index: cell.index,
+          rect: {
+            x: rect.x - layout.gap / 2,
+            y: rect.y - layout.gap / 2,
+            width: rect.width + layout.gap,
+            height: rect.height + layout.gap,
+          },
+        });
+        if (isFeedbackCell && (animation.kind === 'shake' || animation.kind === 'pulse')) {
+          this.drawAnimatedCell(cell, rect, animation.kind, animationProgress.progress);
+        } else {
+          this.drawCell(cell, rect);
+        }
+      } else if (item.kind === 'weakHint') {
         this.drawHintRing(rect, 'rgba(255, 122, 104, 0.9)', now);
-      }
-      if (view.guidance?.index === cell.index) {
+      } else {
         this.drawHintRing(rect, 'rgba(33, 166, 122, 0.95)', now);
-        this.text(view.guidance.label, rect.x + rect.width / 2, rect.y - 24, 22, 800, theme.good, 'center');
+        if (item.label) {
+          this.text(item.label, rect.x + rect.width / 2, rect.y - 24, 22, 800, theme.good, 'center');
+        }
       }
     }
   }
