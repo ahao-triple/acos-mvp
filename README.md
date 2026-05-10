@@ -39,11 +39,23 @@ games/<game-project>/
       platform/
       render/
       test/
+  channels/
+    douyin/
+      materials.ts
+      icon.png
+      build/        # .gitignore
+    vivo/
+      materials.ts
+      icon.png
+      build/        # .gitignore
 ```
 
 约定：
 
-- `game.config.ts` 是平台打包入口配置。
+- `game.config.ts` 是游戏共性配置（`title` / `entry` / `publicDir` / `orientation` / `canvas`）；不再承载 `platform` / `outDir` / 渠道字段。
+- `channels/<platform>/materials.ts` 是渠道字段（抖音 `appid`、`projectName`、`rewardedAdUnitId`、`iconPath`；vivo `packageName`、`iconPath`、`versionName`、`versionCode`）。
+- `channels/<platform>/icon.png` 是渠道图标（必填；抖音用于后台提交，vivo 写入构建产物）。
+- `channels/<platform>/build/` 是打包产物目录，已 `.gitignore`。
 - `game/public-pack/` 是运行时静态资源目录，打包器会复制这里的内容。
 - `game/src/main.ts` 暴露浏览器预览入口和 mini-pack 运行时入口。
 - `game/src/platform/*` 隔离浏览器、抖音、vivo 等平台能力。
@@ -79,15 +91,19 @@ games/<game-project>/
 - `douyin`
 - `vivo`
 
-根目录打包命令：
+根目录命令：
 
 ```bash
+pnpm preflight games/<game-project> --platform douyin
+pnpm preflight games/<game-project> --platform vivo
 pnpm build games/<game-project>
 pnpm build games/<game-project> --platform douyin
 pnpm build games/<game-project> --platform vivo
 ```
 
 不传 `--platform` 时默认使用 `douyin`。
+
+`build` 命令会先跑 preflight，缺渠道物料时一次性中文报告并退出。打包产物输出到 `games/<game-project>/channels/<platform>/build/`（已 `.gitignore`）。
 
 抖音构建会在构建后运行 smoke 检查。vivo 构建会生成 vivo/Quick Game 项目，并在环境可用时尝试生成 debug `.rpk`。
 
@@ -135,7 +151,13 @@ pnpm --dir games/gonglian-fangxian/game test
 pnpm --dir games/difference-hunt/game test
 pnpm --dir games/gonglian-fangxian/game build
 pnpm --dir games/difference-hunt/game build
-pnpm build games/gonglian-fangxian
+DOUYIN_APPID=tt-test DOUYIN_REWARDED_AD_UNIT_ID=tt-rwd \
+  pnpm preflight games/gonglian-fangxian --platform douyin
+DOUYIN_APPID=tt-test DOUYIN_REWARDED_AD_UNIT_ID=tt-rwd \
+  pnpm build games/gonglian-fangxian
+DOUYIN_APPID=tt-test DOUYIN_REWARDED_AD_UNIT_ID=tt-rwd \
+  pnpm build games/difference-hunt --platform douyin
+MINI_PACK_VIVO_FAKE_RPK=1 pnpm build games/difference-hunt --platform vivo
 ```
 
 根目录 `pnpm verify` 只覆盖一部分流程，不替代完整矩阵。
@@ -179,12 +201,13 @@ Windows 是受支持开发环境。测试中处理本地路径时应使用 `file
 
 新增游戏时至少完成：
 
-- 创建 `games/<game-project>/game.config.ts`。
+- 创建 `games/<game-project>/game.config.ts`（仅游戏共性字段）。
 - 创建 `games/<game-project>/AGENT.md` 和 `games/<game-project>/AGENT_CN.md`，并保持两份语义一致。
 - 创建 `game/public-pack/` 并放入运行时资源。
 - 创建 `game/src/main.ts`，支持浏览器预览和 mini-pack runtime。
 - 提供 `platform/web.ts` 和 `platform/minipack.ts`。
+- 为每个支持的渠道创建 `channels/<platform>/materials.ts` 与 `channels/<platform>/icon.png`。
 - 提供核心玩法测试、存档测试和资源数据测试。
-- 跑通浏览器预览、游戏构建和至少一个平台打包。
+- 跑通浏览器预览、`pnpm preflight games/<game> --platform <p>` 与至少一个平台打包。
 
 新游戏不应依赖仓库外路径或未纳入仓库规范的目录。
