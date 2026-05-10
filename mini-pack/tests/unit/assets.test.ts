@@ -1,11 +1,12 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, test } from 'vitest';
 
 import { copyAssets } from '../../src/core/assets.js';
 
-const tmpRoot = path.resolve(new URL('../tmp/assets', import.meta.url).pathname);
+const tmpRoot = fileURLToPath(new URL('../tmp/assets/', import.meta.url));
 
 afterEach(async () => {
   await fs.rm(tmpRoot, { force: true, recursive: true });

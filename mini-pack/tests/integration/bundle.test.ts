@@ -1,11 +1,12 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, test } from 'vitest';
 
 import { bundleGameEntry } from '../../src/core/bundle.js';
 
-const tmpRoot = path.resolve(new URL('../tmp/bundle', import.meta.url).pathname);
+const tmpRoot = fileURLToPath(new URL('../tmp/bundle/', import.meta.url));
 
 afterEach(async () => {
   await fs.rm(tmpRoot, { force: true, recursive: true });
@@ -54,5 +55,5 @@ export function createGame(runtime: any) {
 });
 
 function fixturePath(name: string): string {
-  return path.resolve(new URL(`../fixtures/${name}/`, import.meta.url).pathname);
+  return fileURLToPath(new URL(`../fixtures/${name}/`, import.meta.url));
 }

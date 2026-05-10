@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, test } from 'vitest';
 
@@ -7,9 +8,13 @@ import { loadGameConfig } from '../../src/core/config.js';
 import { UserError } from '../../src/shared/errors.js';
 
 const envFilesToRemove: string[] = [];
+const tempRootsToRemove: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(envFilesToRemove.splice(0).map((file) => fs.rm(file, { force: true })));
+  await Promise.all([
+    ...envFilesToRemove.splice(0).map((file) => fs.rm(file, { force: true })),
+    ...tempRootsToRemove.splice(0).map((dir) => fs.rm(dir, { force: true, recursive: true })),
+  ]);
 });
 
 describe('loadGameConfig', () => {
@@ -48,7 +53,7 @@ describe('loadGameConfig', () => {
   });
 
   test('requires Douyin materials only for Douyin builds', async () => {
-    const projectRoot = fixturePath('valid-douyin-game');
+    const projectRoot = await copyFixture('valid-douyin-game');
     const materialsDir = path.join(projectRoot, 'platform/douyin/materials');
     const hiddenDir = path.join(projectRoot, 'platform/douyin/materials-hidden-for-test');
 
@@ -91,7 +96,7 @@ describe('loadGameConfig', () => {
   });
 
   test('loads Douyin appid from the project .env before importing game.config.ts', async () => {
-    const projectRoot = fixturePath('valid-douyin-game');
+    const projectRoot = await copyFixture('valid-douyin-game');
     const envFile = path.join(projectRoot, '.env');
     envFilesToRemove.push(envFile);
     await fs.writeFile(envFile, 'DOUYIN_APPID=tt-test-appid\n');
@@ -106,5 +111,14 @@ describe('loadGameConfig', () => {
 });
 
 function fixturePath(name: string): string {
-  return path.resolve(new URL(`../fixtures/${name}/`, import.meta.url).pathname);
+  return fileURLToPath(new URL(`../fixtures/${name}/`, import.meta.url));
+}
+
+async function copyFixture(name: string): Promise<string> {
+  const tempParent = fileURLToPath(new URL('../tmp/', import.meta.url));
+  await fs.mkdir(tempParent, { recursive: true });
+  const tempRoot = await fs.mkdtemp(path.join(tempParent, `${name}-`));
+  tempRootsToRemove.push(tempRoot);
+  await fs.cp(fixturePath(name), tempRoot, { recursive: true });
+  return tempRoot;
 }

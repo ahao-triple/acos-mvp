@@ -1,0 +1,69 @@
+# AGENT Development Rules
+
+This file defines repository-wide rules. Before working inside a specific game, read this file first, then read `games/<game-project>/AGENT.md`. Game-level rules extend or narrow these rules. If rules conflict, the file closer to the working directory takes precedence.
+
+Each `AGENT.md` must have a same-directory `AGENT_CN.md` mirror. `AGENT.md` is the English version used by AI agents. `AGENT_CN.md` is the Simplified Chinese version used for user review. The two files must stay semantically equivalent and must be updated together in the same change.
+
+## Language Rules
+
+- AI-facing documentation must be written in English. This includes `AGENT.md` files, agent handoff notes, implementation instructions, and any document primarily meant to guide AI agents.
+- User-facing documentation must be written in Simplified Chinese unless the user explicitly asks for another language. This includes `AGENT_CN.md` files, summaries, product notes, acceptance notes, and direct replies to the user.
+- When changing any `AGENT.md`, update its matching `AGENT_CN.md` in the same change. When changing any `AGENT_CN.md`, update its matching `AGENT.md` in the same change.
+- Player-facing in-game text must use standard Simplified Chinese.
+- Keep Chinese product names unchanged, for example `就你眼神好` and `共联防线软件`.
+
+## Project Boundaries
+
+- `mini-pack/` is the shared packager and mini-game runtime bridge.
+- `games/<game-project>/` contains independent game projects.
+- Game projects must not depend on paths outside this repository or on deleted experiment projects.
+- Cross-game reuse must happen through explicit copying, shared abstractions, or `mini-pack` features.
+- Platform-specific packaging belongs in `mini-pack`; do not scatter platform packaging logic into individual games.
+
+## Mini-Game Product Rules
+
+- Design games as mobile portrait mini-games by default, using `750 x 1334` as the logical design size.
+- Prioritize short sessions, lightweight systems, clear goals, and fast access to the core gameplay.
+- Keep page boundaries clear. Common pages include home, gameplay, result, level selection, and settings.
+- All player-facing UI, dialogs, buttons, tips, reward descriptions, and level goals must use standard Simplified Chinese.
+- Do not bake critical UI copy, button text, numbers, or variable information into images unless the requirement explicitly says so.
+- New systems should support the core gameplay, retention, sharing, or monetization. Do not turn these games into heavy long-term games, generic tools, or content websites.
+
+## Stability Rules
+
+- The core game flow must remain usable when platform capabilities fail.
+- Sharing, ads, storage, audio, desktop shortcuts, sidebar entry points, and similar platform features must be isolated and have fallback behavior.
+- Saves must tolerate old versions, missing fields, and malformed data. A bad save must not prevent game startup.
+- Music and sound effects must support toggles. Audio loading, playback, or autoplay failures must not block the game flow.
+- Browser preview may be preserved, but the final implementation must not depend on a normal web-only runtime.
+
+## Ad Rules
+
+- Video ads may only be used in reward scenarios that the player actively triggers.
+- Ad entry points must clearly show the rewarded-video marker and explain the reward.
+- If the player cancels, skips, closes, or does not complete the ad, do not grant the full reward.
+- If platform capability is unavailable, the ad component fails to load, or the platform API throws, fallback rewards may be granted with clear feedback.
+- Keep game state stable before and after ads. Ads must not corrupt level, reward, or screen state.
+
+## Level And Resource Rules
+
+- Level-based games should progress in order, starting from level 1 by default.
+- Locked levels must have a clear locked state and must not look directly playable.
+- Runtime assets belong in `game/public-pack/`. Resource manifests and docs should use the same path.
+- Browser preview assets may use public-root paths such as `/audio/...` and `/assets/...`.
+- Generated or replaced images and audio must fit the current game's style. Do not commit temporary previews, tool caches, or obviously unrelated assets.
+
+## Verification Rules
+
+- When changing gameplay, levels, saves, or ad flows, run the corresponding game's tests.
+- When changing rendering or interaction, run the corresponding game's tests and use browser preview when needed.
+- When changing resource directories, Vite config, or platform config, run the corresponding game build and platform package.
+- When changing `mini-pack`, run `pnpm --dir mini-pack test` and verify at least one real game platform package.
+- Windows is a supported development environment. Use `fileURLToPath()` for local paths; do not build Windows paths directly from `URL.pathname`.
+
+## Git Rules
+
+- The worktree may already be dirty. Check `git status --short` before editing.
+- Do not revert unrelated changes.
+- Do not commit `node_modules/`, `dist/`, `build/`, `builds/`, local tool config, or temporary directories.
+- Before deleting a legacy project at scale, confirm that no active references remain.

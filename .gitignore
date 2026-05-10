@@ -9,7 +9,6 @@ builds/
 dist/
 mini-pack/dist/
 games/*/game/dist/
-games/tap-gallery/game/public/
 games/difference-hunt/levels/library/
 games/difference-hunt/levels/temp/
 games/difference-hunt/levels/local/
@@ -21,6 +20,7 @@ games/difference-hunt/levels/node_modules/
 games/*/.env
 
 # Tool caches and temporary files
+.claude/
 .superpowers/
 .vite/
 .vite-temp/

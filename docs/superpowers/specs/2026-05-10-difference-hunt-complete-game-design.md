@@ -4,7 +4,7 @@
 
 ## 目标
 
-将 `games/difference-hunt` 完善为一个完整的移动端竖屏找不同小游戏。玩法只保留找不同，不接入 `normalGame`、`addGame` 等其它玩法类型。实现应遵守 `games/difference-hunt/AI_RULES.md`：短局、轻量、核心流程稳定、简体中文文案、清晰页面、主动触发的视频广告入口、顺序关卡解锁和兼容旧存档。
+将 `games/difference-hunt` 完善为一个完整的移动端竖屏找不同小游戏。玩法只保留找不同，不接入 `normalGame`、`addGame` 等其它玩法类型。实现应遵守根目录 `AGENT.md` / `AGENT_CN.md` 和 `games/difference-hunt/AGENT.md` / `AGENT_CN.md`：短局、轻量、核心流程稳定、简体中文文案、清晰页面、主动触发的视频广告入口、顺序关卡解锁和兼容旧存档。
 
 ## 范围
 

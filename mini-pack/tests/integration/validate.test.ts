@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { describe, expect, test } from 'vitest';
 
@@ -39,7 +40,7 @@ describe('mini-pack validate', () => {
 
 function runCli(args: string[], cwd: string): Promise<{ exitCode: number | null; stdout: string; stderr: string }> {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, ['--import', path.resolve('node_modules/tsx/dist/loader.mjs'), path.resolve('src/cli.ts'), ...args], {
+    const child = spawn(process.execPath, ['--import', pathToFileURL(path.resolve('node_modules/tsx/dist/loader.mjs')).href, path.resolve('src/cli.ts'), ...args], {
       cwd,
       stdio: ['ignore', 'pipe', 'pipe'],
     });
@@ -58,5 +59,5 @@ function runCli(args: string[], cwd: string): Promise<{ exitCode: number | null;
 }
 
 function fixturePath(name: string): string {
-  return path.resolve(new URL(`../fixtures/${name}/`, import.meta.url).pathname);
+  return fileURLToPath(new URL(`../fixtures/${name}/`, import.meta.url));
 }

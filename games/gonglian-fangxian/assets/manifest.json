@@ -7,7 +7,7 @@
     "raw": "assets/raw",
     "processed": "assets/processed",
     "generated": "assets/generated",
-    "runtimePublic": "game/public",
+    "runtimePublic": "game/public-pack",
     "douyinMaterials": "platform/douyin/materials"
   },
   "requiredMvpAssets": {

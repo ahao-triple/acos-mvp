@@ -87,7 +87,8 @@ function parseArgs(args) {
 }
 
 function run(command, args) {
-  const result = spawnSync(command, args, {
+  const resolved = resolveCommand(command, args);
+  const result = spawnSync(resolved.command, resolved.args, {
     cwd: repoRoot,
     stdio: 'inherit',
   });
@@ -95,4 +96,11 @@ function run(command, args) {
   if (result.status !== 0) {
     process.exit(result.status ?? 1);
   }
+}
+
+function resolveCommand(command, args) {
+  if (process.platform === 'win32' && command === 'pnpm') {
+    return { command: 'cmd.exe', args: ['/d', '/s', '/c', 'pnpm', ...args] };
+  }
+  return { command, args };
 }

@@ -2,10 +2,11 @@ import { spawn } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, test } from 'vitest';
 
-const repoRoot = path.resolve(new URL('../../../', import.meta.url).pathname);
+const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
 const douyinOutputDir = path.join(repoRoot, 'build/gonglian-fangxian-douyin');
 const vivoOutputDir = path.join(repoRoot, 'build/gonglian-fangxian-vivo');
 const gameProjectDir = path.join(repoRoot, 'games/gonglian-fangxian');
@@ -95,7 +96,8 @@ function runCommand(
   env: Record<string, string> = {},
 ): Promise<{ exitCode: number | null; stdout: string; stderr: string }> {
   return new Promise((resolve) => {
-    const child = spawn(args[0], args.slice(1), {
+    const resolved = resolveCommand(args[0], args.slice(1));
+    const child = spawn(resolved.command, resolved.args, {
       cwd,
       env: { ...process.env, ...env },
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -112,6 +114,13 @@ function runCommand(
       resolve({ exitCode, stdout, stderr });
     });
   });
+}
+
+function resolveCommand(command: string, args: string[]): { command: string; args: string[] } {
+  if (process.platform === 'win32' && command === 'pnpm') {
+    return { command: 'cmd.exe', args: ['/d', '/s', '/c', 'pnpm', ...args] };
+  }
+  return { command, args };
 }
 
 async function findRpkFiles(dir: string): Promise<string[]> {
