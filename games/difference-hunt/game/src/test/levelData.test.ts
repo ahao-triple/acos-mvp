@@ -28,32 +28,32 @@ describe('difference hunt level data', () => {
     const zones = hitZonesForTarget(level, target);
 
     expect(imageFrameForLevel(level)).toEqual({
-      x: 16,
-      y: 241.818,
-      width: 718,
-      height: 850.363,
+      x: -2,
+      y: 220.5,
+      width: 754,
+      height: 893,
     });
     expect(zones).toHaveLength(2);
     expect(zones[0]).toMatchObject({
-      x: 490.489,
-      y: 685.114,
-      width: 73.324,
-      height: 69.515,
+      x: 496.28,
+      y: 686.023,
+      width: 77,
+      height: 73,
     });
     expect(zones[1]).toMatchObject({
-      x: 490.489,
-      y: 259.933,
-      width: 73.324,
-      height: 69.515,
+      x: 496.28,
+      y: 239.523,
+      width: 77,
+      height: 73,
     });
   });
 
-  test('keeps the playable image frame inside the portrait design canvas', () => {
+  test('keeps the same slight horizontal bleed as the Cocos source levels', () => {
     for (const level of differenceHuntLevels) {
       const frame = imageFrameForLevel(level);
 
-      expect(frame.x).toBeGreaterThanOrEqual(16);
-      expect(frame.x + frame.width).toBeLessThanOrEqual(734);
+      expect(frame.x).toBe(-2);
+      expect(frame.x + frame.width).toBe(752);
     }
   });
 });

@@ -168,7 +168,6 @@ export class CanvasRenderer {
   private drawLevelImage(): void {
     const { level } = this.controller.getViewState();
     const frame = imageFrameForLevel(level);
-    this.roundRect(frame.x - 8, frame.y - 8, frame.width + 16, frame.height + 16, 22, '#ffffff', 'rgba(15, 23, 42, 0.18)');
     const image = this.imageCache.get(this.assetUrl(level.background));
     if (image?.complete && image.naturalWidth > 0) {
       this.ctx.drawImage(image, frame.x, frame.y, frame.width, frame.height);
