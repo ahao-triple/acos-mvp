@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const supportedPlatforms = new Set(['douyin', 'vivo']);
-const usage = 'Usage: pnpm build games/<game-project> [--platform douyin|vivo]';
+const usage = 'Usage: pnpm preflight games/<game-project> [--platform douyin|vivo]';
 const parsed = parseArgs(process.argv.slice(2));
 
 if (!parsed.ok) {
@@ -26,20 +26,16 @@ if (!fs.existsSync(configFile)) {
 run('pnpm', ['--dir', 'mini-pack', 'build']);
 run(process.execPath, [
   'mini-pack/dist/cli.js',
-  'build',
+  'preflight',
   '--platform',
   platform,
   '--project-root',
   gamePath,
 ]);
-if (platform === 'douyin') {
-  run(process.execPath, ['scripts/smoke-douyin.mjs', gamePath]);
-}
 
 function parseArgs(args) {
   let gamePath;
   let platform = 'douyin';
-
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg === '--platform') {
@@ -58,9 +54,8 @@ function parseArgs(args) {
     if (gamePath) return { ok: false, message: `Unexpected argument: ${arg}` };
     gamePath = arg;
   }
-
   if (!gamePath) return { ok: false, message: 'Missing game project path.' };
-  if (!supportedPlatforms.has(platform)) return { ok: false, message: `Unsupported platform: ${platform}\nSupported platforms: ${[...supportedPlatforms].join(', ')}` };
+  if (!supportedPlatforms.has(platform)) return { ok: false, message: `Unsupported platform: ${platform}` };
   return { ok: true, gamePath, platform };
 }
 

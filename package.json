@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build-game.mjs",
+    "preflight": "node scripts/preflight.mjs",
     "smoke": "node scripts/smoke-douyin.mjs",
     "test:game": "pnpm --dir games/gonglian-fangxian/game test",
     "test:pack": "pnpm --dir mini-pack test",
