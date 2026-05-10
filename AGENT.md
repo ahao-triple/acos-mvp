@@ -67,3 +67,36 @@ Each `AGENT.md` must have a same-directory `AGENT_CN.md` mirror. `AGENT.md` is t
 - Do not revert unrelated changes.
 - Do not commit `node_modules/`, `dist/`, `build/`, `builds/`, local tool config, or temporary directories.
 - Before deleting a legacy project at scale, confirm that no active references remain.
+
+## AI Working Conventions
+
+This section collects the additional rules an AI must follow when working in this repository. Items already covered in `Language Rules`, `Verification Rules`, or `Git Rules` are restated here only as pointers — the canonical wording stays in those sections.
+
+### Preparation Before Edits
+
+- Read the root `AGENT.md` first, then the relevant `games/<game>/AGENT.md`. When rules conflict, the file closer to the working directory wins.
+- Run `git status --short` before editing, to avoid overwriting uncommitted work. See `Git Rules`.
+
+### Irreversible Operations Require User Approval
+
+- The AI must not run unprompted: `git push`, PR merges, `git push --force` / `--force-with-lease`, `git reset --hard`, branch deletion, or `git rebase` that rewrites published history.
+- `git commit` only runs when the user explicitly asks for it. If a hook fails, create a new commit instead of using `--amend`.
+- Flags that bypass hooks or signatures (`--no-verify`, `--no-gpg-sign`, etc.) are only used when the user explicitly requests them.
+
+### Completion Bar (No Performative "Done")
+
+- Do not claim "done / fixed / passing" before the corresponding verification has actually run. Running `tsc --noEmit` alone does not count as verification.
+- Verification scope follows `Verification Rules`: gameplay / saves / ads → that game's `pnpm test`; resource directories / Vite config / platform config → also run that game's `pnpm build`; `mini-pack` changes → also run `pnpm --dir mini-pack test` and at least one real game's platform package.
+- When something cannot be verified locally (UI browser preview unreachable, device unreachable, etc.), explicitly call it out as an unverified item — do not hide it.
+
+### Documentation And Mirroring
+
+- Any change to an `AGENT.md` must be paired in the same commit with the matching change to its sibling `AGENT_CN.md`, and vice versa. See `Language Rules`.
+
+### specs / plans Location And Naming
+
+- Cross-game work, `mini-pack`, platform integration, and repo-level rules → root `docs/superpowers/{specs,plans}/`.
+- Gameplay / level / UI / save / asset / in-game platform bridge work for a single game → `games/<game>/docs/superpowers/{specs,plans}/`.
+- A single change that spans multiple games → root.
+- Naming: `specs/YYYY-MM-DD-<topic>-design.md`, `plans/YYYY-MM-DD-<topic>.md`; `<topic>` uses an English hyphen-joined slug.
+- `specs/plans` are written in standard Simplified Chinese by default and do not need an English mirror.

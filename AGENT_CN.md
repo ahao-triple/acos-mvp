@@ -67,3 +67,36 @@
 - 不回退无关改动。
 - 不提交 `node_modules/`、`dist/`、`build/`、`builds/`、本地工具配置或临时目录。
 - 大规模删除旧项目之前，必须确认没有活动引用。
+
+## AI 工作约定
+
+本章节集中说明 AI 在本仓库工作时需要遵守的额外行为规范，与上文 `语言规则`、`验证规则`、`Git 规则` 等章节中已存在的条目不重复表述，必要时归位重申。
+
+### 改动前的准备
+
+- 必先读根 `AGENT.md`，再读对应 `games/<game>/AGENT.md`；规则冲突时以更靠近改动目录的为准。
+- 改动前跑 `git status --short` 查看工作区，避免覆盖未提交改动。详见 `Git 规则`。
+
+### 不可逆操作必须用户授权
+
+- AI 不自主执行：`git push`、合并 PR、`git push --force` / `--force-with-lease`、`git reset --hard`、删除分支、`git rebase` 改写已发布历史。
+- `git commit` 仅在用户明确要求时执行；钩子失败时新建提交，不使用 `--amend`。
+- `--no-verify`、`--no-gpg-sign` 等绕过钩子或签名的开关只在用户明确要求时使用。
+
+### 完成判定（不表演式完成）
+
+- 在跑过对应验证之前，不得声称"完成 / 修复 / 通过"。仅跑 `tsc --noEmit` 不算验证。
+- 验证范围依据上文 `验证规则`：玩法 / 存档 / 广告 → 对应游戏 `pnpm test`；资源目录 / Vite 配置 / 平台配置 → 加跑对应游戏 `pnpm build`；改 `mini-pack` → 加跑 `pnpm --dir mini-pack test` 与至少一个真实游戏的平台包。
+- 无法本地验证的项（如 UI 浏览器预览不可达、真机不可达）必须显式说明"未验证项"，不得隐去。
+
+### 文档与镜像
+
+- 修改任意 `AGENT.md` 必须在同次提交同步修改同目录 `AGENT_CN.md`，反之亦然。详见 `语言规则`。
+
+### specs / plans 放置与命名
+
+- 跨游戏 / `mini-pack` / 平台接入 / 仓库级规则 → 根 `docs/superpowers/{specs,plans}/`。
+- 单游戏的玩法 / 关卡 / UI / 存档 / 资源 / 游戏内平台桥接 → `games/<game>/docs/superpowers/{specs,plans}/`。
+- 同时跨多个游戏的改动 → 根。
+- 命名：`specs/YYYY-MM-DD-<主题>-design.md`、`plans/YYYY-MM-DD-<主题>.md`；`<主题>` 用英文连字符短串。
+- `specs/plans` 默认使用规范简体中文，不需要中英镜像。
