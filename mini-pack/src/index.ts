@@ -1,5 +1,13 @@
-export { defineGameConfig } from './core/schema.js';
-export type { GameConfig } from './core/schema.js';
+export {
+  defineGameConfig,
+  defineDouyinMaterials,
+  defineVivoMaterials,
+} from './core/schema.js';
+export type {
+  GameConfig,
+  DouyinMaterials,
+  VivoMaterials,
+} from './core/schema.js';
 export type {
   GameApp,
   GameRuntime,
