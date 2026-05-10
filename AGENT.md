@@ -100,3 +100,18 @@ This section collects the additional rules an AI must follow when working in thi
 - A single change that spans multiple games → root.
 - Naming: `specs/YYYY-MM-DD-<topic>-design.md`, `plans/YYYY-MM-DD-<topic>.md`; `<topic>` uses an English hyphen-joined slug.
 - `specs/plans` are written in standard Simplified Chinese by default and do not need an English mirror.
+
+## Channel Materials Convention
+
+Each game keeps its per-channel configuration and outputs under `games/<game>/channels/<platform>/`:
+
+- `materials.ts`: channel-specific fields (douyin `appid` / `projectName` / `rewardedAdUnitId` / `iconPath`; vivo `packageName` / `iconPath` / `versionName` / `versionCode`).
+- `icon.png`: channel icon (required; uploaded to the douyin console manually, written into the vivo build at `src/icon.png`).
+- `build/`: build output, already `.gitignored`.
+
+`game.config.ts` carries only game-wide fields (`title` / `entry` / `publicDir` / `orientation` / `canvas`); `platform`, `outDir`, and per-channel fields no longer live here.
+
+Builds must pass preflight first:
+
+- `pnpm preflight games/<game> --platform <platform>`: validation only.
+- `pnpm build games/<game> --platform <platform>`: validates then builds; missing items are reported in Chinese as a single batch and exit non-zero.

@@ -28,4 +28,5 @@ This file only adds local rules for `games/gonglian-fangxian`. Repository-wide r
 
 - After changing gameplay, levels, saves, ads, or rendering, run `pnpm --dir games/gonglian-fangxian/game test`.
 - After changing resource directories, Vite config, or platform config, run `pnpm --dir games/gonglian-fangxian/game build`.
-- After changing platform packaging, run `pnpm build games/gonglian-fangxian` from the repository root.
+- After changing `channels/douyin/materials.ts` or `icon.png`, run `pnpm preflight games/gonglian-fangxian --platform douyin`.
+- After changing platform packaging, run `pnpm build games/gonglian-fangxian` from the repository root (it runs preflight + smoke).

@@ -28,4 +28,5 @@
 
 - 修改玩法、关卡、存档、广告或渲染后，运行 `pnpm --dir games/gonglian-fangxian/game test`。
 - 修改资源目录、Vite 配置或平台配置后，运行 `pnpm --dir games/gonglian-fangxian/game build`。
-- 修改平台打包链路后，在仓库根目录运行 `pnpm build games/gonglian-fangxian`。
+- 修改 `channels/douyin/materials.ts` 或 `icon.png` 后，运行 `pnpm preflight games/gonglian-fangxian --platform douyin`。
+- 修改平台打包链路后，在仓库根目录运行 `pnpm build games/gonglian-fangxian`（包含 preflight + smoke）。

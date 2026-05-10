@@ -28,3 +28,5 @@ This file only adds local rules for `games/difference-hunt`. Repository-wide rul
 
 - After changing gameplay, levels, saves, ads, or rendering, run `pnpm --dir games/difference-hunt/game test`.
 - After changing resource directories, Vite config, or platform config, run `pnpm --dir games/difference-hunt/game build`.
+- After changing `channels/douyin/materials.ts` or `icon.png`, run `pnpm preflight games/difference-hunt --platform douyin`.
+- After changing `channels/vivo/materials.ts` or `icon.png`, run `pnpm preflight games/difference-hunt --platform vivo` and `MINI_PACK_VIVO_FAKE_RPK=1 pnpm build games/difference-hunt --platform vivo`.
