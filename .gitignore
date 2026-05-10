@@ -9,6 +9,7 @@ builds/
 dist/
 mini-pack/dist/
 games/*/game/dist/
+games/*/channels/*/build/
 games/difference-hunt/levels/library/
 games/difference-hunt/levels/temp/
 games/difference-hunt/levels/local/
