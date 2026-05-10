@@ -11,8 +11,7 @@ if (!gamePath) {
   process.exit(1);
 }
 
-const gameName = path.basename(path.resolve(repoRoot, gamePath));
-const packageDir = path.join(repoRoot, 'build', `${gameName}-douyin`);
+const packageDir = path.join(repoRoot, gamePath, 'channels/douyin/build');
 const gameJsPath = path.join(packageDir, 'game.js');
 
 if (!fs.existsSync(gameJsPath)) {
