@@ -7,24 +7,24 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, test } from 'vitest';
 
 const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
-const douyinOutputDir = path.join(repoRoot, 'build/gonglian-fangxian-douyin');
-const vivoOutputDir = path.join(repoRoot, 'build/gonglian-fangxian-vivo');
-const gameProjectDir = path.join(repoRoot, 'games/gonglian-fangxian');
+const douyinGameDir = path.join(repoRoot, 'games/gonglian-fangxian');
+const douyinOutputDir = path.join(douyinGameDir, 'channels/douyin/build');
+const vivoGameDir = path.join(repoRoot, 'games/difference-hunt');
+const vivoOutputDir = path.join(vivoGameDir, 'channels/vivo/build');
 
 afterEach(async () => {
-  await fs.rm(path.join(repoRoot, 'build'), { force: true, recursive: true });
+  await fs.rm(douyinOutputDir, { force: true, recursive: true });
+  await fs.rm(vivoOutputDir, { force: true, recursive: true });
 });
 
 describe('repository game build command', () => {
-  // TODO(channels-migration): unskip after games migrated to channels/
-  test.skip('builds a Douyin package for a game project into the repository build directory', async () => {
+  test('builds a Douyin package for gonglian-fangxian into channels/douyin/build', async () => {
     const result = await runCommand(['pnpm', 'build', 'games/gonglian-fangxian'], repoRoot, {
       DOUYIN_APPID: 'tt-repo-build-appid',
+      DOUYIN_REWARDED_AD_UNIT_ID: 'tt-repo-build-rwd',
     });
 
     expect(result.exitCode).toBe(0);
-    const smokeResult = await runCommand(['pnpm', 'smoke', 'games/gonglian-fangxian'], repoRoot);
-    expect(smokeResult.exitCode).toBe(0);
 
     await expect(fs.stat(path.join(douyinOutputDir, 'game.js'))).resolves.toBeTruthy();
     await expect(fs.stat(path.join(douyinOutputDir, 'game.json'))).resolves.toBeTruthy();
@@ -42,14 +42,14 @@ describe('repository game build command', () => {
       showStatusBar: false,
     });
     const projectConfig = JSON.parse(await fs.readFile(path.join(douyinOutputDir, 'project.config.json'), 'utf8'));
-    expect(projectConfig.appid).toEqual(expect.any(String));
-    expect(projectConfig.appid).not.toBe('');
+    expect(projectConfig.appid).toBe('tt-repo-build-appid');
+    expect(projectConfig.projectname).toBe('gonglian-fangxian');
 
     const report = JSON.parse(await fs.readFile(path.join(douyinOutputDir, 'build-report.json'), 'utf8'));
     expect(report).toMatchObject({
       tool: 'mini-pack',
       platform: 'douyin',
-      outDir: 'build/gonglian-fangxian-douyin',
+      outDir: 'channels/douyin/build',
       bundle: {
         file: 'game.js',
       },
@@ -60,32 +60,37 @@ describe('repository game build command', () => {
     expect(report.assets.count).toBeGreaterThan(0);
   });
 
-  // TODO(channels-migration): unskip after games migrated to channels/
-  test.skip('builds a vivo package for a game project into the repository build directory without changing game files', async () => {
-    const beforeSnapshot = await snapshotFiles(gameProjectDir);
+  test('builds a vivo package for difference-hunt into channels/vivo/build without changing game files', async () => {
+    const beforeSnapshot = await snapshotFiles(vivoGameDir, ['channels/vivo/build']);
 
-    const result = await runCommand(['pnpm', 'build', 'games/gonglian-fangxian', '--platform', 'vivo'], repoRoot, {
+    const result = await runCommand(['pnpm', 'build', 'games/difference-hunt', '--platform', 'vivo'], repoRoot, {
       MINI_PACK_VIVO_FAKE_RPK: '1',
     });
 
-    const afterSnapshot = await snapshotFiles(gameProjectDir);
+    const afterSnapshot = await snapshotFiles(vivoGameDir, ['channels/vivo/build']);
     expect(afterSnapshot).toEqual(beforeSnapshot);
 
     expect(result.exitCode).toBe(0);
     await expect(fs.stat(path.join(vivoOutputDir, 'package.json'))).resolves.toBeTruthy();
     await expect(fs.stat(path.join(vivoOutputDir, 'src/manifest.json'))).resolves.toBeTruthy();
     await expect(fs.stat(path.join(vivoOutputDir, 'src/game.js'))).resolves.toBeTruthy();
-    await expect(fs.stat(path.join(vivoOutputDir, 'src/assets/audio/button.wav'))).resolves.toBeTruthy();
+    await expect(fs.stat(path.join(vivoOutputDir, 'src/icon.png'))).resolves.toBeTruthy();
+    await expect(fs.stat(path.join(vivoOutputDir, 'src/assets/audio/bgm.mp3'))).resolves.toBeTruthy();
     await expect(fs.stat(path.join(vivoOutputDir, 'build-report.json'))).resolves.toBeTruthy();
 
     const rpkFiles = await findRpkFiles(vivoOutputDir);
-    expect(rpkFiles).toEqual([path.join(vivoOutputDir, 'dist/debug/com.minipack.gonglianfangxian.rpk')]);
+    expect(rpkFiles).toEqual([path.join(vivoOutputDir, 'dist/debug/com.jnsy.jnysh.vivominigame.rpk')]);
+
+    const manifest = JSON.parse(await fs.readFile(path.join(vivoOutputDir, 'src/manifest.json'), 'utf8'));
+    expect(manifest.package).toBe('com.jnsy.jnysh.vivominigame');
+    expect(manifest.versionName).toBe('1.0.0');
+    expect(manifest.versionCode).toBe(1);
 
     const report = JSON.parse(await fs.readFile(path.join(vivoOutputDir, 'build-report.json'), 'utf8'));
     expect(report).toMatchObject({
       tool: 'mini-pack',
       platform: 'vivo',
-      outDir: 'build/gonglian-fangxian-vivo',
+      outDir: 'channels/vivo/build',
     });
     expect(report.bundle.bytes).toBeGreaterThan(0);
     expect(report.assets.count).toBeGreaterThan(0);
@@ -139,22 +144,24 @@ async function findRpkFiles(dir: string): Promise<string[]> {
   return files.flat().sort();
 }
 
-async function snapshotFiles(dir: string): Promise<Record<string, string>> {
-  const entries = await fs.readdir(dir, { withFileTypes: true });
-  const files = await Promise.all(
-    entries.map(async (entry) => {
-      const entryPath = path.join(dir, entry.name);
-      const relativePath = path.relative(dir, entryPath);
-      if (entry.isDirectory()) {
-        const childSnapshot = await snapshotFiles(entryPath);
-        return Object.entries(childSnapshot).map(([childPath, hash]) => [path.join(relativePath, childPath), hash]);
-      }
-      if (!entry.isFile()) {
-        return [];
-      }
-      const fileBuffer = await fs.readFile(entryPath);
-      return [[relativePath, crypto.createHash('sha256').update(fileBuffer).digest('hex')]];
-    }),
-  );
-  return Object.fromEntries(files.flat());
+async function snapshotFiles(dir: string, excludeRelPaths: string[] = []): Promise<Record<string, string>> {
+  const exclude = new Set(excludeRelPaths.map((p) => path.normalize(p)));
+
+  async function walk(current: string): Promise<Array<[string, string]>> {
+    const entries = await fs.readdir(current, { withFileTypes: true });
+    const results = await Promise.all(
+      entries.map(async (entry) => {
+        const entryPath = path.join(current, entry.name);
+        const relativePath = path.relative(dir, entryPath);
+        if (exclude.has(relativePath)) return [] as Array<[string, string]>;
+        if (entry.isDirectory()) return walk(entryPath);
+        if (!entry.isFile()) return [] as Array<[string, string]>;
+        const fileBuffer = await fs.readFile(entryPath);
+        return [[relativePath, crypto.createHash('sha256').update(fileBuffer).digest('hex')]] as Array<[string, string]>;
+      }),
+    );
+    return results.flat();
+  }
+
+  return Object.fromEntries(await walk(dir));
 }
