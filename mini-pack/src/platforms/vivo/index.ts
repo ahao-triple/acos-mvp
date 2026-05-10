@@ -62,9 +62,7 @@ export const vivoPlatformBuilder: PlatformBuilder = {
     await writeBuildReport(path.join(outDir, 'build-report.json'), report);
 
     if (!options.skipVivoRpk) {
-      // buildVivoRpk 旧签名为 (projectDir, config)；下个 task 会改为 (projectDir, loaded)。
-      // 暂时用 as any 让类型通过，运行时可能因旧实现读 config.douyin 出错——但这条路径在 vitest 单测里不会触发（rpk 测试单独覆盖）。
-      await buildVivoRpk(outDir, loaded as any);
+      await buildVivoRpk(outDir, loaded);
     }
 
     return report;

@@ -5,7 +5,6 @@ import { fileURLToPath } from 'node:url';
 
 import { UserError } from '../../shared/errors.js';
 import type { LoadedGameConfig } from '../../shared/types.js';
-import { createVivoPackageName } from './template.js';
 
 export interface VivoRpkBuildResult {
   rpkFiles: string[];
@@ -25,9 +24,12 @@ interface VivoCliRunResult {
 
 const VIVO_CLI_BIN = 'mgs';
 
-export async function buildVivoRpk(projectDir: string, config: LoadedGameConfig): Promise<VivoRpkBuildResult> {
+export async function buildVivoRpk(projectDir: string, loaded: LoadedGameConfig): Promise<VivoRpkBuildResult> {
+  if (loaded.platform !== 'vivo' || !loaded.vivoMaterials) {
+    throw new UserError('buildVivoRpk requires a loaded vivo config');
+  }
   if (process.env.MINI_PACK_VIVO_FAKE_RPK === '1') {
-    const fakeRpk = path.join(projectDir, 'dist/debug', `${createVivoPackageName(config.douyin.projectName)}.rpk`);
+    const fakeRpk = path.join(projectDir, 'dist/debug', `${loaded.vivoMaterials.packageName}.rpk`);
     await fs.mkdir(path.dirname(fakeRpk), { recursive: true });
     await fs.writeFile(fakeRpk, 'fake vivo rpk for tests\n');
     return { rpkFiles: [fakeRpk] };

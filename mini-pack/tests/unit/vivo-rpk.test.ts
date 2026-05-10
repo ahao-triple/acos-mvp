@@ -27,9 +27,9 @@ describe('createVivoCliCommand', () => {
     expect(command.command).toBe('mgs');
     expect(command.args).toEqual(['build']);
     expect(command.spawnOptions.shell).toBe(true);
-    expect(command.spawnOptions.env?.PATH?.startsWith(`${path.join(packageRoot, 'node_modules/.bin')}${path.delimiter}`)).toBe(
-      true,
-    );
+    expect(
+      command.spawnOptions.env?.PATH?.startsWith(`${path.join(packageRoot, 'node_modules/.bin')}${path.delimiter}`),
+    ).toBe(true);
   });
 
   test('uses the PATH mgs executable directly on non-Windows platforms', () => {
@@ -51,7 +51,7 @@ describe('buildVivoRpk', () => {
     child.stderr = new PassThrough();
     spawnMock.mockReturnValue(child);
 
-    const buildPromise = buildVivoRpk(projectDir, createConfig());
+    const buildPromise = buildVivoRpk(projectDir, createLoaded());
     await vi.waitFor(() => {
       expect(spawnMock).toHaveBeenCalled();
     });
@@ -69,7 +69,7 @@ describe('buildVivoRpk', () => {
 
   test('returns generated RPK files when the CLI exits non-zero after packaging', async () => {
     const projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mini-pack-vivo-rpk-'));
-    const rpkFile = path.join(projectDir, 'dist', 'com.minipack.gonglianfangxian.rpk');
+    const rpkFile = path.join(projectDir, 'dist', 'com.example.app.rpk');
     await fs.mkdir(path.dirname(rpkFile), { recursive: true });
     await fs.writeFile(rpkFile, 'rpk\n');
     const child = new EventEmitter() as EventEmitter & { stdout: PassThrough; stderr: PassThrough };
@@ -77,7 +77,7 @@ describe('buildVivoRpk', () => {
     child.stderr = new PassThrough();
     spawnMock.mockReturnValue(child);
 
-    const buildPromise = buildVivoRpk(projectDir, createConfig());
+    const buildPromise = buildVivoRpk(projectDir, createLoaded());
     await vi.waitFor(() => {
       expect(spawnMock).toHaveBeenCalled();
     });
@@ -91,31 +91,61 @@ describe('buildVivoRpk', () => {
       rpkFiles: [rpkFile],
     });
   });
+
+  test('writes a fake rpk named by materials.packageName when MINI_PACK_VIVO_FAKE_RPK=1', async () => {
+    const projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'mini-pack-vivo-fake-'));
+
+    const previous = process.env.MINI_PACK_VIVO_FAKE_RPK;
+    process.env.MINI_PACK_VIVO_FAKE_RPK = '1';
+    try {
+      const result = await buildVivoRpk(projectDir, createLoaded());
+      expect(result.rpkFiles).toHaveLength(1);
+      expect(result.rpkFiles[0].endsWith('com.example.app.rpk')).toBe(true);
+      const exists = await fs
+        .stat(result.rpkFiles[0])
+        .then(() => true)
+        .catch(() => false);
+      expect(exists).toBe(true);
+    } finally {
+      if (previous === undefined) delete process.env.MINI_PACK_VIVO_FAKE_RPK;
+      else process.env.MINI_PACK_VIVO_FAKE_RPK = previous;
+      await fs.rm(projectDir, { recursive: true, force: true });
+    }
+  });
 });
 
-function createConfig(): LoadedGameConfig {
+function createLoaded(): LoadedGameConfig {
   const projectRoot = path.join(os.tmpdir(), 'gonglian-fangxian');
   return {
-    platform: 'vivo',
-    title: '共联防线',
-    entry: 'game/src/main.ts',
-    publicDir: 'game/public',
-    outDir: 'builds/vivo',
-    orientation: 'portrait',
-    canvas: {
-      width: 720,
-      height: 1280,
+    game: {
+      title: '共联防线',
+      entry: 'game/src/main.ts',
+      publicDir: 'game/public',
+      orientation: 'portrait',
+      canvas: { width: 720, height: 1280 },
     },
-    douyin: {
-      appid: '',
-      projectName: 'gonglian-fangxian',
+    platform: 'vivo',
+    materials: {
+      packageName: 'com.example.app',
+      iconPath: 'icon.png',
+      versionName: '1.0.0',
+      versionCode: 1,
     },
     projectRoot,
     paths: {
       configFileAbs: path.join(projectRoot, 'game.config.ts'),
       entryAbs: path.join(projectRoot, 'game/src/main.ts'),
       publicDirAbs: path.join(projectRoot, 'game/public'),
-      outDirAbs: path.join(projectRoot, 'builds/vivo'),
+      channelRoot: path.join(projectRoot, 'channels/vivo'),
+      materialsAbs: path.join(projectRoot, 'channels/vivo/materials.ts'),
+      iconAbs: path.join(projectRoot, 'channels/vivo/icon.png'),
+      outDirAbs: path.join(projectRoot, 'channels/vivo/build'),
+    },
+    vivoMaterials: {
+      packageName: 'com.example.app',
+      iconPath: 'icon.png',
+      versionName: '1.0.0',
+      versionCode: 1,
     },
   };
 }
