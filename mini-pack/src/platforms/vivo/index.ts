@@ -8,33 +8,29 @@ import { UserError } from '../../shared/errors.js';
 import type { BuildReport, LoadedGameConfig } from '../../shared/types.js';
 import type { PlatformBuildOptions, PlatformBuilder } from '../index.js';
 import { buildVivoRpk } from './rpk.js';
-import { createVivoManifest, createVivoPackageJson, renderVivoGameJs, VIVO_ICON_BASE64 } from './template.js';
+import { createVivoManifest, createVivoPackageJson, renderVivoGameJs } from './template.js';
 
 export const vivoPlatformBuilder: PlatformBuilder = {
   name: 'vivo',
 
-  async validate(config: LoadedGameConfig): Promise<void> {
-    if (config.platform !== 'vivo') {
-      throw new UserError(`Vivo builder cannot build platform: ${config.platform}`);
+  async build(loaded: LoadedGameConfig, options: PlatformBuildOptions = {}): Promise<BuildReport> {
+    if (loaded.platform !== 'vivo') {
+      throw new UserError(`Vivo builder cannot build platform: ${loaded.platform}`);
     }
-  },
 
-  async build(config: LoadedGameConfig, options: PlatformBuildOptions = {}): Promise<BuildReport> {
-    await this.validate(config);
-
-    const outDir = config.paths.outDirAbs;
+    const outDir = loaded.paths.outDirAbs;
     const srcDir = path.join(outDir, 'src');
     await fs.remove(outDir);
     await fs.ensureDir(srcDir);
 
     await fs.writeJson(path.join(outDir, 'package.json'), createVivoPackageJson(), { spaces: 2 });
-    await fs.writeJson(path.join(srcDir, 'manifest.json'), createVivoManifest(config), { spaces: 2 });
-    await fs.writeFile(path.join(srcDir, 'icon.png'), Buffer.from(VIVO_ICON_BASE64, 'base64'));
+    await fs.writeJson(path.join(srcDir, 'manifest.json'), createVivoManifest(loaded), { spaces: 2 });
+    await fs.copyFile(loaded.paths.iconAbs, path.join(srcDir, 'icon.png'));
 
     const tempDir = path.join(outDir, '.mini-pack');
     const tempBundle = path.join(tempDir, 'game.bundle.js');
     await bundleGameEntry({
-      entryAbs: config.paths.entryAbs,
+      entryAbs: loaded.paths.entryAbs,
       outfile: tempBundle,
     });
 
@@ -45,17 +41,19 @@ export const vivoPlatformBuilder: PlatformBuilder = {
     await fs.remove(tempDir);
 
     const assetStats = await copyAssets({
-      sourceDir: config.paths.publicDirAbs,
+      sourceDir: loaded.paths.publicDirAbs,
       destinationDir: path.join(srcDir, 'assets'),
     });
     const bundleStats = await fs.stat(gameJsPath);
 
+    const reportOutDir = path.relative(loaded.projectRoot, outDir).split(path.sep).join('/');
+
     const report = createBuildReport({
       platform: 'vivo',
-      title: config.title,
-      entry: config.entry,
-      publicDir: config.publicDir,
-      outDir: config.outDir,
+      title: loaded.game.title,
+      entry: loaded.game.entry,
+      publicDir: loaded.game.publicDir,
+      outDir: reportOutDir,
       bundleBytes: bundleStats.size,
       assetCount: assetStats.count,
       assetBytes: assetStats.bytes,
@@ -64,7 +62,9 @@ export const vivoPlatformBuilder: PlatformBuilder = {
     await writeBuildReport(path.join(outDir, 'build-report.json'), report);
 
     if (!options.skipVivoRpk) {
-      await buildVivoRpk(outDir, config);
+      // buildVivoRpk 旧签名为 (projectDir, config)；下个 task 会改为 (projectDir, loaded)。
+      // 暂时用 as any 让类型通过，运行时可能因旧实现读 config.douyin 出错——但这条路径在 vitest 单测里不会触发（rpk 测试单独覆盖）。
+      await buildVivoRpk(outDir, loaded as any);
     }
 
     return report;

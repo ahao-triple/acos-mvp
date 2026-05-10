@@ -23,14 +23,18 @@ export function createVivoPackageJson(): Record<string, unknown> {
   };
 }
 
-export function createVivoManifest(config: LoadedGameConfig): Record<string, unknown> {
+export function createVivoManifest(loaded: LoadedGameConfig): Record<string, unknown> {
+  if (loaded.platform !== 'vivo' || !loaded.vivoMaterials) {
+    throw new Error('createVivoManifest requires a loaded vivo config');
+  }
+  const { vivoMaterials, game } = loaded;
   return {
-    package: createVivoPackageName(config.douyin.projectName),
-    name: config.title,
-    versionName: '1.0.0',
-    versionCode: 1,
+    package: vivoMaterials.packageName,
+    name: game.title,
+    versionName: vivoMaterials.versionName,
+    versionCode: vivoMaterials.versionCode,
     minPlatformVersion: 1060,
-    deviceOrientation: config.orientation,
+    deviceOrientation: game.orientation,
     type: 'game',
     icon: '/icon.png',
     config: {
