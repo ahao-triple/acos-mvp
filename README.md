@@ -9,12 +9,12 @@
 - `mini-pack/`：共享打包器和平台运行时桥接层。
 - `games/<game-project>/`：独立小游戏项目。
 
-当前保留的游戏项目：
+游戏项目：
 
 - `games/gonglian-fangxian`：三消闯关小游戏，主要用于验证抖音和 vivo 打包链路。
 - `games/difference-hunt`：竖屏找不同小游戏，产品名为“就你眼神好”。
 
-历史实验项目不作为新开发基线。新游戏应参考当前保留项目的结构和规范。
+新游戏应参考已有项目的结构和规范。
 
 ## Game Project Layout
 
@@ -74,7 +74,7 @@ games/<game-project>/
 
 ## Platform Support
 
-当前 `mini-pack` 支持的平台：
+`mini-pack` 支持的平台：
 
 - `douyin`
 - `vivo`
@@ -91,7 +91,7 @@ pnpm build games/<game-project> --platform vivo
 
 抖音构建会在构建后运行 smoke 检查。vivo 构建会生成 vivo/Quick Game 项目，并在环境可用时尝试生成 debug `.rpk`。
 
-尚未支持的平台：
+不在本 MVP 范围内的平台：
 
 - 快手小游戏
 - 微信小游戏
@@ -127,7 +127,7 @@ pnpm --dir games/<game-project>/game build
 pnpm --dir mini-pack test
 ```
 
-当前推荐的完整验证矩阵：
+完整验证矩阵：
 
 ```bash
 pnpm --dir mini-pack test
@@ -138,7 +138,7 @@ pnpm --dir games/difference-hunt/game build
 pnpm build games/gonglian-fangxian
 ```
 
-根目录当前 `pnpm verify` 只覆盖一部分流程，不能替代完整矩阵。
+根目录 `pnpm verify` 只覆盖一部分流程，不替代完整矩阵。
 
 ## Resource Rules
 
@@ -187,4 +187,4 @@ Windows 是受支持开发环境。测试中处理本地路径时应使用 `file
 - 提供核心玩法测试、存档测试和资源数据测试。
 - 跑通浏览器预览、游戏构建和至少一个平台打包。
 
-新游戏不应依赖已删除实验项目或未纳入当前仓库规范的外部目录。
+新游戏不应依赖仓库外路径或未纳入仓库规范的目录。
