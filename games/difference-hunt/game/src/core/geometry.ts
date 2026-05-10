@@ -14,30 +14,42 @@ export interface Rect {
 
 export const DESIGN_WIDTH = 750;
 export const DESIGN_HEIGHT = 1334;
+const PLAY_IMAGE_SIDE_MARGIN = 16;
 
 export function imageFrameForLevel(level: DifferenceLevel): Rect {
+  const scale = imageScaleForLevel(level);
+  const width = round(level.backgroundSize.width * scale);
+  const height = round(level.backgroundSize.height * scale);
   return {
-    x: level.center.x - level.backgroundSize.width / 2,
-    y: level.center.y - level.backgroundSize.height / 2,
-    width: level.backgroundSize.width,
-    height: level.backgroundSize.height,
+    x: round(level.center.x - width / 2),
+    y: round(level.center.y - height / 2),
+    width,
+    height,
   };
 }
 
 export function centerForCocosPoint(level: DifferenceLevel, point: Point): Point {
+  const frame = imageFrameForLevel(level);
+  const scale = imageScaleForLevel(level);
   return {
-    x: round(level.center.x + point.x),
-    y: round(level.center.y - point.y),
+    x: round(frame.x + frame.width / 2 + point.x * scale),
+    y: round(frame.y + frame.height / 2 - point.y * scale),
   };
 }
 
 export function hitZonesForTarget(level: DifferenceLevel, target: DifferenceTarget): Rect[] {
+  const frame = imageFrameForLevel(level);
+  const scale = imageScaleForLevel(level);
+  const scaledSize = {
+    width: round(target.size.width * scale),
+    height: round(target.size.height * scale),
+  };
   const bottomCenter = centerForCocosPoint(level, target.cocos);
   const topCenter = {
     x: bottomCenter.x,
-    y: round(bottomCenter.y - level.backgroundSize.height / 2),
+    y: round(bottomCenter.y - frame.height / 2),
   };
-  return [rectFromCenter(bottomCenter, target.size), rectFromCenter(topCenter, target.size)];
+  return [rectFromCenter(bottomCenter, scaledSize), rectFromCenter(topCenter, scaledSize)];
 }
 
 export function containsPoint(rect: Rect, point: Point): boolean {
@@ -63,6 +75,10 @@ function rectFromCenter(center: Point, size: { width: number; height: number }):
     width: size.width,
     height: size.height,
   };
+}
+
+function imageScaleForLevel(level: DifferenceLevel): number {
+  return Math.min(1, (DESIGN_WIDTH - PLAY_IMAGE_SIDE_MARGIN * 2) / level.backgroundSize.width);
 }
 
 function round(value: number): number {
