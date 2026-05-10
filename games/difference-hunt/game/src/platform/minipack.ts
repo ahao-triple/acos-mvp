@@ -55,17 +55,23 @@ export function createMiniPackPlatformAdapter(runtime: MiniPackGameRuntime): Pla
     playSfx(name) {
       return runtime.audio.playSfx(name);
     },
+    playMusic(name, loop) {
+      return runtime.audio.playMusic(name, loop);
+    },
+    stopMusic() {
+      runtime.audio.stopMusic();
+    },
     async showRewardedAd(reason) {
       const slot = reason === 'add_time' ? 'add-steps' : 'claim-reward';
       if (!runtime.ads.isRewardedVideoReady(slot)) {
-        return { status: 'unsupported', message: '广告暂时不可用，已发放兜底奖励。' };
+        return { status: 'unsupported', message: '广告暂不可用。' };
       }
       try {
         const result = await runtime.ads.showRewardedVideo(slot);
-        return result.completed ? { status: 'success' } : { status: 'cancelled', message: '完整观看视频广告才能领取奖励。' };
+        return result.completed ? { status: 'success' } : { status: 'cancelled', message: '未完成观看。' };
       } catch (error) {
         runtime.logger.warn('Rewarded video failed.', error);
-        return { status: 'failed', message: '广告加载失败，已发放兜底奖励。' };
+        return { status: 'failed', message: '广告加载失败。' };
       }
     },
   };

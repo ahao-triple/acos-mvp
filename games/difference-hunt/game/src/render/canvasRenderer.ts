@@ -1,4 +1,4 @@
-import type { GameController } from '../app/controller';
+import type { AdPrompt, GameController } from '../app/controller';
 import { foundTargetById } from '../app/controller';
 import type { DifferenceTarget } from '../assets/types';
 import { DESIGN_HEIGHT, DESIGN_WIDTH, hitZonesForTarget, imageFrameForLevel, type Point, type Rect } from '../core/geometry';
@@ -7,7 +7,7 @@ import { shouldHandleHit, type HitTargetType } from './hitPolicy';
 import { clientPointToDesign, viewportTransform, type ViewportTransform } from './scaler';
 import { theme } from './theme';
 
-type AdButtonType = Extract<HitTargetType, 'adHint' | 'adTime' | 'doubleReward'>;
+type AdButtonType = Extract<HitTargetType, 'adHint' | 'adTime' | 'doubleReward' | 'adConfirm'>;
 
 interface HitTarget {
   type: HitTargetType;
@@ -64,31 +64,31 @@ export class CanvasRenderer {
   render(): void {
     const view = this.controller.getViewState();
     this.hits.length = 0;
+    this.drawViewportBackground();
     this.ctx.clearRect(-this.transform.offsetX, -this.transform.offsetY, DESIGN_WIDTH + Math.abs(this.transform.offsetX) * 2, DESIGN_HEIGHT + Math.abs(this.transform.offsetY) * 2);
     this.drawBackground();
 
     if (view.screen === 'home') {
       this.drawHome();
-      return;
-    }
-    if (view.screen === 'settings') {
+    } else if (view.screen === 'settings') {
       this.drawSettings();
-      return;
-    }
-    if (view.screen === 'levels') {
+    } else if (view.screen === 'levels') {
       this.drawLevelSelect();
-      return;
+    } else {
+      this.drawHeader();
+      this.drawLevelImage();
+      this.drawFoundMarks();
+      this.drawTray();
+      if (view.screen === 'win') {
+        this.drawWinOverlay();
+      }
+      if (view.screen === 'failed') {
+        this.drawFailedOverlay();
+      }
     }
-
-    this.drawHeader();
-    this.drawLevelImage();
-    this.drawFoundMarks();
-    this.drawTray();
-    if (view.screen === 'win') {
-      this.drawWinOverlay();
-    }
-    if (view.screen === 'failed') {
-      this.drawFailedOverlay();
+    if (view.adPrompt) {
+      this.hits.length = 0;
+      this.drawAdPrompt(view.adPrompt);
     }
   }
 
@@ -100,9 +100,22 @@ export class CanvasRenderer {
     this.ctx.fillRect(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT);
   }
 
+  private drawViewportBackground(): void {
+    this.ctx.save();
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const width = Math.max(1, this.canvas.width);
+    const height = Math.max(1, this.canvas.height);
+    const gradient = this.ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, theme.backgroundTop);
+    gradient.addColorStop(1, theme.backgroundBottom);
+    this.ctx.fillStyle = gradient;
+    this.ctx.fillRect(0, 0, width, height);
+    this.ctx.restore();
+  }
+
   private drawHome(): void {
     const view = this.controller.getViewState();
-    this.text('找茬闯关', DESIGN_WIDTH / 2, 70, 50, 900, theme.ink, 'center');
+    this.text('就你眼神好', DESIGN_WIDTH / 2, 70, 50, 900, theme.ink, 'center');
     this.text(`第 ${view.level.levelNo} 关 · ${view.level.title}`, DESIGN_WIDTH / 2, 124, 24, 800, theme.muted, 'center');
 
     const preview = this.imageCache.get(this.assetUrl(view.level.background));
@@ -117,14 +130,14 @@ export class CanvasRenderer {
     this.ctx.fillRect(68, 790, 614, 130);
     this.text(`已解锁 ${view.save.highestUnlockedLevel}/${view.levels.length} 关`, 106, 834, 24, 800, '#ffffff', 'left');
     this.text(`金币 ${view.save.coins}   提示 ${view.save.hints}`, 106, 876, 22, 700, 'rgba(255,255,255,0.86)', 'left');
-    this.text(view.dailyRewardAvailable ? '每日奖励可领取' : '今日奖励已领取', 644, 876, 22, 700, '#ffffff', 'right');
+    this.text(view.dailyRewardAvailable ? '今日可领' : '今日已领', 644, 876, 22, 700, '#ffffff', 'right');
 
     this.button(74, 982, 602, 76, '开始游戏', theme.accent, '#ffffff', 'start');
     this.button(74, 1084, 286, 70, '选择关卡', theme.sky, '#ffffff', 'level');
     this.button(390, 1084, 286, 70, view.dailyRewardAvailable ? '领取每日奖励' : '每日奖励', view.dailyRewardAvailable ? theme.gold : '#ffffff', view.dailyRewardAvailable ? '#ffffff' : theme.ink, 'daily');
     this.button(74, 1180, 286, 70, '设置', '#ffffff', theme.ink, 'settings');
     this.roundRect(390, 1180, 286, 70, 22, theme.cream, theme.panelStroke);
-    this.text('7 关资源已接入', 533, 1224, 23, 800, theme.ink, 'center');
+    this.text('7 关已开放', 533, 1224, 23, 800, theme.ink, 'center');
 
     this.drawMessage(1268);
   }
@@ -138,9 +151,9 @@ export class CanvasRenderer {
     this.button(472, 270, 172, 62, view.save.settings.soundEnabled ? '关闭' : '开启', view.save.settings.soundEnabled ? theme.accent : theme.green, '#ffffff', 'sound');
 
     this.text('进度', 94, 424, 28, 800, theme.ink, 'left');
-    this.text(`已完成 ${view.save.completedLevels.length} 关，最高解锁第 ${view.save.highestUnlockedLevel} 关`, 94, 468, 21, 700, theme.muted, 'left');
+    this.text(`已通关 ${view.save.completedLevels.length} 关`, 94, 468, 21, 700, theme.muted, 'left');
     this.text(`金币 ${view.save.coins}   提示 ${view.save.hints}`, 94, 512, 22, 700, theme.muted, 'left');
-    this.text('声音关闭后，点击、失败和通关音效都会停止播放。', 94, 566, 20, 700, theme.muted, 'left');
+    this.text('音效开关可在此调整。', 94, 566, 20, 700, theme.muted, 'left');
 
     this.button(94, 626, 550, 66, '回到首页', theme.sky, '#ffffff', 'home');
     this.drawMessage(782);
@@ -149,14 +162,14 @@ export class CanvasRenderer {
   private drawTopBar(title: string): void {
     this.roundRect(28, 28, 694, 118, 22, theme.panel, theme.panelStroke);
     this.text(title, 54, 88, 36, 900, theme.ink, 'left');
-    this.button(496, 54, 92, 54, '首页', '#ffffff', theme.ink, 'home');
-    this.button(604, 54, 92, 54, '设置', '#ffffff', theme.ink, 'settings');
+    this.button(484, 52, 104, 58, '首页', '#ffffff', theme.ink, 'home');
+    this.button(600, 52, 104, 58, '设置', '#ffffff', theme.ink, 'settings');
   }
 
   private drawHeader(): void {
     const view = this.controller.getViewState();
     this.roundRect(28, 28, 694, 144, 22, theme.panel, theme.panelStroke);
-    this.text('找不同', 54, 70, 32, 900, theme.ink, 'left');
+    this.text('就你眼神好', 54, 70, 32, 900, theme.ink, 'left');
     this.text(`第 ${view.level.levelNo} 关  ${view.level.title}`, 54, 114, 23, 700, theme.muted, 'left');
     this.pill(336, 45, 138, 48, this.formatTimer(view.timer.remainingMs), view.timer.remainingMs <= 15_000 ? theme.accent : theme.green);
     this.pill(504, 45, 170, 48, `${view.remaining} 处未找`, view.remaining === 0 ? theme.green : theme.gold);
@@ -226,14 +239,7 @@ export class CanvasRenderer {
     }
 
     if (view.feedback.type === 'miss' && view.feedback.point) {
-      this.ctx.strokeStyle = 'rgba(15, 23, 42, 0.28)';
-      this.ctx.lineWidth = 4;
-      this.ctx.beginPath();
-      this.ctx.moveTo(view.feedback.point.x - 18, view.feedback.point.y - 18);
-      this.ctx.lineTo(view.feedback.point.x + 18, view.feedback.point.y + 18);
-      this.ctx.moveTo(view.feedback.point.x + 18, view.feedback.point.y - 18);
-      this.ctx.lineTo(view.feedback.point.x - 18, view.feedback.point.y + 18);
-      this.ctx.stroke();
+      this.drawMissMarker(view.feedback.point);
     }
   }
 
@@ -269,30 +275,26 @@ export class CanvasRenderer {
   private drawLevelSelect(): void {
     const view = this.controller.getViewState();
     this.drawTopBar('选择关卡');
-    this.text('按顺序挑战，锁定关卡可主动看广告解锁。', DESIGN_WIDTH / 2, 190, 22, 700, theme.muted, 'center');
+    this.text('按顺序挑战，后续关卡可解锁。', DESIGN_WIDTH / 2, 190, 22, 700, theme.muted, 'center');
     for (const [index, level] of view.levels.entries()) {
       const unlocked = level.levelNo <= view.save.highestUnlockedLevel;
       const completed = view.save.completedLevels.includes(level.levelNo);
       const x = 62 + (index % 2) * 326;
-      const y = 238 + Math.floor(index / 2) * 166;
-      this.roundRect(x, y, 300, 136, 22, unlocked ? '#ffffff' : theme.locked, theme.panelStroke);
+      const y = 232 + Math.floor(index / 2) * 176;
+      this.roundRect(x, y, 300, 150, 22, unlocked ? '#ffffff' : theme.locked, theme.panelStroke);
       const preview = this.imageCache.get(this.assetUrl(level.background));
       if (preview?.complete && preview.naturalWidth > 0) {
-        this.drawCoverImage(preview, x + 16, y + 18, 96, 88, 14);
+        this.drawCoverImage(preview, x + 16, y + 18, 92, 84, 14);
       } else {
-        this.roundRect(x + 16, y + 18, 96, 88, 14, '#eef2f7');
-        this.text(String(level.levelNo), x + 64, y + 64, 24, 900, theme.muted, 'center');
+        this.roundRect(x + 16, y + 18, 92, 84, 14, '#eef2f7');
+        this.text(String(level.levelNo), x + 62, y + 60, 24, 900, theme.muted, 'center');
       }
-      this.text(`第 ${level.levelNo} 关`, x + 130, y + 36, 24, 900, theme.ink, 'left');
-      this.text(level.title, x + 130, y + 70, 20, 700, theme.muted, 'left');
-      this.pill(x + 130, y + 88, 116, 28, completed ? '已完成' : unlocked ? '可挑战' : '锁定', completed ? theme.green : unlocked ? theme.gold : theme.muted);
-      if (unlocked) {
-        this.text('开始', x + 260, y + 116, 20, 800, theme.accent, 'right');
-      } else {
-        this.drawAdBadge(x + 128, y + 102, 38, 28);
-        this.text('广告解锁', x + 260, y + 118, 20, 800, theme.gold, 'right');
-      }
-      this.hits.push({ type: 'level', levelNo: level.levelNo, rect: { x, y, width: 300, height: 136 } });
+      this.text(`第 ${level.levelNo} 关`, x + 124, y + 40, 24, 900, theme.ink, 'left');
+      this.text(level.title, x + 124, y + 76, 20, 700, theme.muted, 'left');
+      this.pill(x + 124, y + 100, 104, 30, completed ? '已完成' : unlocked ? '可挑战' : '锁定', completed ? theme.green : unlocked ? theme.gold : theme.muted);
+      this.roundRect(x + 228, y + 100, 58, 30, 15, unlocked ? theme.accentSoft : theme.gold, unlocked ? theme.accent : '#ffffff');
+      this.text(unlocked ? '开始' : '解锁', x + 257, y + 115, 17, 850, unlocked ? theme.accent : '#ffffff', 'center');
+      this.hits.push({ type: 'level', levelNo: level.levelNo, rect: { x, y, width: 300, height: 150 } });
     }
     this.drawMessage(930);
   }
@@ -341,8 +343,25 @@ export class CanvasRenderer {
   };
 
   private async handleDesignPoint(point: Point): Promise<void> {
+    const view = this.controller.getViewState();
     const hit = [...this.hits].reverse().find((target) => point.x >= target.rect.x && point.x <= target.rect.x + target.rect.width && point.y >= target.rect.y && point.y <= target.rect.y + target.rect.height);
-    const screen = this.controller.getViewState().screen;
+    const screen = view.screen;
+    if (view.adPrompt) {
+      if (!hit) {
+        return;
+      }
+      if (hit.type === 'adConfirm') {
+        this.controller.playUiClick();
+        await this.controller.confirmRewardedAd();
+        return;
+      }
+      if (hit.type === 'adCancel') {
+        this.controller.playUiClick();
+        this.controller.cancelRewardedAd();
+        return;
+      }
+      return;
+    }
     if (!shouldHandleHit(screen, hit?.type ?? null)) {
       return;
     }
@@ -359,59 +378,66 @@ export class CanvasRenderer {
       return;
     }
     if (hit.type === 'continue') {
+      this.controller.playUiClick();
       this.controller.nextLevel();
       return;
     }
     if (hit.type === 'level') {
+      this.controller.playUiClick();
       if (hit.levelNo) {
-        const view = this.controller.getViewState();
-        if (hit.levelNo <= view.save.highestUnlockedLevel) {
-          this.controller.startLevel(hit.levelNo);
-        } else {
-          await this.controller.unlockLevelWithAd(hit.levelNo);
-        }
+        this.controller.startLevel(hit.levelNo);
       } else {
         this.controller.showLevels();
       }
       return;
     }
     if (hit.type === 'start') {
+      this.controller.playUiClick();
       this.controller.startGame();
       return;
     }
     if (hit.type === 'home') {
+      this.controller.playUiClick();
       this.controller.showHome();
       return;
     }
     if (hit.type === 'settings') {
+      this.controller.playUiClick();
       this.controller.showSettings();
       return;
     }
     if (hit.type === 'hint') {
+      this.controller.playUiClick();
       this.controller.useHint();
       return;
     }
     if (hit.type === 'adHint') {
-      await this.controller.claimAdHint();
+      this.controller.playUiClick();
+      this.controller.requestRewardedAd({ type: 'hint' });
       return;
     }
     if (hit.type === 'adTime') {
-      await this.controller.claimAdTimeBonus();
+      this.controller.playUiClick();
+      this.controller.requestRewardedAd({ type: 'add_time' });
       return;
     }
     if (hit.type === 'daily') {
+      this.controller.playUiClick();
       this.controller.claimDailyReward();
       return;
     }
     if (hit.type === 'doubleReward') {
-      await this.controller.claimDoubleReward();
+      this.controller.playUiClick();
+      this.controller.requestRewardedAd({ type: 'double_reward' });
       return;
     }
     if (hit.type === 'sound') {
+      this.controller.playUiClick();
       this.controller.toggleSound();
       return;
     }
     if (hit.type === 'retry') {
+      this.controller.playUiClick();
       this.controller.startLevel(this.controller.getViewState().level.levelNo);
     }
   }
@@ -437,32 +463,96 @@ export class CanvasRenderer {
 
   private adButton(x: number, y: number, width: number, height: number, label: string, type: AdButtonType): void {
     this.roundRect(x, y, width, height, Math.min(22, height / 2), theme.gold, theme.panelStroke);
-    const iconWidth = 38;
-    const iconHeight = 28;
-    const iconX = x + Math.max(16, width * 0.08);
+    const iconHeight = Math.max(18, Math.min(28, height * 0.48));
+    const iconWidth = iconHeight * (38 / 28);
+    const iconX = x + Math.max(14, Math.min(20, width * 0.08));
     const iconY = y + (height - iconHeight) / 2;
-    this.drawAdBadge(iconX, iconY, iconWidth, iconHeight);
-    this.text(label, iconX + iconWidth + 12, y + height / 2 + 1, height >= 60 ? 24 : 19, 850, '#ffffff', 'left');
+    this.drawAdVideoIcon(iconX, iconY, iconWidth, iconHeight);
+    const labelX = iconX + iconWidth + 12;
+    this.text(label, labelX, y + height / 2 + 1, height >= 60 ? 24 : 18, 850, '#ffffff', 'left');
     this.hits.push({ type, rect: { x, y, width, height } });
   }
 
-  private drawAdBadge(x: number, y: number, width: number, height: number): void {
+  private drawAdPrompt(prompt: AdPrompt): void {
+    this.ctx.fillStyle = 'rgba(15, 23, 42, 0.52)';
+    this.ctx.fillRect(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT);
+
+    this.roundRect(88, 420, 574, 334, 28, '#ffffff', 'rgba(15, 23, 42, 0.18)');
+    this.text('领取奖励', DESIGN_WIDTH / 2, 486, 42, 900, theme.ink, 'center');
+    this.text(prompt.title, DESIGN_WIDTH / 2, 548, 28, 800, theme.muted, 'center');
+    this.text('看完后领取。', DESIGN_WIDTH / 2, 592, 21, 700, theme.muted, 'center');
+    this.adButton(130, 640, 220, 66, '确认观看', 'adConfirm');
+    this.button(368, 640, 206, 66, '取消', '#ffffff', theme.ink, 'adCancel');
+  }
+
+  private drawAdVideoIcon(x: number, y: number, width: number, height: number): void {
+    const py = (value: number): number => 28 - value;
     this.ctx.save();
-    this.roundRect(x, y, width, height, 7, theme.accent, 'rgba(255,255,255,0.55)');
-    this.ctx.fillStyle = 'rgba(255,255,255,0.92)';
-    this.roundPath(x + 7, y + 7, width - 17, height - 14, 4);
-    this.ctx.fill();
-    this.ctx.fillStyle = theme.gold;
+    this.ctx.translate(x, y);
+    this.ctx.scale(width / 38, height / 28);
+
+    this.ctx.fillStyle = '#ffffff';
     this.ctx.beginPath();
-    this.ctx.moveTo(x + width - 11, y + 8);
-    this.ctx.lineTo(x + width - 5, y + height / 2);
-    this.ctx.lineTo(x + width - 11, y + height - 8);
+    this.ctx.moveTo(0, py(22.75));
+    this.ctx.bezierCurveTo(0, py(25.64), 2.29, py(28), 5.12, py(28));
+    this.ctx.lineTo(25.14, py(28));
+    this.ctx.bezierCurveTo(27.97, py(28), 30.26, py(25.64), 30.26, py(22.75));
+    this.ctx.lineTo(30.26, py(21.95));
+    this.ctx.bezierCurveTo(30.26, py(21.52), 30.72, py(21.21), 31.16, py(21.37));
+    this.ctx.lineTo(34.48, py(22.7));
+    this.ctx.bezierCurveTo(36.17, py(23.37), 38, py(22.12), 38, py(20.28));
+    this.ctx.lineTo(38, py(7.79));
+    this.ctx.bezierCurveTo(38, py(5.93), 36.14, py(4.67), 34.45, py(5.38));
+    this.ctx.lineTo(31.17, py(6.74));
+    this.ctx.bezierCurveTo(30.74, py(6.91), 30.26, py(6.6), 30.26, py(6.14));
+    this.ctx.lineTo(30.26, py(5.21));
+    this.ctx.bezierCurveTo(30.26, py(2.34), 27.97, py(0), 25.14, py(0));
+    this.ctx.lineTo(5.12, py(0));
+    this.ctx.bezierCurveTo(2.29, py(0), 0, py(2.34), 0, py(5.21));
+    this.ctx.lineTo(0, py(22.75));
     this.ctx.closePath();
     this.ctx.fill();
-    this.ctx.fillStyle = theme.accent;
+
+    this.ctx.fillStyle = theme.gold;
     this.ctx.beginPath();
-    this.ctx.arc(x + 14, y + height / 2, 3.5, 0, Math.PI * 2);
+    this.ctx.moveTo(20.62, py(11.82));
+    this.ctx.bezierCurveTo(22.2, py(12.84), 22.2, py(15.16), 20.62, py(16.19));
+    this.ctx.lineTo(14.97, py(19.86));
+    this.ctx.bezierCurveTo(13.24, py(20.98), 10.95, py(19.74), 10.95, py(17.67));
+    this.ctx.lineTo(10.95, py(10.34));
+    this.ctx.bezierCurveTo(10.95, py(8.28), 13.24, py(7.03), 14.97, py(8.16));
+    this.ctx.lineTo(20.62, py(11.82));
+    this.ctx.closePath();
     this.ctx.fill();
+    this.ctx.restore();
+  }
+
+  private drawMissMarker(point: Point): void {
+    this.ctx.save();
+    this.ctx.translate(point.x, point.y);
+
+    this.ctx.fillStyle = 'rgba(225, 29, 72, 0.16)';
+    this.ctx.beginPath();
+    this.ctx.arc(0, 0, 28, 0, Math.PI * 2);
+    this.ctx.fill();
+
+    this.ctx.lineCap = 'round';
+    this.ctx.lineJoin = 'round';
+    this.ctx.strokeStyle = '#ffffff';
+    this.ctx.lineWidth = 10;
+    this.ctx.beginPath();
+    this.ctx.moveTo(-15, -15);
+    this.ctx.lineTo(15, 15);
+    this.ctx.moveTo(15, -15);
+    this.ctx.lineTo(-15, 15);
+    this.ctx.stroke();
+
+    this.ctx.strokeStyle = theme.accent;
+    this.ctx.lineWidth = 5;
+    this.ctx.beginPath();
+    this.ctx.arc(0, 0, 24, 0, Math.PI * 2);
+    this.ctx.stroke();
+
     this.ctx.restore();
   }
 

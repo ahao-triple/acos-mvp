@@ -51,6 +51,72 @@ describe('GameController', () => {
     expect(controller.getViewState().feedback.message).toContain('提示');
   });
 
+  test('requesting and confirming a rewarded hint uses the ad prompt flow', async () => {
+    const platform = createPlatformStub();
+    const controller = new GameController({ levels: differenceHuntLevels, save: defaultTestSave(), platform });
+    controller.startLevel(1);
+
+    controller.requestRewardedAd({ type: 'hint' });
+    expect(controller.getViewState().adPrompt?.title).toBe('看视频领取提示');
+    expect(platform.adReasons).toEqual([]);
+
+    await controller.confirmRewardedAd();
+
+    expect(platform.adReasons).toEqual(['hint']);
+    expect(controller.getViewState().adPrompt).toBeNull();
+    expect(controller.getViewState().save.hints).toBe(1);
+  });
+
+  test('canceling a rewarded ad prompt clears the prompt without granting rewards', () => {
+    const platform = createPlatformStub();
+    const controller = new GameController({
+      levels: differenceHuntLevels,
+      save: defaultTestSave(),
+      platform,
+      now: () => 10_000,
+    });
+    controller.startLevel(1);
+
+    controller.requestRewardedAd({ type: 'add_time' });
+    controller.cancelRewardedAd();
+
+    expect(controller.getViewState().adPrompt).toBeNull();
+    expect(platform.adReasons).toEqual([]);
+    expect(controller.getViewState().timer.remainingMs).toBe(120_000);
+  });
+
+  test('toggling sound stops and resumes background music', () => {
+    const platform = createPlatformStub();
+    const controller = new GameController({ levels: differenceHuntLevels, save: defaultTestSave(), platform });
+
+    controller.toggleSound();
+    controller.toggleSound();
+
+    expect(platform.musicEvents).toEqual([
+      { kind: 'stop' },
+      { kind: 'play', name: 'bgm', loop: true },
+    ]);
+  });
+
+  test('daily reward message clears after a short time', () => {
+    const platform = createPlatformStub();
+    let now = 10_000;
+    const controller = new GameController({
+      levels: differenceHuntLevels,
+      save: defaultTestSave(),
+      platform,
+      now: () => now,
+    });
+
+    controller.claimDailyReward('2026-05-10');
+    expect(controller.getViewState().feedback.message).toBe('已领取奖励。');
+
+    now = 12_300;
+    controller.tick();
+
+    expect(controller.getViewState().feedback.message).toBeUndefined();
+  });
+
   test('rewarded add-time extends an active countdown', async () => {
     const platform = createPlatformStub();
     const controller = new GameController({
@@ -87,7 +153,7 @@ describe('GameController', () => {
     expect(controller.getViewState().timer.remainingMs).toBe(30_000);
   });
 
-  test('rewarded unlock opens a locked level without starting it immediately', async () => {
+  test('rewarded unlock starts the locked level after confirmation', async () => {
     const platform = createPlatformStub();
     const controller = new GameController({ levels: differenceHuntLevels, save: defaultTestSave(), platform });
 
@@ -95,7 +161,19 @@ describe('GameController', () => {
 
     expect(platform.adReasons).toEqual(['unlock_level']);
     expect(controller.getViewState().save.highestUnlockedLevel).toBe(4);
-    expect(controller.getViewState().screen).toBe('levels');
+    expect(controller.getViewState().screen).toBe('playing');
+    expect(controller.getViewState().level.levelNo).toBe(4);
+  });
+
+  test('starting a locked level opens the rewarded ad prompt first', () => {
+    const platform = createPlatformStub();
+    const controller = new GameController({ levels: differenceHuntLevels, save: defaultTestSave(), platform });
+
+    controller.startLevel(4);
+
+    expect(controller.getViewState().adPrompt?.title).toBe('看视频解锁第 4 关');
+    expect(platform.adReasons).toEqual([]);
+    expect(controller.getViewState().screen).toBe('home');
   });
 
   test('rewarded double reward can only be claimed once after a win', async () => {
@@ -144,11 +222,13 @@ function defaultTestSave() {
   };
 }
 
-function createPlatformStub(): PlatformAdapter & { adReasons: RewardedAdReason[] } {
+function createPlatformStub(): PlatformAdapter & { adReasons: RewardedAdReason[]; musicEvents: Array<{ kind: 'play' | 'stop'; name?: string; loop?: boolean }> } {
   const adReasons: RewardedAdReason[] = [];
+  const musicEvents: Array<{ kind: 'play' | 'stop'; name?: string; loop?: boolean }> = [];
   return {
     name: 'test',
     adReasons,
+    musicEvents,
     storage: {
       getItem() {
         return null;
@@ -158,6 +238,12 @@ function createPlatformStub(): PlatformAdapter & { adReasons: RewardedAdReason[]
     },
     triggerHaptic() {},
     async playSfx() {},
+    async playMusic(name, loop) {
+      musicEvents.push({ kind: 'play', name, loop });
+    },
+    stopMusic() {
+      musicEvents.push({ kind: 'stop' });
+    },
     async showRewardedAd(reason) {
       adReasons.push(reason);
       return { status: 'success' };

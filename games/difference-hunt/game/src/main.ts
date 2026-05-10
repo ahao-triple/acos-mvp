@@ -55,6 +55,7 @@ export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
       }
       renderer = new CanvasRenderer(canvas, controller, assetBase);
       resize();
+      controller.syncBackgroundMusic();
       frame();
     },
     pause() {
@@ -65,6 +66,7 @@ export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
     },
     destroy() {
       running = false;
+      platform.stopMusic();
       renderer?.destroy();
       renderer = null;
       if (frameHandle !== null) {
@@ -138,10 +140,16 @@ function readMiniGameWindowInfo(): { width: number; height: number; dpr: number 
   if (!rawWidth || !rawHeight) {
     return null;
   }
-  const isVivo = Boolean(qgInfo);
+  if (qgInfo) {
+    return {
+      width: Math.round(rawWidth / dpr),
+      height: Math.round(rawHeight / dpr),
+      dpr,
+    };
+  }
   return {
-    width: isVivo ? Math.round(rawWidth / dpr) : rawWidth,
-    height: isVivo ? Math.round(rawHeight / dpr) : rawHeight,
+    width: rawWidth,
+    height: rawHeight,
     dpr,
   };
 }

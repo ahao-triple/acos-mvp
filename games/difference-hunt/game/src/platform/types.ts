@@ -14,5 +14,7 @@ export interface PlatformAdapter {
   storage: StorageLike;
   triggerHaptic(kind: HapticKind): void;
   playSfx(name: string): Promise<void>;
+  playMusic(name: string, loop: boolean): Promise<void>;
+  stopMusic(): void;
   showRewardedAd(reason: RewardedAdReason): Promise<PlatformResult>;
 }

@@ -12,6 +12,8 @@ export type HitTargetType =
   | 'adTime'
   | 'daily'
   | 'doubleReward'
+  | 'adConfirm'
+  | 'adCancel'
   | 'sound'
   | 'retry';
 
@@ -19,6 +21,8 @@ const OVERLAY_HITS = new Set<HitTargetType>([
   'continue',
   'doubleReward',
   'adTime',
+  'adConfirm',
+  'adCancel',
   'retry',
   'level',
   'home',

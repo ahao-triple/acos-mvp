@@ -1,6 +1,8 @@
 import type { PlatformAdapter } from './types';
 
 export function createWebPlatformAdapter(): PlatformAdapter {
+  let music: HTMLAudioElement | null = null;
+
   return {
     name: 'web',
     storage: {
@@ -17,11 +19,50 @@ export function createWebPlatformAdapter(): PlatformAdapter {
     triggerHaptic() {
       // Browsers do not expose a consistent short haptic API.
     },
-    async playSfx() {
-      // Browser preview keeps audio optional; platform builds provide sound.
+    async playSfx(name) {
+      await playAudio(`/audio/${name}.wav`, false);
+    },
+    async playMusic(name, loop) {
+      stopAudio(music);
+      music = createAudio(`/audio/${name}.mp3`, loop);
+      await music.play();
+    },
+    stopMusic() {
+      stopAudio(music);
+      music = null;
     },
     async showRewardedAd() {
-      return { status: 'success', message: '预览环境已直接发放奖励。' };
+      return { status: 'success' };
     },
   };
+}
+
+function createAudio(src: string, loop: boolean): HTMLAudioElement {
+  const audio = new Audio();
+  audio.src = src;
+  audio.preload = 'auto';
+  audio.loop = loop;
+  audio.currentTime = 0;
+  return audio;
+}
+
+async function playAudio(src: string, loop: boolean): Promise<void> {
+  const audio = createAudio(src, loop);
+  await safePlay(audio);
+}
+
+async function safePlay(audio: HTMLAudioElement): Promise<void> {
+  try {
+    await audio.play();
+  } catch {
+    // Autoplay policies may reject in previews; ignore and keep the game running.
+  }
+}
+
+function stopAudio(audio: HTMLAudioElement | null): void {
+  if (!audio) {
+    return;
+  }
+  audio.pause();
+  audio.currentTime = 0;
 }

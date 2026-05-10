@@ -6,6 +6,17 @@ import type { PlatformAdapter, PlatformResult } from '../platform/types';
 export type GameScreen = 'home' | 'playing' | 'win' | 'levels' | 'settings' | 'failed';
 export type FeedbackType = 'none' | 'found' | 'miss' | 'win';
 
+export type RewardedAdRequest =
+  | { type: 'hint' }
+  | { type: 'add_time' }
+  | { type: 'unlock_level'; levelNo: number }
+  | { type: 'double_reward' };
+
+export interface AdPrompt {
+  title: string;
+  request: RewardedAdRequest;
+}
+
 export interface FeedbackEvent {
   type: FeedbackType;
   targetId?: string;
@@ -31,6 +42,7 @@ export interface GameViewState {
     doubleClaimed: boolean;
   };
   dailyRewardAvailable: boolean;
+  adPrompt: AdPrompt | null;
 }
 
 export interface GameControllerOptions {
@@ -59,6 +71,9 @@ export class GameController {
   private levelEndsAtMs = 0;
   private hintTargetId: string | null = null;
   private doubleRewardClaimed = false;
+  private adPrompt: AdPrompt | null = null;
+  private feedbackExpiresAtMs = 0;
+  private musicPlaying = false;
 
   constructor(options: GameControllerOptions) {
     this.levels = [...options.levels].sort((a, b) => a.levelNo - b.levelNo);
@@ -91,6 +106,7 @@ export class GameController {
         doubleClaimed: this.doubleRewardClaimed,
       },
       dailyRewardAvailable: this.isDailyRewardAvailable(),
+      adPrompt: this.adPrompt,
     };
   }
 
@@ -98,7 +114,11 @@ export class GameController {
     if (this.screen === 'playing' && this.timerRemainingMs() <= 0) {
       this.screen = 'failed';
       this.feedback = { type: 'miss', message: '时间用完了，再试一次。' };
-      void this.platform?.playSfx('invalid');
+      this.feedbackExpiresAtMs = this.now() + 2000;
+      this.playSound('lose');
+    }
+    if (this.feedback.message && this.feedbackExpiresAtMs > 0 && this.now() >= this.feedbackExpiresAtMs) {
+      this.clearFeedback();
     }
   }
 
@@ -106,15 +126,51 @@ export class GameController {
     return this.startLevel(this.save.currentLevel);
   }
 
+  requestRewardedAd(request: RewardedAdRequest): GameViewState {
+    this.adPrompt = {
+      title: rewardedAdPromptTitle(request),
+      request,
+    };
+    return this.getViewState();
+  }
+
+  cancelRewardedAd(): GameViewState {
+    this.adPrompt = null;
+    return this.getViewState();
+  }
+
+  playUiClick(): void {
+    this.playSound('tap');
+  }
+
+  async confirmRewardedAd(): Promise<GameViewState> {
+    const request = this.adPrompt?.request;
+    this.adPrompt = null;
+    if (!request) {
+      return this.getViewState();
+    }
+
+    if (request.type === 'hint') {
+      return this.claimAdHint();
+    }
+    if (request.type === 'add_time') {
+      return this.claimAdTimeBonus();
+    }
+    if (request.type === 'unlock_level') {
+      return this.unlockLevelWithAd(request.levelNo);
+    }
+    return this.claimDoubleReward();
+  }
+
   tap(point: Point): FeedbackEvent {
     if (this.screen !== 'playing') {
-      void this.platform?.playSfx('invalid');
+      this.playSound('invalid');
       this.feedback = { type: 'miss', point };
       return this.feedback;
     }
     const target = findTargetAt(this.level, this.foundIds, point);
     if (!target) {
-      void this.platform?.playSfx('invalid');
+      this.playSound('invalid');
       this.feedback = { type: 'miss', point };
       return this.feedback;
     }
@@ -127,11 +183,11 @@ export class GameController {
       this.screen = 'win';
       this.save = completeLevel(this.save, this.level.levelNo, this.levels.length);
       writeSave(this.storage, this.save);
-      void this.platform?.playSfx('win');
+      this.playSound('win');
       this.feedback = { type: 'win', targetId: target.id, point };
       return this.feedback;
     }
-    void this.platform?.playSfx('tap');
+    this.playSound('found');
     this.feedback = { type: 'found', targetId: target.id, point };
     return this.feedback;
   }
@@ -139,9 +195,7 @@ export class GameController {
   startLevel(levelNo: number): GameViewState {
     const nextLevel = this.findLevel(levelNo) ?? this.levels[0];
     if (nextLevel.levelNo > this.save.highestUnlockedLevel) {
-      this.screen = 'levels';
-      this.feedback = { type: 'miss', message: '先观看视频解锁这一关。' };
-      return this.getViewState();
+      return this.requestRewardedAd({ type: 'unlock_level', levelNo: nextLevel.levelNo });
     }
     this.level = nextLevel;
     this.foundIds = new Set();
@@ -149,6 +203,7 @@ export class GameController {
     this.feedback = { type: 'none' };
     this.hintTargetId = null;
     this.doubleRewardClaimed = false;
+    this.adPrompt = null;
     this.levelEndsAtMs = this.now() + LEVEL_DURATION_MS;
     this.save = {
       ...this.save,
@@ -166,16 +221,22 @@ export class GameController {
 
   showLevels(): GameViewState {
     this.screen = 'levels';
+    this.adPrompt = null;
+    this.clearFeedback();
     return this.getViewState();
   }
 
   showHome(): GameViewState {
     this.screen = 'home';
+    this.adPrompt = null;
+    this.clearFeedback();
     return this.getViewState();
   }
 
   showSettings(): GameViewState {
     this.screen = 'settings';
+    this.adPrompt = null;
+    this.clearFeedback();
     return this.getViewState();
   }
 
@@ -188,19 +249,20 @@ export class GameController {
       },
     };
     writeSave(this.storage, this.save);
+    this.syncBackgroundMusic();
     return this.getViewState();
   }
 
   useHint(): FeedbackEvent {
     if (this.screen !== 'playing') {
-      return this.setMessage('先开始关卡再使用提示。');
+      return this.setMessage('请先开始游戏。');
     }
     const target = this.firstMissingTarget();
     if (!target) {
-      return this.setMessage('已经全部找到了。');
+      return this.setMessage('已经找完了。');
     }
     if (this.save.hints <= 0) {
-      return this.setMessage('提示不足，可以看广告获得提示。');
+      return this.setMessage('提示不足。');
     }
     this.save = {
       ...this.save,
@@ -208,14 +270,14 @@ export class GameController {
     };
     this.hintTargetId = target.id;
     writeSave(this.storage, this.save);
-    void this.platform?.playSfx('tap');
-    return this.setMessage('已标出一个还没找到的位置。');
+    this.playSound('found');
+    return this.setMessage('已标出一个位置。');
   }
 
   async claimAdHint(): Promise<GameViewState> {
     const result = await this.showRewardedAdWithFallback('hint');
     if (!isRewardGranted(result)) {
-      this.setMessage(result.message ?? '完整观看视频广告才能领取奖励。');
+      this.setMessage(result.message ?? '未完成观看。');
       return this.getViewState();
     }
     this.save = {
@@ -224,24 +286,24 @@ export class GameController {
     };
     const target = this.firstMissingTarget();
     this.hintTargetId = target?.id ?? null;
-    this.feedback = { type: 'none', message: result.message ?? '已获得 1 次提示。' };
+    this.setMessage(result.message ?? '获得提示 x1。');
     writeSave(this.storage, this.save);
-    void this.platform?.playSfx('win');
+    this.playSound('win');
     return this.getViewState();
   }
 
   async claimAdTimeBonus(): Promise<GameViewState> {
     const result = await this.showRewardedAdWithFallback('add_time');
     if (!isRewardGranted(result)) {
-      this.setMessage(result.message ?? '完整观看视频广告才能领取奖励。');
+      this.setMessage(result.message ?? '未完成观看。');
       return this.getViewState();
     }
     this.levelEndsAtMs = Math.max(this.levelEndsAtMs, this.now()) + AD_TIME_BONUS_MS;
     if (this.screen === 'failed') {
       this.screen = 'playing';
     }
-    this.feedback = { type: 'none', message: result.message ?? '已增加 30 秒。' };
-    void this.platform?.playSfx('win');
+    this.setMessage(result.message ?? '已增加 30 秒。');
+    this.playSound('win');
     return this.getViewState();
   }
 
@@ -256,18 +318,16 @@ export class GameController {
     }
     const result = await this.showRewardedAdWithFallback('unlock_level');
     if (!isRewardGranted(result)) {
-      this.setMessage(result.message ?? '完整观看视频广告才能解锁。');
+      this.setMessage(result.message ?? '解锁失败。');
       return this.getViewState();
     }
     this.save = {
       ...this.save,
       highestUnlockedLevel: Math.max(this.save.highestUnlockedLevel, levelNo),
     };
-    this.screen = 'levels';
-    this.feedback = { type: 'none', message: result.message ?? `已解锁第 ${levelNo} 关。` };
     writeSave(this.storage, this.save);
-    void this.platform?.playSfx('win');
-    return this.getViewState();
+    this.playSound('win');
+    return this.startLevel(levelNo);
   }
 
   async claimDoubleReward(): Promise<GameViewState> {
@@ -276,7 +336,7 @@ export class GameController {
     }
     const result = await this.showRewardedAdWithFallback('double_reward');
     if (!isRewardGranted(result)) {
-      this.setMessage(result.message ?? '完整观看视频广告才能领取奖励。');
+      this.setMessage(result.message ?? '未完成观看。');
       return this.getViewState();
     }
     this.doubleRewardClaimed = true;
@@ -284,15 +344,15 @@ export class GameController {
       ...this.save,
       coins: this.save.coins + rewardCoinsForLevel(this.level.levelNo),
     };
-    this.feedback = { type: 'none', message: result.message ?? '金币奖励已翻倍。' };
+    this.setMessage(result.message ?? '金币奖励已翻倍。');
     writeSave(this.storage, this.save);
-    void this.platform?.playSfx('win');
+    this.playSound('win');
     return this.getViewState();
   }
 
   claimDailyReward(day = formatLocalDay(this.now())): GameViewState {
     if (this.save.lastDailyRewardDay === day) {
-      this.feedback = { type: 'none', message: '今日奖励已经领取。' };
+      this.setMessage('今日已领。');
       return this.getViewState();
     }
     this.save = {
@@ -301,9 +361,9 @@ export class GameController {
       hints: this.save.hints + DAILY_REWARD_HINTS,
       lastDailyRewardDay: day,
     };
-    this.feedback = { type: 'none', message: '已领取每日奖励：金币 20、提示 1。' };
+    this.setMessage('已领取奖励。');
     writeSave(this.storage, this.save);
-    void this.platform?.playSfx('win');
+    this.playSound('win');
     return this.getViewState();
   }
 
@@ -324,7 +384,39 @@ export class GameController {
 
   private setMessage(message: string): FeedbackEvent {
     this.feedback = { type: 'none', message };
+    this.feedbackExpiresAtMs = this.now() + 2200;
     return this.feedback;
+  }
+
+  private playSound(name: string): void {
+    if (!this.save.settings.soundEnabled) {
+      return;
+    }
+    this.syncBackgroundMusic();
+    void this.platform?.playSfx(name);
+  }
+
+  syncBackgroundMusic(): void {
+    if (!this.platform) {
+      return;
+    }
+    if (!this.save.settings.soundEnabled) {
+      this.platform.stopMusic();
+      this.musicPlaying = false;
+      return;
+    }
+    if (this.musicPlaying) {
+      return;
+    }
+    this.musicPlaying = true;
+    void this.platform.playMusic('bgm', true).catch(() => {
+      this.musicPlaying = false;
+    });
+  }
+
+  private clearFeedback(): void {
+    this.feedback = { type: 'none' };
+    this.feedbackExpiresAtMs = 0;
   }
 
   private async showRewardedAdWithFallback(reason: Parameters<PlatformAdapter['showRewardedAd']>[0]): Promise<PlatformResult> {
@@ -353,6 +445,19 @@ export function foundTargetById(level: DifferenceLevel, targetId: string): Diffe
 
 function isRewardGranted(result: PlatformResult): boolean {
   return result.status === 'success' || result.status === 'unsupported' || result.status === 'failed';
+}
+
+function rewardedAdPromptTitle(request: RewardedAdRequest): string {
+  if (request.type === 'hint') {
+    return '看视频领取提示';
+  }
+  if (request.type === 'add_time') {
+    return '看视频加 30 秒';
+  }
+  if (request.type === 'unlock_level') {
+    return `看视频解锁第 ${request.levelNo} 关`;
+  }
+  return '看视频领翻倍奖励';
 }
 
 function formatLocalDay(timestamp: number): string {
