@@ -16,7 +16,7 @@ describe('bundleGameEntry', () => {
   test('bundles a TypeScript game entry into a JavaScript file', async () => {
     const outfile = path.join(tmpRoot, 'game.bundle.mjs');
     const result = await bundleGameEntry({
-      entryAbs: path.join(fixturePath('valid-douyin-game'), 'game/src/main.ts'),
+      entryAbs: path.join(fixturePath('valid-douyin-game'), 'game/main.ts'),
       outfile,
     });
 

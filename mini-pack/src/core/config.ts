@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import type { ZodType } from 'zod';
 
 import {
   douyinMaterialsSchema,
@@ -87,20 +88,12 @@ export async function loadGameConfig(options: LoadGameConfigOptions): Promise<Lo
   };
 }
 
-interface SafeParseResult<T> {
-  success: boolean;
-  data?: T;
-  error?: { issues: Array<{ path: Array<string | number>; message: string }> };
-}
-
-interface SafeParser<T> {
-  safeParse: (input: unknown) => SafeParseResult<T>;
-}
-
-function parseMaterials<T>(schema: SafeParser<T>, raw: unknown, platform: string): T {
+function parseMaterials<T>(schema: ZodType<T>, raw: unknown, platform: string): T {
   const parsed = schema.safeParse(raw);
-  if (!parsed.success || !parsed.data) {
-    const detail = parsed.error?.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('\n') ?? 'unknown';
+  if (!parsed.success) {
+    const detail = parsed.error.issues
+      .map((issue) => `${issue.path.map(String).join('.')}: ${issue.message}`)
+      .join('\n');
     throw new UserError(`Invalid channels/${platform}/materials.ts.`, detail);
   }
   return parsed.data;
