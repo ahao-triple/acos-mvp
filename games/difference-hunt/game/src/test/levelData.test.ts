@@ -12,13 +12,12 @@ describe('difference hunt level data', () => {
 
   test('points every level image to a copied public-pack resource', async () => {
     const { access } = await import('node:fs/promises');
-    const { resolve } = await import('node:path');
-    const root = resolve(__dirname, '../../public-pack');
+    const root = `${process.cwd()}/public-pack`;
 
     for (const level of differenceHuntLevels) {
-      await expect(access(resolve(root, level.background))).resolves.toBeUndefined();
+      await expect(access(`${root}/${level.background}`)).resolves.toBeUndefined();
       for (const target of level.targets) {
-        await expect(access(resolve(root, target.image))).resolves.toBeUndefined();
+        await expect(access(`${root}/${target.image}`)).resolves.toBeUndefined();
       }
     }
   });
