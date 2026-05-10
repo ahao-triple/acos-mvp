@@ -1,19 +1,32 @@
-import type { GameConfig } from '../core/schema.js';
+import type {
+  DouyinMaterials,
+  GameConfig,
+  VivoMaterials,
+} from '../core/schema.js';
 
 export type PlatformName = 'douyin' | 'vivo';
+
+export type ChannelMaterials = DouyinMaterials | VivoMaterials;
 
 export interface ResolvedPaths {
   configFileAbs: string;
   entryAbs: string;
   publicDirAbs: string;
+  channelRoot: string;
+  materialsAbs: string;
+  iconAbs: string;
   outDirAbs: string;
-  douyinMaterialsAbs?: string;
 }
 
-export type LoadedGameConfig = GameConfig & {
+export interface LoadedGameConfig {
+  game: GameConfig;
+  platform: PlatformName;
+  materials: ChannelMaterials;
   projectRoot: string;
   paths: ResolvedPaths;
-};
+  douyinMaterials?: DouyinMaterials;
+  vivoMaterials?: VivoMaterials;
+}
 
 export interface AssetStats {
   count: number;

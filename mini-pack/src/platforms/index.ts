@@ -9,19 +9,17 @@ export interface PlatformBuildOptions {
 
 export interface PlatformBuilder {
   name: PlatformName;
-  validate(config: LoadedGameConfig): Promise<void>;
-  build(config: LoadedGameConfig, options?: PlatformBuildOptions): Promise<BuildReport>;
+  build(loaded: LoadedGameConfig, options?: PlatformBuildOptions): Promise<BuildReport>;
 }
 
 const supportedPlatforms = ['douyin', 'vivo'] as const;
 
 export function getPlatformBuilder(platform: string): PlatformBuilder {
-  if (platform === 'douyin') {
-    return douyinPlatformBuilder;
-  }
-  if (platform === 'vivo') {
-    return vivoPlatformBuilder;
-  }
+  if (platform === 'douyin') return douyinPlatformBuilder;
+  if (platform === 'vivo') return vivoPlatformBuilder;
 
-  throw new UserError(`Unsupported platform: ${platform}`, `Supported platforms: ${supportedPlatforms.join(', ')}`);
+  throw new UserError(
+    `Unsupported platform: ${platform}`,
+    `Supported platforms: ${supportedPlatforms.join(', ')}`,
+  );
 }
