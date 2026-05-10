@@ -9,6 +9,7 @@ export interface MiniPackGameApp {
 
 export interface MiniPackGameRuntime {
   canvas: HTMLCanvasElement;
+  renderMode?: 'canvas' | 'webgl';
   storage: {
     getString(key: string): string | null;
     setString(key: string, value: string): void;
@@ -32,6 +33,7 @@ export interface MiniPackGameRuntime {
     warn(message: string, data?: unknown): void;
     error(message: string, data?: unknown): void;
   };
+  createCanvas?: () => HTMLCanvasElement;
   present?: () => void;
 }
 

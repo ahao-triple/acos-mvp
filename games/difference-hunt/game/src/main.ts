@@ -3,6 +3,10 @@ import { differenceHuntLevels } from './assets/levels';
 import { createMiniPackPlatformAdapter, type MiniPackGameApp, type MiniPackGameRuntime } from './platform/minipack';
 import { createWebPlatformAdapter } from './platform/web';
 import { CanvasRenderer } from './render/canvasRenderer';
+import { WebglRenderer } from './render/webglRenderer';
+
+type Renderer = CanvasRenderer | WebglRenderer;
+export type RendererKind = 'canvas' | 'webgl';
 
 export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
   const canvas = runtime?.canvas ?? getBrowserCanvas();
@@ -16,8 +20,8 @@ export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
     storage: platform.storage,
     platform,
   });
-  const assetBase = runtime ? 'assets/' : '/';
-  let renderer: CanvasRenderer | null = null;
+  const assetBase = resolveAssetBase(runtime);
+  let renderer: Renderer | null = null;
   let frameHandle: number | null = null;
   let running = false;
   let paused = false;
@@ -53,7 +57,9 @@ export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
         prepareBrowserDocument(canvas);
         window.addEventListener('resize', resize);
       }
-      renderer = new CanvasRenderer(canvas, controller, assetBase);
+      renderer = selectRendererKind(runtime) === 'webgl'
+        ? new WebglRenderer(canvas, controller, assetBase, runtime?.createCanvas)
+        : new CanvasRenderer(canvas, controller, assetBase);
       resize();
       controller.syncBackgroundMusic();
       frame();
@@ -87,7 +93,7 @@ function getBrowserCanvas(): HTMLCanvasElement | null {
   return document.querySelector('#game');
 }
 
-if (getBrowserCanvas()) {
+if (getBrowserCanvas() && !isMiniGameRuntime()) {
   createGame().start();
 }
 
@@ -123,6 +129,14 @@ export function resolveRuntimeCanvasSize(canvas: HTMLCanvasElement): { width: nu
   };
 }
 
+export function resolveAssetBase(runtime?: MiniPackGameRuntime): string {
+  return runtime ? '' : '/';
+}
+
+export function selectRendererKind(runtime?: MiniPackGameRuntime): RendererKind {
+  return runtime?.renderMode === 'webgl' ? 'webgl' : 'canvas';
+}
+
 function readMiniGameWindowInfo(): { width: number; height: number; dpr: number } | null {
   const g = globalThis as typeof globalThis & {
     tt?: { getWindowInfo?: () => unknown; getSystemInfoSync?: () => unknown };
@@ -142,9 +156,9 @@ function readMiniGameWindowInfo(): { width: number; height: number; dpr: number 
   }
   if (qgInfo) {
     return {
-      width: Math.round(rawWidth / dpr),
-      height: Math.round(rawHeight / dpr),
-      dpr,
+      width: rawWidth,
+      height: rawHeight,
+      dpr: 1,
     };
   }
   return {
@@ -160,6 +174,14 @@ function readPositiveNumber(value: unknown): number | null {
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null ? value as Record<string, unknown> : null;
+}
+
+function isMiniGameRuntime(): boolean {
+  const g = globalThis as typeof globalThis & {
+    qg?: unknown;
+    tt?: unknown;
+  };
+  return !!g.qg || !!g.tt;
 }
 
 function requestFrame(callback: FrameRequestCallback): number {

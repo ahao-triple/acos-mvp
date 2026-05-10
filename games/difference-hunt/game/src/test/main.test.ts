@@ -1,9 +1,10 @@
 import { describe, expect, test } from 'vitest';
 
-import { resolveRuntimeCanvasSize } from '../main';
+import { resolveAssetBase, resolveRuntimeCanvasSize, selectRendererKind } from '../main';
+import type { MiniPackGameRuntime } from '../platform/minipack';
 
 describe('resolveRuntimeCanvasSize', () => {
-  test('uses the vivo window size normalized by dpr', () => {
+  test('keeps vivo canvas dimensions at the native window size', () => {
     const originalQg = (globalThis as typeof globalThis & { qg?: { getSystemInfoSync?: () => unknown } }).qg;
     (globalThis as typeof globalThis & { qg?: { getSystemInfoSync?: () => unknown } }).qg = {
       getSystemInfoSync() {
@@ -22,12 +23,30 @@ describe('resolveRuntimeCanvasSize', () => {
       } as HTMLCanvasElement);
 
       expect(size).toEqual({
-        width: 698,
-        height: 1240,
-        dpr: 2,
+        width: 1396,
+        height: 2480,
+        dpr: 1,
       });
     } finally {
       (globalThis as typeof globalThis & { qg?: typeof originalQg }).qg = originalQg;
     }
+  });
+});
+
+describe('mini-pack runtime bootstrap', () => {
+  test('uses the WebGL renderer when the platform requests it', () => {
+    expect(selectRendererKind({ renderMode: 'webgl' } as MiniPackGameRuntime)).toBe('webgl');
+  });
+
+  test('uses the canvas renderer by default', () => {
+    expect(selectRendererKind({} as MiniPackGameRuntime)).toBe('canvas');
+  });
+
+  test('does not add an extra assets/ prefix for packaged mini-game resources', () => {
+    expect(resolveAssetBase({} as MiniPackGameRuntime)).toBe('');
+  });
+
+  test('keeps browser assets rooted at the web public path', () => {
+    expect(resolveAssetBase()).toBe('/');
   });
 });

@@ -73,9 +73,12 @@ describe('repository game build command', () => {
     expect(result.exitCode).toBe(0);
     await expect(fs.stat(path.join(vivoOutputDir, 'package.json'))).resolves.toBeTruthy();
     await expect(fs.stat(path.join(vivoOutputDir, 'src/manifest.json'))).resolves.toBeTruthy();
+    await expect(fs.stat(path.join(vivoOutputDir, 'src/main.js'))).resolves.toBeTruthy();
+    await expect(fs.stat(path.join(vivoOutputDir, 'src/runtime-adapter/ral.js'))).resolves.toBeTruthy();
+    await expect(fs.stat(path.join(vivoOutputDir, 'src/runtime-adapter/web-adapter.js'))).resolves.toBeTruthy();
     await expect(fs.stat(path.join(vivoOutputDir, 'src/game.js'))).resolves.toBeTruthy();
     await expect(fs.stat(path.join(vivoOutputDir, 'src/icon.png'))).resolves.toBeTruthy();
-    await expect(fs.stat(path.join(vivoOutputDir, 'src/assets/audio/bgm.mp3'))).resolves.toBeTruthy();
+    await expect(fs.stat(path.join(vivoOutputDir, 'src/audio/bgm.mp3'))).resolves.toBeTruthy();
     await expect(fs.stat(path.join(vivoOutputDir, 'build-report.json'))).resolves.toBeTruthy();
 
     const rpkFiles = await findRpkFiles(vivoOutputDir);
@@ -83,8 +86,8 @@ describe('repository game build command', () => {
 
     const manifest = JSON.parse(await fs.readFile(path.join(vivoOutputDir, 'src/manifest.json'), 'utf8'));
     expect(manifest.package).toBe('com.jnsy.jnysh.vivominigame');
-    expect(manifest.versionName).toBe('1.0.0');
-    expect(manifest.versionCode).toBe(1);
+    expect(manifest.versionName).toBe('1.0.9');
+    expect(manifest.versionCode).toBe(10);
 
     const report = JSON.parse(await fs.readFile(path.join(vivoOutputDir, 'build-report.json'), 'utf8'));
     expect(report).toMatchObject({
