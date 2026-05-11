@@ -12,11 +12,21 @@ const fixtureRoot = path.join(fixturesDir, 'valid-douyin-game');
 describe('runBuildCommand (fixture)', () => {
   afterEach(async () => {
     await fs.rm(path.join(fixtureRoot, 'channels/douyin/build'), { recursive: true, force: true });
+    await fs.rm(path.join(fixtureRoot, 'channels/kuaishou/build'), { recursive: true, force: true });
   });
 
   it('builds the douyin package into channels/douyin/build/', async () => {
     await runBuildCommand({ platform: 'douyin', projectRoot: fixtureRoot });
     const outDir = path.join(fixtureRoot, 'channels/douyin/build');
+    const entries = await fs.readdir(outDir);
+    expect(entries.sort()).toEqual(
+      ['assets', 'build-report.json', 'game.js', 'game.json', 'project.config.json'].sort(),
+    );
+  });
+
+  it('builds the kuaishou package into channels/kuaishou/build/', async () => {
+    await runBuildCommand({ platform: 'kuaishou', projectRoot: fixtureRoot });
+    const outDir = path.join(fixtureRoot, 'channels/kuaishou/build');
     const entries = await fs.readdir(outDir);
     expect(entries.sort()).toEqual(
       ['assets', 'build-report.json', 'game.js', 'game.json', 'project.config.json'].sort(),

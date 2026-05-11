@@ -16,8 +16,8 @@ describe('loadGameConfig', () => {
 
     expect(loaded.game.title).toBe('Fixture Game');
     expect(loaded.platform).toBe('douyin');
-    expect(loaded.materials.appid).toBe('tt-fixture-appid');
-    expect(loaded.materials.projectName).toBe('fixture');
+    expect(loaded.douyinMaterials?.appid).toBe('tt-fixture-appid');
+    expect(loaded.douyinMaterials?.projectName).toBe('fixture');
     expect(loaded.paths.channelRoot).toBe(path.join(validGame, 'channels/douyin'));
     expect(loaded.paths.materialsAbs).toBe(path.join(validGame, 'channels/douyin/materials.ts'));
     expect(loaded.paths.iconAbs).toBe(path.join(validGame, 'channels/douyin/icon.png'));

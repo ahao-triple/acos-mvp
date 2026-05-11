@@ -1,5 +1,7 @@
 # Vivo Debug RPK Implementation Plan
 
+> Historical note: this plan predates the channels migration and the later `kuaishou` platform. It is retained only as execution history. Use `README.md`, root `AGENT.md` / `AGENT_CN.md`, and current code for supported platforms and commands.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add a `vivo` mini-pack platform that packages the existing game as a debug `.rpk` while leaving every file under `games/` unchanged.

@@ -29,4 +29,5 @@
 - 修改玩法、关卡、存档、广告或渲染后，运行 `pnpm --dir games/difference-hunt/game test`。
 - 修改资源目录、Vite 配置或平台配置后，运行 `pnpm --dir games/difference-hunt/game build`。
 - 修改 `channels/douyin/materials.ts` 或 `icon.png` 后，运行 `pnpm preflight games/difference-hunt --platform douyin`。
+- 修改 `channels/kuaishou/materials.ts` 或 `icon.png` 后，运行 `pnpm preflight games/difference-hunt --platform kuaishou`。
 - 修改 `channels/vivo/materials.ts` 或 `icon.png` 后，运行 `pnpm preflight games/difference-hunt --platform vivo` 与 `MINI_PACK_VIVO_FAKE_RPK=1 pnpm build games/difference-hunt --platform vivo`。

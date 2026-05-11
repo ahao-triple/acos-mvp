@@ -105,8 +105,8 @@ This section collects the additional rules an AI must follow when working in thi
 
 Each game keeps its per-channel configuration and outputs under `games/<game>/channels/<platform>/`:
 
-- `materials.ts`: channel-specific fields (douyin `appid` / `projectName` / `rewardedAdUnitId` / `iconPath`; vivo `packageName` / `iconPath` / `versionName` / `versionCode`).
-- `icon.png`: channel icon (required; uploaded to the douyin console manually, written into the vivo build at `src/icon.png`).
+- `materials.ts`: channel-specific fields (douyin/kuaishou `appid` / `projectName` / `rewardedAdUnitId` / `iconPath`; vivo `packageName` / `iconPath` / `versionName` / `versionCode`).
+- `icon.png`: channel icon (required; uploaded to the douyin/kuaishou console manually, written into the vivo build at `src/icon.png`).
 - `build/`: build output, already `.gitignored`.
 
 `game.config.ts` carries only game-wide fields (`title` / `entry` / `publicDir` / `orientation` / `canvas`); `platform`, `outDir`, and per-channel fields no longer live here.

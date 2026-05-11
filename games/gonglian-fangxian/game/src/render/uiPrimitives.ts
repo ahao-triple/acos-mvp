@@ -1,4 +1,5 @@
 import type { AppAction } from '../app/controller';
+import { nowMs } from './time';
 
 export interface HitArea {
   x: number;
@@ -63,7 +64,7 @@ export function drawAdButton(ui: UiRenderContext, x: number, y: number, width: n
 
 export function drawButtonBase(ui: UiRenderContext, x: number, y: number, width: number, height: number, action: AppAction, drawContent: () => void): void {
   const key = actionKey(action);
-  const pressed = ui.pressedButton?.key === key && ui.pressedButton.untilMs > performance.now();
+  const pressed = ui.pressedButton?.key === key && ui.pressedButton.untilMs > nowMs();
 
   ui.ctx.save();
   if (pressed) {

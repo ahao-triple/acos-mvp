@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   gameConfigSchema,
   douyinMaterialsSchema,
+  kuaishouMaterialsSchema,
   vivoMaterialsSchema,
   defineGameConfig,
   defineDouyinMaterials,
+  defineKuaishouMaterials,
   defineVivoMaterials,
 } from '../../src/core/schema.js';
 
@@ -80,6 +82,42 @@ describe('douyinMaterialsSchema', () => {
   });
 });
 
+describe('kuaishouMaterialsSchema', () => {
+  it('accepts valid kuaishou materials with default iconPath', () => {
+    const result = kuaishouMaterialsSchema.safeParse({
+      appid: 'kwai_game_test_appid',
+      projectName: 'difference-hunt',
+    });
+    expect(result.success).toBe(true);
+    expect(result.success && result.data.iconPath).toBe('icon.png');
+  });
+
+  it('allows empty appid (preflight strictness, not schema)', () => {
+    const result = kuaishouMaterialsSchema.safeParse({
+      appid: '',
+      projectName: 'difference-hunt',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects empty projectName', () => {
+    const result = kuaishouMaterialsSchema.safeParse({
+      appid: 'kwai_game_test_appid',
+      projectName: '',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects extra keys', () => {
+    const result = kuaishouMaterialsSchema.safeParse({
+      appid: 'kwai_game_test_appid',
+      projectName: 'difference-hunt',
+      packageName: 'com.x.y',
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
 describe('vivoMaterialsSchema', () => {
   it('accepts valid vivo materials and applies defaults', () => {
     const result = vivoMaterialsSchema.safeParse({
@@ -129,6 +167,11 @@ describe('define*', () => {
   it('defineDouyinMaterials returns its input', () => {
     const m = { appid: 'a', projectName: 'p', iconPath: 'icon.png' };
     expect(defineDouyinMaterials(m)).toBe(m);
+  });
+
+  it('defineKuaishouMaterials returns its input', () => {
+    const m = { appid: 'a', projectName: 'p', iconPath: 'icon.png' };
+    expect(defineKuaishouMaterials(m)).toBe(m);
   });
 
   it('defineVivoMaterials returns its input', () => {

@@ -4,8 +4,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const supportedPlatforms = new Set(['douyin', 'vivo']);
-const usage = 'Usage: pnpm build games/<game-project> [--platform douyin|vivo]';
+const supportedPlatforms = new Set(['douyin', 'kuaishou', 'vivo']);
+const usage = 'Usage: pnpm build games/<game-project> [--platform douyin|kuaishou|vivo]';
 const parsed = parseArgs(process.argv.slice(2));
 
 if (!parsed.ok) {

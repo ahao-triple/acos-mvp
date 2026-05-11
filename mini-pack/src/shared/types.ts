@@ -1,12 +1,13 @@
 import type {
   DouyinMaterials,
   GameConfig,
+  KuaishouMaterials,
   VivoMaterials,
 } from '../core/schema.js';
 
-export type PlatformName = 'douyin' | 'vivo';
+export type PlatformName = 'douyin' | 'kuaishou' | 'vivo';
 
-export type ChannelMaterials = DouyinMaterials | VivoMaterials;
+export type ChannelMaterials = DouyinMaterials | KuaishouMaterials | VivoMaterials;
 
 export interface ResolvedPaths {
   configFileAbs: string;
@@ -25,6 +26,7 @@ export interface LoadedGameConfig {
   projectRoot: string;
   paths: ResolvedPaths;
   douyinMaterials?: DouyinMaterials;
+  kuaishouMaterials?: KuaishouMaterials;
   vivoMaterials?: VivoMaterials;
 }
 

@@ -21,7 +21,7 @@
 
 - 广告入口用于补给、道具获取、失败加步和胜利奖励翻倍等玩家主动触发场景。
 - 广告按钮继续复用现有 `38 x 28` 激励视频标识和统一广告按钮布局。
-- 保留抖音侧边栏、添加桌面和平台奖励逻辑；失败时降级反馈，不能阻塞主流程。
+- 保留抖音和快手的添加桌面、收藏/设为常用奖励逻辑，以及抖音侧边栏逻辑；失败时降级反馈，不能阻塞主流程。
 - 修改平台能力时，同时检查浏览器预览和 mini-pack 运行时入口。
 
 ## 验证
@@ -29,4 +29,5 @@
 - 修改玩法、关卡、存档、广告或渲染后，运行 `pnpm --dir games/gonglian-fangxian/game test`。
 - 修改资源目录、Vite 配置或平台配置后，运行 `pnpm --dir games/gonglian-fangxian/game build`。
 - 修改 `channels/douyin/materials.ts` 或 `icon.png` 后，运行 `pnpm preflight games/gonglian-fangxian --platform douyin`。
-- 修改平台打包链路后，在仓库根目录运行 `pnpm build games/gonglian-fangxian`（包含 preflight + smoke）。
+- 修改 `channels/kuaishou/materials.ts` 或 `icon.png` 后，运行 `pnpm preflight games/gonglian-fangxian --platform kuaishou`。
+- 修改平台打包链路后，在仓库根目录运行 `pnpm build games/gonglian-fangxian --platform <platform>`；抖音还要保持默认 `pnpm build games/gonglian-fangxian` smoke 路径可用。

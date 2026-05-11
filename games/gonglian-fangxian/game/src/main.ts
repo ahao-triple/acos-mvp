@@ -132,13 +132,18 @@ export function resolveRuntimeCanvasSize(canvas: HTMLCanvasElement): { width: nu
 }
 
 function readMiniGameWindowInfo(): { width: number; height: number; dpr: number } | null {
-  const tt = (globalThis as typeof globalThis & {
+  const miniGameGlobal = globalThis as typeof globalThis & {
+    ks?: {
+      getWindowInfo?: () => unknown;
+      getSystemInfoSync?: () => unknown;
+    };
     tt?: {
       getWindowInfo?: () => unknown;
       getSystemInfoSync?: () => unknown;
     };
-  }).tt;
-  const info = asRecord(tt?.getWindowInfo?.()) ?? asRecord(tt?.getSystemInfoSync?.());
+  };
+  const bridge = miniGameGlobal.ks ?? miniGameGlobal.tt;
+  const info = asRecord(bridge?.getWindowInfo?.()) ?? asRecord(bridge?.getSystemInfoSync?.());
   if (!info) {
     return null;
   }
@@ -169,7 +174,7 @@ function requestFrame(callback: FrameRequestCallback): number {
     return requestAnimationFrame(callback);
   }
 
-  return window.setTimeout(() => callback(Date.now()), 16);
+  return globalThis.setTimeout(() => callback(Date.now()), 16);
 }
 
 function cancelFrame(handle: number): void {

@@ -1,9 +1,9 @@
 # Channels-Driven 打包链路 设计文档
 
 - 日期：2026-05-11
-- 主题：把每个游戏的渠道（douyin / vivo / 未来其它）相关物料、配置和打包产物全部下沉到 `games/<game>/channels/<platform>/`；引入 preflight 校验；修当前 vivo 打包失败的根因。
+- 主题：把每个游戏的渠道（douyin / kuaishou / vivo / 未来其它）相关物料、配置和打包产物全部下沉到 `games/<game>/channels/<platform>/`；引入 preflight 校验；修当前 vivo 打包失败的根因。
 - 所属范围：跨游戏 + `mini-pack` + 平台接入 → spec 落根 `docs/superpowers/specs/`。
-- 状态：已与用户对齐 §1–§4，等待用户审本文件后走 writing-plans。
+- 状态：历史设计已实施；2026-05-11 追加快手小游戏打包与快手运行时桥接。当前可执行规范以 `README.md`、根 `AGENT.md` / `AGENT_CN.md` 和代码为准。
 
 ## 背景
 
@@ -46,6 +46,10 @@ games/<game>/
       materials.ts                  # 抖音渠道字段
       icon.png                      # 抖音渠道图标
       build/                        # 打包产物（.gitignore）
+    kuaishou/
+      materials.ts                  # 快手渠道字段
+      icon.png                      # 快手渠道图标
+      build/                        # 可导入快手开发者工具的小游戏工程
     vivo/
       materials.ts
       icon.png
@@ -77,7 +81,7 @@ export default defineGameConfig({
 去除字段：
 - `platform`：由命令行 `--platform` 决定，每个游戏可同时支持多渠道。
 - `outDir`：约定为 `channels/<platform>/build/`，不可配置。
-- `douyin`、`vivo`：迁到 `channels/<platform>/materials.ts`。
+- `douyin`、`kuaishou`、`vivo`：迁到 `channels/<platform>/materials.ts`。
 
 ### `channels/douyin/materials.ts`
 
@@ -102,6 +106,19 @@ export default defineVivoMaterials({
   iconPath: "icon.png",
   versionName: "1.0.0",
   versionCode: 1,
+});
+```
+
+### `channels/kuaishou/materials.ts`
+
+```ts
+import { defineKuaishouMaterials } from "../../../../mini-pack/src/index";
+
+export default defineKuaishouMaterials({
+  appid: process.env.KUAISHOU_APPID ?? "kwai_game_test_appid",
+  projectName: "difference-hunt",
+  rewardedAdUnitId: process.env.KUAISHOU_REWARDED_AD_UNIT_ID,
+  iconPath: "icon.png",
 });
 ```
 
@@ -138,6 +155,13 @@ douyinMaterialsSchema = strict({
   iconPath: z.string().trim().min(1).default("icon.png"),
 });
 
+kuaishouMaterialsSchema = strict({
+  appid: z.string(),
+  projectName: z.string().trim().min(1),
+  rewardedAdUnitId: z.string().optional(),
+  iconPath: z.string().trim().min(1).default("icon.png"),
+});
+
 vivoMaterialsSchema = strict({
   packageName: z.string().trim().regex(
     /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/,
@@ -149,7 +173,7 @@ vivoMaterialsSchema = strict({
 });
 ```
 
-新导出：`defineDouyinMaterials`、`defineVivoMaterials`、对应类型。
+新导出：`defineDouyinMaterials`、`defineKuaishouMaterials`、`defineVivoMaterials`、对应类型。
 
 > 注：`appid`、`rewardedAdUnitId` 在 schema 层允许空字符串通过，"必须非空"由 preflight 强制——这样保留 `process.env.X ?? ""` 的语法可用，但实际打包前会被拒。
 
@@ -160,8 +184,8 @@ vivoMaterialsSchema = strict({
 ```ts
 {
   game: GameConfig,                              // games/<game>/game.config.ts
-  platform: "douyin" | "vivo",
-  materials: DouyinMaterials | VivoMaterials,    // channels/<platform>/materials.ts
+  platform: "douyin" | "kuaishou" | "vivo",
+  materials: DouyinMaterials | KuaishouMaterials | VivoMaterials, // channels/<platform>/materials.ts
   paths: {
     projectRoot,                                 // 仓库根
     gameRoot,                                    // games/<game>/
@@ -195,12 +219,17 @@ vivoMaterialsSchema = strict({
 - `renderDouyinGameJs(bundleCode, config)` 改签名为 `(bundleCode, loaded)`，`rewardedAdUnitId` 从 `loaded.materials.rewardedAdUnitId` 读。
 - douyin builder **不复制** `icon.png` 到 `build/`（抖音小游戏提审图标在开放平台后台上传，开发包内不需要）；但 `channels/douyin/icon.png` 仍作为渠道资产由 preflight 校验存在，用于人工提交后台时取用。
 
+**`mini-pack/src/platforms/kuaishou/index.ts` + `template.ts`**
+- 生成可导入快手开发者工具的 `game.js`、`game.json`、`project.config.json` 和 `assets/`。
+- 运行时桥接 `ks.createCanvas`、触摸、存储、音频、激励视频、震动。
+- 快手留存能力接入：添加桌面使用 `ks.checkShortcut` / `ks.addShortcut`；设为常用使用 `ks.checkCommonUse` / `ks.addCommonUse`。能力不存在或调用失败时返回降级结果，不阻塞核心玩法。
+
 ### Preflight（`mini-pack/src/commands/preflight.ts`）
 
 ```ts
 export interface PreflightOptions {
   projectRoot: string;     // games/<game>
-  platform: "douyin" | "vivo";
+  platform: "douyin" | "kuaishou" | "vivo";
 }
 
 export interface PreflightIssue {
@@ -218,6 +247,7 @@ export async function runPreflight(options: PreflightOptions): Promise<{ issues:
 3. `channels/<platform>/<materials.iconPath>` 文件存在。
 4. 平台特定字段非空：
    - douyin：`appid`、`projectName` 非空；`rewardedAdUnitId` 若有则非空。
+   - kuaishou：`appid`、`projectName` 非空；`rewardedAdUnitId` 若有则非空；开发测试可用 `kwai_game_test_appid`。
    - vivo：`packageName`、`versionName` 非空（regex 已在 schema 强约束）。
 5. `<game.entry>`、`<game.publicDir>` 路径存在。
 

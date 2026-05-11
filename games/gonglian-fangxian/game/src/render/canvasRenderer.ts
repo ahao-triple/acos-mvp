@@ -10,6 +10,7 @@ import { drawMenuScreen, drawSuppliesScreen } from './menuScreen';
 import { drawAdConfirmModal, drawLostResult, drawPausedResult, drawWinResult } from './resultScreen';
 import { coverRect, fitLogicalCanvas, LOGICAL_HEIGHT, LOGICAL_WIDTH, toLogicalPoint, type CanvasFit } from './scaler';
 import { pieceColors } from './theme';
+import { nowMs } from './time';
 import { actionKey, drawButton, drawPanel, drawText, roundRect, type HitArea, type PressedButton, type UiRenderContext } from './uiPrimitives';
 import { VisualBoardModel } from './visualBoard';
 
@@ -96,20 +97,20 @@ export class CanvasRenderer {
   }
 
   render(): void {
-    const nowMs = performance.now();
+    const currentTimeMs = nowMs();
     const view = this.controller.getViewState();
-    this.trackViewTiming(view, nowMs);
+    this.trackViewTiming(view, currentTimeMs);
     this.hitAreas = [];
 
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    this.drawViewportBackground(view, nowMs);
+    this.drawViewportBackground(view, currentTimeMs);
 
     this.ctx.save();
     this.ctx.translate(this.fit.offsetX, this.fit.offsetY);
     this.ctx.scale(this.fit.scale, this.fit.scale);
-    const shake = this.screenShakeOffset(nowMs);
+    const shake = this.screenShakeOffset(currentTimeMs);
     this.ctx.translate(shake.x, shake.y);
-    this.drawBackground(view, nowMs);
+    this.drawBackground(view, currentTimeMs);
 
     if (view.screen !== 'won' && view.screen !== 'lost') {
       this.resultReveal = null;
@@ -129,7 +130,7 @@ export class CanvasRenderer {
     } else if (view.screen === 'playing' || view.screen === 'paused' || view.screen === 'won' || view.screen === 'lost') {
       drawGameScreen({
         ui: view.screen === 'playing' ? this.ui() : this.nonInteractiveUi(),
-        nowMs,
+        nowMs: currentTimeMs,
         visualBoard: this.visualBoard,
         effects: this.effects,
         presentedBoard: (session, time) => this.presentedBoard(session, time),
@@ -139,16 +140,16 @@ export class CanvasRenderer {
       if (view.screen === 'paused') {
         drawPausedResult(this.ui());
       }
-      if (view.screen === 'won' && this.resultOverlayReady(view, nowMs)) {
+      if (view.screen === 'won' && this.resultOverlayReady(view, currentTimeMs)) {
         drawWinResult(this.ui(), view);
       }
-      if (view.screen === 'lost' && this.resultOverlayReady(view, nowMs)) {
+      if (view.screen === 'lost' && this.resultOverlayReady(view, currentTimeMs)) {
         drawLostResult(this.ui(), view);
       }
     }
 
     if (view.feedback) {
-      this.drawToast(view.feedback, nowMs);
+      this.drawToast(view.feedback, currentTimeMs);
     }
 
     if (view.adPrompt) {
@@ -172,13 +173,13 @@ export class CanvasRenderer {
     return { type: cue.sound, id: cue.id };
   }
 
-  applyImpact(impact: ImpactEvent, nowMs = performance.now()): void {
+  applyImpact(impact: ImpactEvent, currentTimeMs = nowMs()): void {
     if (impact.shake.amplitude <= 0 || impact.shake.durationMs <= 0) {
       return;
     }
 
     this.screenShake = {
-      startedMs: nowMs,
+      startedMs: currentTimeMs,
       amplitude: impact.shake.amplitude,
       durationMs: impact.shake.durationMs,
       seed: ++this.shakeSeed,
@@ -204,7 +205,7 @@ export class CanvasRenderer {
     const point = toLogicalPoint(clientPoint.clientX - bounds.left, clientPoint.clientY - bounds.top, this.fit);
     const area = [...this.hitAreas].reverse().find((candidate) => point.x >= candidate.x && point.x <= candidate.x + candidate.width && point.y >= candidate.y && point.y <= candidate.y + candidate.height);
     if (area) {
-      this.pressedButton = { key: actionKey(area.action), untilMs: performance.now() + 240 };
+      this.pressedButton = { key: actionKey(area.action), untilMs: nowMs() + 240 };
       await this.controller.dispatch(area.action);
       return;
     }
@@ -215,8 +216,8 @@ export class CanvasRenderer {
 
     const cell = cellAt(point.x, point.y);
     if (cell) {
-      const nowMs = performance.now();
-      if (this.visualBoard.isBusy(nowMs) || this.presentation) {
+      const currentTimeMs = nowMs();
+      if (this.visualBoard.isBusy(currentTimeMs) || this.presentation) {
         return;
       }
       await this.controller.dispatch({ type: 'tapCell', position: cell });

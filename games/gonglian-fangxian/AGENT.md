@@ -21,7 +21,7 @@ This file only adds local rules for `games/gonglian-fangxian`. Repository-wide r
 
 - Ad entry points are for active-player-triggered scenarios such as supplies, tool acquisition, extra steps after failure, and win reward doubling.
 - Ad buttons should continue to reuse the existing `38 x 28` rewarded-video marker and unified ad button layout.
-- Preserve Douyin sidebar, add-to-desktop, and platform reward logic. Failures should degrade with feedback and must not block the main flow.
+- Preserve Douyin and Kuaishou add-to-desktop / favorite-or-common-use reward logic, plus Douyin sidebar logic. Failures should degrade with feedback and must not block the main flow.
 - When changing platform capabilities, check both browser preview and the mini-pack runtime entry.
 
 ## Verification
@@ -29,4 +29,5 @@ This file only adds local rules for `games/gonglian-fangxian`. Repository-wide r
 - After changing gameplay, levels, saves, ads, or rendering, run `pnpm --dir games/gonglian-fangxian/game test`.
 - After changing resource directories, Vite config, or platform config, run `pnpm --dir games/gonglian-fangxian/game build`.
 - After changing `channels/douyin/materials.ts` or `icon.png`, run `pnpm preflight games/gonglian-fangxian --platform douyin`.
-- After changing platform packaging, run `pnpm build games/gonglian-fangxian` from the repository root (it runs preflight + smoke).
+- After changing `channels/kuaishou/materials.ts` or `icon.png`, run `pnpm preflight games/gonglian-fangxian --platform kuaishou`.
+- After changing platform packaging, run `pnpm build games/gonglian-fangxian --platform <platform>` from the repository root; for Douyin also keep the default `pnpm build games/gonglian-fangxian` smoke path valid.

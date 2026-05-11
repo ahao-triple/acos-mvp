@@ -1,4 +1,4 @@
-import { defineGameConfig } from '../../../src/index';
+import { defineGameConfig } from '../../../src/index.js';
 
 export default defineGameConfig({
   title: 'Fixture Game',

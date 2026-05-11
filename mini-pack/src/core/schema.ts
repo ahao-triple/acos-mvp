@@ -34,6 +34,21 @@ export function defineDouyinMaterials(materials: DouyinMaterials): DouyinMateria
   return materials;
 }
 
+export const kuaishouMaterialsSchema = z
+  .object({
+    appid: z.string(),
+    projectName: z.string().trim().min(1, 'kuaishou.projectName must not be empty'),
+    rewardedAdUnitId: z.string().optional(),
+    iconPath: z.string().trim().min(1).default('icon.png'),
+  })
+  .strict();
+
+export type KuaishouMaterials = z.infer<typeof kuaishouMaterialsSchema>;
+
+export function defineKuaishouMaterials(materials: KuaishouMaterials): KuaishouMaterials {
+  return materials;
+}
+
 const PACKAGE_NAME_PATTERN = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/;
 
 export const vivoMaterialsSchema = z

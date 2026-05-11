@@ -1,5 +1,7 @@
 # Channels-Driven 打包链路 实施计划
 
+> 历史说明：本计划对应 2026-05-11 的 channels 迁移实施，已完成。后续已新增 `kuaishou` 平台；当前平台列表、命令和目录约定以 `README.md`、根 `AGENT.md` / `AGENT_CN.md` 和代码为准。本文件保留为历史执行记录，不再作为新的实施入口。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** 把每个游戏的渠道相关物料、配置、产物下沉到 `games/<game>/channels/<platform>/`，引入 preflight 校验，并修当前 vivo 打包的 schema 与 builder 接通缺失。

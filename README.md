@@ -11,7 +11,7 @@
 
 游戏项目：
 
-- `games/gonglian-fangxian`：三消闯关小游戏，主要用于验证抖音和 vivo 打包链路。
+- `games/gonglian-fangxian`：三消闯关小游戏，主要用于验证抖音、快手和 vivo 打包链路。
 - `games/difference-hunt`：竖屏找不同小游戏，产品名为“就你眼神好”。
 
 新游戏应参考已有项目的结构和规范。
@@ -44,6 +44,10 @@ games/<game-project>/
       materials.ts
       icon.png
       build/        # .gitignore
+    kuaishou/
+      materials.ts
+      icon.png
+      build/        # .gitignore
     vivo/
       materials.ts
       icon.png
@@ -53,12 +57,12 @@ games/<game-project>/
 约定：
 
 - `game.config.ts` 是游戏共性配置（`title` / `entry` / `publicDir` / `orientation` / `canvas`）；不再承载 `platform` / `outDir` / 渠道字段。
-- `channels/<platform>/materials.ts` 是渠道字段（抖音 `appid`、`projectName`、`rewardedAdUnitId`、`iconPath`；vivo `packageName`、`iconPath`、`versionName`、`versionCode`）。
-- `channels/<platform>/icon.png` 是渠道图标（必填；抖音用于后台提交，vivo 写入构建产物）。
+- `channels/<platform>/materials.ts` 是渠道字段（抖音/快手 `appid`、`projectName`、`rewardedAdUnitId`、`iconPath`；vivo `packageName`、`iconPath`、`versionName`、`versionCode`）。
+- `channels/<platform>/icon.png` 是渠道图标（必填；抖音/快手用于后台提交，vivo 写入构建产物）。
 - `channels/<platform>/build/` 是打包产物目录，已 `.gitignore`。
 - `game/public-pack/` 是运行时静态资源目录，打包器会复制这里的内容。
 - `game/src/main.ts` 暴露浏览器预览入口和 mini-pack 运行时入口。
-- `game/src/platform/*` 隔离浏览器、抖音、vivo 等平台能力。
+- `game/src/platform/*` 隔离浏览器、抖音、快手、vivo 等平台能力。
 - `game/src/app/*` 负责流程、存档、奖励、关卡状态等产品逻辑。
 - `game/src/render/*` 负责 Canvas 绘制和交互命中。
 - `AGENT.md` 是给 AI 使用的英文规则，`AGENT_CN.md` 是给用户查看的中文镜像。
@@ -89,15 +93,18 @@ games/<game-project>/
 `mini-pack` 支持的平台：
 
 - `douyin`
+- `kuaishou`
 - `vivo`
 
 根目录命令：
 
 ```bash
 pnpm preflight games/<game-project> --platform douyin
+pnpm preflight games/<game-project> --platform kuaishou
 pnpm preflight games/<game-project> --platform vivo
 pnpm build games/<game-project>
 pnpm build games/<game-project> --platform douyin
+pnpm build games/<game-project> --platform kuaishou
 pnpm build games/<game-project> --platform vivo
 ```
 
@@ -105,11 +112,16 @@ pnpm build games/<game-project> --platform vivo
 
 `build` 命令会先跑 preflight，缺渠道物料时一次性中文报告并退出。打包产物输出到 `games/<game-project>/channels/<platform>/build/`（已 `.gitignore`）。
 
-抖音构建会在构建后运行 smoke 检查。vivo 构建会生成 vivo/Quick Game 项目，并在环境可用时尝试生成 debug `.rpk`。
+抖音构建会在构建后运行 smoke 检查。快手构建会生成可导入快手小游戏开发者工具的 `game.js` / `game.json` / `project.config.json` 工程。vivo 构建会生成 vivo/Quick Game 项目，并在环境可用时尝试生成 debug `.rpk`。
+
+快手渠道配置位于 `games/<game-project>/channels/kuaishou/materials.ts`：
+
+- `KUAISHOU_APPID`：正式快手小游戏 appid；不设置时默认使用开发测试 appid `kwai_game_test_appid`。
+- `KUAISHOU_REWARDED_AD_UNIT_ID`：快手激励视频广告位 id；不设置时广告能力降级。
+- 快手运行时桥接已接入 `ks.createCanvas`、触摸、存储、音频、激励视频、震动、添加桌面（`ks.checkShortcut` / `ks.addShortcut`）和设为常用（`ks.checkCommonUse` / `ks.addCommonUse`）。
 
 不在本 MVP 范围内的平台：
 
-- 快手小游戏
 - 微信小游戏
 - 其它快应用联盟渠道
 
@@ -157,6 +169,10 @@ DOUYIN_APPID=tt-test DOUYIN_REWARDED_AD_UNIT_ID=tt-rwd \
   pnpm build games/gonglian-fangxian
 DOUYIN_APPID=tt-test DOUYIN_REWARDED_AD_UNIT_ID=tt-rwd \
   pnpm build games/difference-hunt --platform douyin
+KUAISHOU_APPID=kwai_game_test_appid \
+  pnpm build games/gonglian-fangxian --platform kuaishou
+KUAISHOU_APPID=kwai_game_test_appid \
+  pnpm build games/difference-hunt --platform kuaishou
 MINI_PACK_VIVO_FAKE_RPK=1 pnpm build games/difference-hunt --platform vivo
 ```
 

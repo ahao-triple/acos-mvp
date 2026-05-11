@@ -8,9 +8,11 @@ import type { ZodType } from 'zod';
 import {
   douyinMaterialsSchema,
   gameConfigSchema,
+  kuaishouMaterialsSchema,
   vivoMaterialsSchema,
   type DouyinMaterials,
   type GameConfig,
+  type KuaishouMaterials,
   type VivoMaterials,
 } from './schema.js';
 import { resolveProjectPath } from './paths.js';
@@ -59,10 +61,7 @@ export async function loadGameConfig(options: LoadGameConfigOptions): Promise<Lo
   );
 
   const rawMaterials = await withProjectEnv(projectRoot, () => importDefault(materialsAbs));
-  const materials: ChannelMaterials =
-    platform === 'douyin'
-      ? parseMaterials(douyinMaterialsSchema, rawMaterials, 'douyin')
-      : parseMaterials(vivoMaterialsSchema, rawMaterials, 'vivo');
+  const materials: ChannelMaterials = parseChannelMaterials(platform, rawMaterials);
 
   const entryAbs = resolveProjectPath(projectRoot, game.entry, 'entry');
   const publicDirAbs = resolveProjectPath(projectRoot, game.publicDir, 'publicDir');
@@ -84,8 +83,19 @@ export async function loadGameConfig(options: LoadGameConfigOptions): Promise<Lo
       outDirAbs,
     },
     douyinMaterials: platform === 'douyin' ? (materials as DouyinMaterials) : undefined,
+    kuaishouMaterials: platform === 'kuaishou' ? (materials as KuaishouMaterials) : undefined,
     vivoMaterials: platform === 'vivo' ? (materials as VivoMaterials) : undefined,
   };
+}
+
+function parseChannelMaterials(platform: PlatformName, raw: unknown): ChannelMaterials {
+  if (platform === 'douyin') {
+    return parseMaterials(douyinMaterialsSchema, raw, 'douyin');
+  }
+  if (platform === 'kuaishou') {
+    return parseMaterials(kuaishouMaterialsSchema, raw, 'kuaishou');
+  }
+  return parseMaterials(vivoMaterialsSchema, raw, 'vivo');
 }
 
 function parseMaterials<T>(schema: ZodType<T>, raw: unknown, platform: string): T {

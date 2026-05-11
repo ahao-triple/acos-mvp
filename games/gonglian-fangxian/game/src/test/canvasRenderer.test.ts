@@ -23,6 +23,25 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
     expect(text).toContain('继续作战');
   });
 
+  test('renders when mini game runtime has no global performance object', () => {
+    const originalPerformance = globalThis.performance;
+    Reflect.deleteProperty(globalThis, 'performance');
+    const { canvas, ctx } = createRecordingCanvas();
+    const controller = new GameController(mockPlatform());
+    const renderer = new CanvasRenderer(canvas, controller);
+
+    try {
+      expect(() => renderer.render()).not.toThrow();
+      expect(renderedText(ctx)).toContain('共联防线软件');
+    } finally {
+      Object.defineProperty(globalThis, 'performance', {
+        configurable: true,
+        value: originalPerformance,
+        writable: true,
+      });
+    }
+  });
+
   test('renders briefing screen with objective and start action', async () => {
     const { canvas, ctx } = createRecordingCanvas();
     const controller = new GameController(mockPlatform());
