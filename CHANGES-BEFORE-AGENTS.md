@@ -11,7 +11,11 @@
 
 ## [P0] 1. 加一个 `pnpm bootstrap` 脚本，统一安装所有子包
 
-- [ ] 完成
+- [x] 完成
+
+实际落地方案是 pnpm workspaces（spec 里的 C 方案，非清单原文的 mjs 包装器）。
+根 `package.json` 的 `bootstrap` 即 `pnpm install`。
+见 `docs/superpowers/specs/2026-05-12-pnpm-workspaces-bootstrap-design.md`。
 
 **Why**
 当前每个子包独立 install、根目录没 lockfile，新人/agent 第一步就会卡。

@@ -48,12 +48,17 @@ packages:
 
 **根 `package.json`**
 
-在 `scripts` 块加一条：
+在 `scripts` 块加一条 `bootstrap`，并加 `pnpm.overrides` 锁住 vivo 包链版本（详见下方"已知风险与缓解 / 风险 3"）：
 
 ```jsonc
 {
   "scripts": {
     "bootstrap": "pnpm install"
+  },
+  "pnpm": {
+    "overrides": {
+      "@vivo-minigame/cli-packager": "1.27.23"
+    }
   }
 }
 ```
@@ -89,7 +94,17 @@ pnpm 通常按子包独立摆放 native binding，但 install 完整跑通是最
 
 **缓解**：Verify 步骤里 `pnpm verify` 必须全绿（覆盖 test:game / test:pack / build）。
 
-**风险 3：本次改动一次性删除三个旧 lockfile，回退不便**
+**风险 3：vivo 包链 registry 版本不一致，删 lockfile 后重新解析装不上**
+
+`@vivo-minigame/cli` 链路在 npm registry 上发布不一致：`cli-packager@1.27.23` 声明 `cli-server@^1.27.36`，但 registry 上 `cli-server` 最新只到 1.27.15。旧子包 lockfile 把这个不一致冻结在 `cli-packager@1.27.23 / cli-server@1.27.15` 的可工作解上；删掉 lockfile 重新解析时，pnpm 会按 `^1.27.23` 选 `cli-packager@1.27.36`，进而要求装不存在的 `cli-server@^1.27.36`，失败。
+
+**缓解**：根 `package.json` 加 `pnpm.overrides` 把 `@vivo-minigame/cli-packager` 锁回 `1.27.23`，让 pnpm 在解析时跳过最新版。
+
+**override 退出条件**：当 npm registry 上 `@vivo-minigame/cli-server` 发布出 `>=1.27.36` 时，这个 override 可以删除——届时跑 `pnpm install && pnpm verify` 必须仍然通过。在那之前不要动它。
+
+**附带漂移**：workspaces 切换后 `@vivo-minigame/cli-shared-utils` 从旧子包 lockfile 的 `1.25.0` 漂移到 `1.27.36`（在 `^` 范围内）。已通过 `MINI_PACK_VIVO_FAKE_RPK=1 pnpm build games/difference-hunt --platform vivo` 验证产物正常；记录在此以便未来 vivo 回归时快速 bisect。
+
+**风险 4：本次改动一次性删除三个旧 lockfile，回退不便**
 
 **缓解**：本次改动作为单个 commit 提交，万一线上发现问题（比如某个开发者机器装不上），单 commit revert 即可恢复到当前状态。
 
