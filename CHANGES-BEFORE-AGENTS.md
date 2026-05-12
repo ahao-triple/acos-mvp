@@ -88,7 +88,16 @@ jobs:
 
 ## [P1] 3. `serverBaseUrl` 支持环境变量 fallback
 
-- [ ] 完成
+- [x] 完成
+
+落地走构建时 fallback（spec 里的 A 方案，与清单原文一致）：
+两个 `game.config.ts` 的 `serverBaseUrl` 改成
+`process.env.SERVER_BASE_URL || '<默认>'`，mini-pack 现有的
+`withProjectEnv → importDefault` 链已经把 `.env` 注入到求值期；
+模板把 `loaded.game.serverBaseUrl` 拼到三平台产物。
+`gonglian-fangxian/.env.example` 加了 SERVER_BASE_URL 注释；
+`difference-hunt/.env.example` 不存在，属 P2/5 范围。
+见 `docs/superpowers/specs/2026-05-12-p1-3-server-base-url-env-design.md`。
 
 **Why**
 当前 `game.config.ts` 里硬编码 `https://ks-games.xfyccm.cn/api`，
