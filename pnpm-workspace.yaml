@@ -1,0 +1,3 @@
+packages:
+  - mini-pack
+  - games/*/game

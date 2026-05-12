@@ -4,11 +4,17 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "bootstrap": "pnpm install",
     "build": "node scripts/build-game.mjs",
     "preflight": "node scripts/preflight.mjs",
     "smoke": "node scripts/smoke-douyin.mjs",
     "test:game": "pnpm --dir games/gonglian-fangxian/game test",
     "test:pack": "pnpm --dir mini-pack test",
     "verify": "pnpm test:game && pnpm test:pack && pnpm build games/gonglian-fangxian"
+  },
+  "pnpm": {
+    "overrides": {
+      "@vivo-minigame/cli-packager": "1.27.23"
+    }
   }
 }
