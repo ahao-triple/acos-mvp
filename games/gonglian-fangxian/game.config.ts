@@ -6,5 +6,5 @@ export default defineGameConfig({
   publicDir: 'game/public-pack',
   orientation: 'portrait',
   canvas: { width: 750, height: 1334 },
-  serverBaseUrl: 'https://ks-games.xfyccm.cn/api',
+  serverBaseUrl: process.env.SERVER_BASE_URL || 'https://ks-games.xfyccm.cn/api',
 });
