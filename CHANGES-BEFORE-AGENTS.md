@@ -169,7 +169,14 @@ gonglian-fangxian × {douyin, kuaishou} + difference-hunt ×
 
 ## [P2] 5. 给 `difference-hunt` 也加 `.env.example`
 
-- [ ] 完成
+- [x] 完成
+
+建了 `games/difference-hunt/.env.example`，含 DOUYIN/KUAISHOU 两套 env
+key + SERVER_BASE_URL 注释段，与 `gonglian-fangxian/.env.example` 对齐。
+vivo 不需要 env（materials.ts 全硬编码）所以未列。
+不补 preflight env 校验——build 内部 materials 校验已给清晰错误，
+preflight 重复造防御无价值。
+见 `docs/superpowers/specs/2026-05-12-p2-cleanup-design.md`。
 
 **Why**
 目前只有 `gonglian-fangxian` 有 `.env.example`，
@@ -189,7 +196,16 @@ gonglian-fangxian × {douyin, kuaishou} + difference-hunt ×
 
 ## [P2] 6. 选一个最轻量的 formatter（可选）
 
-- [ ] 完成（或主动决定不做）
+- [x] 完成 — 决定**刻意不引入**
+
+理由：MVP 阶段团队/代码量都小，引入 Biome/Prettier 的成本（config +
+全仓库 format + 修 diff 噪音 + CI lint step）超过收益。等团队/代码量
+上来再选 Biome（单二进制、零配置、与 mini-pack 的 esbuild 风格匹配）。
+
+写 AGENTS.md 时请抄入一句：
+> Repository intentionally has no linter/formatter; do not add one without discussion.
+
+见 `docs/superpowers/specs/2026-05-12-p2-cleanup-design.md`。
 
 **Why**
 目前无 ESLint / Prettier / Biome。MVP 阶段没关系，
