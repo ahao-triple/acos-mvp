@@ -130,7 +130,16 @@ jobs:
 
 ## [P1] 4. 拆分 `verify` 与 `verify:full`
 
-- [ ] 完成
+- [x] 完成
+
+落地用 `scripts/verify-full.mjs` 自动推导矩阵（A 方案，非清单原文的
+inline 长串），与现有 `scripts/*.mjs` 风格一致；当前 5 组：
+gonglian-fangxian × {douyin, kuaishou} + difference-hunt ×
+{douyin, kuaishou, vivo}。vivo 组默认带 `MINI_PACK_VIVO_FAKE_RPK=1`
+绕过 vivo CLI 真实 rpk 打包；任一失败立即停 + 清晰报告
+"<游戏> × <平台>"。`verify` 字段未动。CI 不引入 verify:full
+（需要 secrets，未来再说）。
+见 `docs/superpowers/specs/2026-05-12-p1-4-verify-full-design.md`。
 
 **Why**
 现在 `pnpm verify` 只 build 一个游戏 × 一个平台（gonglian-fangxian × douyin）。
