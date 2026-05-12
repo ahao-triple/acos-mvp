@@ -73,8 +73,8 @@ for (const gameName of fs.readdirSync(gamesDir).sort()) {
 console.log(`[verify:full] 矩阵：${matrix.map((m) => `${m.gameName}×${m.platform}`).join(', ')}`);
 
 // 2. test:game / test:pack
-runOrExit('pnpm', ['test:game'], 'test:game', {});
-runOrExit('pnpm', ['test:pack'], 'test:pack', {});
+runOrExit('pnpm', ['test:game'], 'test:game', process.env);
+runOrExit('pnpm', ['test:pack'], 'test:pack', process.env);
 
 // 3. 矩阵 build
 for (const { gameName, platform } of matrix) {
