@@ -1,17 +1,18 @@
-import type { GameController, AppViewState } from '../app/controller';
+import type { AppAction, GameController, AppViewState } from '../app/controller';
 import type { Board, BoardCell, SessionEvent } from '../core/types';
 import { impactForClearStep, impactForWinFinale, type ImpactDescriptor, type ImpactEvent } from '../feedback/impact';
 import { clamp01, easeOutCubic } from './animation';
 import { drawBriefingScreen } from './briefingScreen';
 import { EffectsModel, type FloatingText, type Particle } from './effects';
-import { BOARD_CELL_SIZE, BOARD_GAP, BOARD_START_X, BOARD_START_Y, cellAt, drawGameScreen } from './gameScreen';
+import { BOARD_CELL_SIZE, BOARD_COLS, BOARD_GAP, BOARD_ROWS, BOARD_START_X, BOARD_START_Y, cellAt, drawGameScreen } from './gameScreen';
 import { drawLevelsScreen } from './levelsScreen';
 import { drawMenuScreen, drawSuppliesScreen } from './menuScreen';
-import { drawAdConfirmModal, drawLostResult, drawPausedResult, drawWinResult } from './resultScreen';
+import { drawLoadingScreen } from './loadingScreen';
+import { drawLostResult, drawPausedResult, drawWinResult } from './resultScreen';
 import { coverRect, fitLogicalCanvas, LOGICAL_HEIGHT, LOGICAL_WIDTH, toLogicalPoint, type CanvasFit } from './scaler';
 import { pieceColors } from './theme';
 import { nowMs } from './time';
-import { actionKey, drawButton, drawPanel, drawText, roundRect, type HitArea, type PressedButton, type UiRenderContext } from './uiPrimitives';
+import { actionKey, drawAdButton, drawButton, drawPanel, drawText, roundRect, type HitArea, type PressedButton, type UiRenderContext } from './uiPrimitives';
 import { VisualBoardModel } from './visualBoard';
 
 interface BoardPresentation {
@@ -43,7 +44,18 @@ interface ResultReveal {
   startedMs: number;
 }
 
-const VICTORY_FINALE_MS = 900;
+interface DragState {
+  row: number;
+  col: number;
+  startX: number;
+  startY: number;
+  pointerId: number | null;
+  consumed: boolean;
+}
+
+const VICTORY_FINALE_MS = 700;
+// 滑动触发阈值：超过单元格 40% 即视为方向手势（约 25px）
+const DRAG_THRESHOLD_PX = BOARD_CELL_SIZE * 0.4;
 
 export class CanvasRenderer {
   private readonly ctx: CanvasRenderingContext2D;
@@ -68,6 +80,13 @@ export class CanvasRenderer {
   private screenShake: ScreenShake | null = null;
   private shakeSeed = 0;
   private resultReveal: ResultReveal | null = null;
+  private dragState: DragState | null = null;
+  private readonly startedAtMs = nowMs();
+  private readonly enableBootLoading = !(
+    typeof process !== 'undefined' &&
+    process?.env &&
+    (process.env.VITEST === 'true' || process.env.NODE_ENV === 'test')
+  );
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -80,7 +99,16 @@ export class CanvasRenderer {
     this.ctx = ctx;
     if (typeof this.canvas.addEventListener === 'function') {
       this.canvas.addEventListener('pointerdown', (event) => {
-        void this.handlePointer(event);
+        void this.handlePointerDown(event);
+      });
+      this.canvas.addEventListener('pointermove', (event) => {
+        void this.handlePointerMove(event);
+      });
+      this.canvas.addEventListener('pointerup', (event) => {
+        this.handlePointerUp(event);
+      });
+      this.canvas.addEventListener('pointercancel', (event) => {
+        this.handlePointerUp(event);
       });
     }
   }
@@ -99,6 +127,7 @@ export class CanvasRenderer {
   render(): void {
     const currentTimeMs = nowMs();
     const view = this.controller.getViewState();
+    const isLoading = this.enableBootLoading && currentTimeMs - this.startedAtMs < 1500;
     this.trackViewTiming(view, currentTimeMs);
     this.hitAreas = [];
 
@@ -117,7 +146,9 @@ export class CanvasRenderer {
       this.visualBoard.clearFinaleBlocks();
     }
 
-    if (view.screen === 'menu') {
+    if (isLoading) {
+      drawLoadingScreen(this.ui(), currentTimeMs - this.startedAtMs);
+    } else if (view.screen === 'menu') {
       drawMenuScreen(this.ui(), view);
     } else if (view.screen === 'levels') {
       drawLevelsScreen(this.ui(), view);
@@ -126,7 +157,7 @@ export class CanvasRenderer {
     } else if (view.screen === 'supplies') {
       drawSuppliesScreen(this.ui(), view);
     } else if (view.screen === 'settings') {
-      this.drawSettings(view);
+      this.drawSettings(view, view.session?.status === 'playing');
     } else if (view.screen === 'playing' || view.screen === 'paused' || view.screen === 'won' || view.screen === 'lost') {
       drawGameScreen({
         ui: view.screen === 'playing' ? this.ui() : this.nonInteractiveUi(),
@@ -150,11 +181,6 @@ export class CanvasRenderer {
 
     if (view.feedback) {
       this.drawToast(view.feedback, currentTimeMs);
-    }
-
-    if (view.adPrompt) {
-      this.hitAreas = [];
-      drawAdConfirmModal(this.ui(), view.adPrompt);
     }
 
     this.ctx.restore();
@@ -193,35 +219,126 @@ export class CanvasRenderer {
     }
   }
 
-  private async handlePointer(event: PointerEvent | MiniGamePointerEvent): Promise<void> {
-    const clientPoint = readClientPoint(event);
-    if (!clientPoint) {
+  private async handlePointerDown(event: PointerEvent | MiniGamePointerEvent): Promise<void> {
+    const point = this.eventToLogicalPoint(event);
+    if (!point) {
       return;
     }
 
-    const bounds = typeof this.canvas.getBoundingClientRect === 'function'
-      ? this.canvas.getBoundingClientRect()
-      : { left: 0, top: 0 };
-    const point = toLogicalPoint(clientPoint.clientX - bounds.left, clientPoint.clientY - bounds.top, this.fit);
     const area = [...this.hitAreas].reverse().find((candidate) => point.x >= candidate.x && point.x <= candidate.x + candidate.width && point.y >= candidate.y && point.y <= candidate.y + candidate.height);
     if (area) {
+      this.dragState = null;
+      if (this.shouldLockAction(area.action)) {
+        return;
+      }
       this.pressedButton = { key: actionKey(area.action), untilMs: nowMs() + 240 };
       await this.controller.dispatch(area.action);
       return;
     }
 
     if (this.controller.getViewState().screen !== 'playing') {
+      this.dragState = null;
       return;
     }
 
     const cell = cellAt(point.x, point.y);
-    if (cell) {
-      const currentTimeMs = nowMs();
-      if (this.visualBoard.isBusy(currentTimeMs) || this.presentation) {
-        return;
-      }
-      await this.controller.dispatch({ type: 'tapCell', position: cell });
+    if (!cell) {
+      this.dragState = null;
+      return;
     }
+
+    const currentTimeMs = nowMs();
+    if (this.visualBoard.isBusy(currentTimeMs) || this.presentation) {
+      this.dragState = null;
+      return;
+    }
+
+    await this.controller.dispatch({ type: 'tapCell', position: cell });
+    this.dragState = {
+      row: cell.row,
+      col: cell.col,
+      startX: point.x,
+      startY: point.y,
+      pointerId: pointerIdOf(event),
+      consumed: false,
+    };
+  }
+
+  private async handlePointerMove(event: PointerEvent | MiniGamePointerEvent): Promise<void> {
+    const drag = this.dragState;
+    if (!drag || drag.consumed) {
+      return;
+    }
+    if (drag.pointerId !== null && pointerIdOf(event) !== drag.pointerId) {
+      return;
+    }
+
+    const point = this.eventToLogicalPoint(event);
+    if (!point) {
+      return;
+    }
+
+    const dx = point.x - drag.startX;
+    const dy = point.y - drag.startY;
+    const absDx = Math.abs(dx);
+    const absDy = Math.abs(dy);
+    if (Math.max(absDx, absDy) < DRAG_THRESHOLD_PX) {
+      return;
+    }
+
+    const target: { row: number; col: number } = absDx >= absDy
+      ? { row: drag.row, col: drag.col + (dx > 0 ? 1 : -1) }
+      : { row: drag.row + (dy > 0 ? 1 : -1), col: drag.col };
+
+    drag.consumed = true;
+    if (target.row < 0 || target.col < 0 || target.row >= BOARD_ROWS || target.col >= BOARD_COLS) {
+      return;
+    }
+
+    const view = this.controller.getViewState();
+    const selected = view.session?.selectedCell;
+    if (!selected || selected.row !== drag.row || selected.col !== drag.col) {
+      return;
+    }
+
+    const currentTimeMs = nowMs();
+    if (this.visualBoard.isBusy(currentTimeMs) || this.presentation) {
+      return;
+    }
+
+    await this.controller.dispatch({ type: 'tapCell', position: target });
+  }
+
+  private handlePointerUp(event: PointerEvent | MiniGamePointerEvent): void {
+    const drag = this.dragState;
+    if (!drag) {
+      return;
+    }
+    if (drag.pointerId !== null && pointerIdOf(event) !== drag.pointerId) {
+      return;
+    }
+    this.dragState = null;
+  }
+
+  private shouldLockAction(action: AppAction): boolean {
+    if (action.type !== 'usePowerUp') {
+      return false;
+    }
+    if (this.controller.getViewState().screen !== 'playing') {
+      return false;
+    }
+    return this.visualBoard.isBusy(nowMs()) || this.presentation !== null;
+  }
+
+  private eventToLogicalPoint(event: PointerEvent | MiniGamePointerEvent): { x: number; y: number } | null {
+    const clientPoint = readClientPoint(event);
+    if (!clientPoint) {
+      return null;
+    }
+    const bounds = typeof this.canvas.getBoundingClientRect === 'function'
+      ? this.canvas.getBoundingClientRect()
+      : { left: 0, top: 0 };
+    return toLogicalPoint(clientPoint.clientX - bounds.left, clientPoint.clientY - bounds.top, this.fit);
   }
 
   private drawViewportBackground(view: AppViewState, nowMs: number): void {
@@ -268,12 +385,21 @@ export class CanvasRenderer {
     this.drawParticles(this.effects.backgroundParticles(LOGICAL_WIDTH, LOGICAL_HEIGHT, nowMs, 18));
   }
 
-  private drawSettings(view: AppViewState): void {
-    this.drawTitle('设置', '音频开关会保存到本地');
-    drawPanel(this.ctx, 100, 300, 550, 500);
-    drawButton(this.ui(), 160, 380, 430, 86, `音效：${view.save.soundEnabled ? '开' : '关'}`, { type: 'toggleSound' });
-    drawButton(this.ui(), 160, 500, 430, 86, `音乐：${view.save.musicEnabled ? '开' : '关'}`, { type: 'toggleMusic' });
-    drawButton(this.ui(), 160, 620, 430, 86, '返回', { type: 'closeModal' });
+  private drawSettings(view: AppViewState, inGame: boolean): void {
+    this.ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    this.ctx.fillRect(0, 0, 750, 1334);
+    drawPanel(this.ctx, 80, 220, 590, 860);
+    drawText(this.ctx, '设置', 375, 282, 52, '#ffffff', 'center');
+    drawText(this.ctx, `用户编号 ${view.userId}`, 375, 340, 24, '#d1fae5', 'center');
+    drawButton(this.ui(), 596, 238, 50, 50, '关', { type: 'closeModal' });
+    drawButton(this.ui(), 150, 390, 450, 72, `音乐：${view.save.musicEnabled ? '开' : '关'}`, { type: 'toggleMusic' });
+    drawButton(this.ui(), 150, 482, 450, 72, `音效：${view.save.soundEnabled ? '开' : '关'}`, { type: 'toggleSound' });
+    drawButton(this.ui(), 150, 574, 450, 72, '返回主页', { type: 'home' });
+    drawAdButton(this.ui(), 150, 666, 450, 72, '赞助支持', { type: 'requestRewardedAd', request: { type: 'sponsor' } });
+    if (inGame) {
+      drawButton(this.ui(), 150, 758, 450, 72, '重新开始', { type: 'retry' });
+      drawAdButton(this.ui(), 150, 850, 450, 72, '跳过本关', { type: 'requestRewardedAd', request: { type: 'skipLevel' } });
+    }
   }
 
   private resultOverlayReady(view: AppViewState, nowMs: number): boolean {
@@ -493,6 +619,7 @@ export class CanvasRenderer {
 interface MiniGamePointerEvent {
   clientX?: number;
   clientY?: number;
+  pointerId?: number;
   touches?: MiniGameTouchPoint[];
   changedTouches?: MiniGameTouchPoint[];
 }
@@ -502,6 +629,19 @@ interface MiniGameTouchPoint {
   clientY?: number;
   x?: number;
   y?: number;
+  identifier?: number;
+}
+
+function pointerIdOf(event: PointerEvent | MiniGamePointerEvent): number | null {
+  if (typeof event.pointerId === 'number') {
+    return event.pointerId;
+  }
+  const miniGameEvent = event as MiniGamePointerEvent;
+  const touch = miniGameEvent.touches?.[0] ?? miniGameEvent.changedTouches?.[0];
+  if (touch && typeof touch.identifier === 'number') {
+    return touch.identifier;
+  }
+  return null;
 }
 
 function readClientPoint(event: PointerEvent | MiniGamePointerEvent): { clientX: number; clientY: number } | null {
@@ -535,18 +675,18 @@ function presentationSteps(events: SessionEvent[], finalBoard: Board): Presentat
     }));
 
   if (steps.length > 0 && boardSignature(steps[steps.length - 1].board) !== boardSignature(finalBoard)) {
-    steps.push({ type: 'refill', eventIndex: -1, board: finalBoard, durationMs: 420 });
+    steps.push({ type: 'refill', eventIndex: -1, board: finalBoard, durationMs: 280 });
   }
 
   return steps;
 }
 
 function defaultPhaseDuration(type: SessionEvent['type']): number {
-  if (type === 'swap') return 520;
-  if (type === 'clear') return 680;
-  if (type === 'fall') return 620;
-  if (type === 'refill') return 720;
-  return 420;
+  if (type === 'swap') return 360;
+  if (type === 'clear') return 460;
+  if (type === 'fall') return 420;
+  if (type === 'refill') return 480;
+  return 280;
 }
 
 function presentationKey(events: SessionEvent[], finalBoard: Board): string {

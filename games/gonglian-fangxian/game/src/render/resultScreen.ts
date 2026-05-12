@@ -1,5 +1,5 @@
 import { describeNodeReward, remainingTargetsText } from '../app/campaign';
-import type { AdPrompt, AppAction, AppViewState } from '../app/controller';
+import type { AppAction, AppViewState } from '../app/controller';
 import { drawAdButton, drawButton, drawPanel, drawText, type UiRenderContext } from './uiPrimitives';
 
 export function drawPausedResult(ui: UiRenderContext): void {
@@ -27,12 +27,14 @@ export function drawWinResult(ui: UiRenderContext, view: AppViewState): void {
     }
   }
   if (!summary?.doubled) {
-    drawButton(ui, 175, 670, 400, 70, '奖励翻倍', { type: 'requestRewardedAd', request: { type: 'doubleWinReward' } });
+    drawAdButton(ui, 175, 670, 400, 70, '奖励翻倍', { type: 'requestRewardedAd', request: { type: 'doubleWinReward' } });
   } else {
     drawText(ui.ctx, '翻倍奖励已领取', 375, 705, 26, '#d1fae5', 'center');
   }
-  drawButton(ui, 175, 770, 400, 68, '下一关', { type: 'nextLevel' });
-  drawButton(ui, 175, 850, 400, 68, '返回首页', { type: 'home' });
+  drawButton(ui, 175, 760, 400, 66, '下一关', { type: 'nextLevel' });
+  drawButton(ui, 175, 838, 400, 66, '重玩本关', { type: 'retry' });
+  drawButton(ui, 175, 916, 400, 66, '分享', { type: 'shareReward' });
+  drawButton(ui, 175, 994, 400, 66, '返回主页', { type: 'home' });
 }
 
 export function drawLostResult(ui: UiRenderContext, view: AppViewState): void {
@@ -43,22 +45,16 @@ export function drawLostResult(ui: UiRenderContext, view: AppViewState): void {
     drawText(ui.ctx, '未完成目标', 375, 455, 28, '#fef3c7', 'center');
     drawText(ui.ctx, remainingTargetsText(view.session), 375, 510, 24, '#d1fae5', 'center');
   }
-  drawButton(ui, 175, 610, 400, 70, '领取 5 步补给', { type: 'requestRewardedAd', request: { type: 'extraMovesAd' } });
-  drawButton(ui, 175, 705, 400, 68, '重玩', { type: 'retry' });
-  drawButton(ui, 175, 785, 400, 68, '返回首页', { type: 'home' });
-}
-
-export function drawAdConfirmModal(ui: UiRenderContext, prompt: AdPrompt): void {
-  drawOverlay(ui);
-  drawPanel(ui.ctx, 85, 420, 580, 360);
-  drawText(ui.ctx, prompt.title, 375, 515, 30, '#ffffff', 'center');
-  drawAdButton(ui, 125, 630, 235, 74, '确认观看', { type: 'confirmRewardedAd' });
-  drawButton(ui, 390, 630, 235, 74, '取消', { type: 'cancelRewardedAd' });
+  drawAdButton(ui, 175, 610, 400, 70, '复活继续', { type: 'requestRewardedAd', request: { type: 'extraMovesAd' } });
+  drawButton(ui, 175, 700, 400, 66, '重玩本关', { type: 'retry' });
+  drawButton(ui, 175, 778, 400, 66, '分享', { type: 'shareReward' });
+  drawButton(ui, 175, 856, 400, 66, '返回主页', { type: 'home' });
 }
 
 function drawModal(ui: UiRenderContext, title: string, buttons: Array<[string, AppAction]>): void {
   drawOverlay(ui);
   drawPanel(ui.ctx, 105, 350, 540, 470);
+  drawButton(ui, 585, 366, 44, 44, '关', { type: 'closeModal' });
   drawText(ui.ctx, title, 375, 430, 56, '#ffffff', 'center');
   buttons.forEach(([label, action], index) => {
     drawButton(ui, 175, 500 + index * 100, 400, 74, label, action);

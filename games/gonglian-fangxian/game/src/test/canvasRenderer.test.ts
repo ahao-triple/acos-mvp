@@ -1,12 +1,16 @@
 import { describe, expect, test, vi } from 'vitest';
 
 import { GameController, type WinSummary } from '../app/controller';
-import type { Board, GameSession } from '../core/types';
+import { levels } from '../config/levels';
+import { findMatches, swapCells } from '../core/board';
+import { applyMove, createSession } from '../core/session';
+import type { Board, GameSession, Position } from '../core/types';
 import type { PlatformAdapter } from '../platform/types';
 import { CanvasRenderer } from '../render/canvasRenderer';
 import { BOARD_CELL_SIZE, BOARD_GAP, BOARD_START_X, BOARD_START_Y, cellAt } from '../render/gameScreen';
 import { targetLabel, targetProgressText } from '../render/theme';
 import { drawAdButton, drawButton } from '../render/uiPrimitives';
+import type { VisualBoardModel, VisualTile } from '../render/visualBoard';
 
 describe('CanvasRenderer mini game canvas compatibility', () => {
   test('renders campaign home progress text', () => {
@@ -79,9 +83,15 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
     expect(text).toContain('奖励翻倍');
   });
 
-  test('win reward button opens a rewarded ad confirmation modal', async () => {
+  test('win reward button triggers rewarded video directly without a confirm modal', async () => {
     const { canvas, ctx } = createRecordingCanvas();
-    const controller = new GameController(mockPlatform());
+    let adCalls = 0;
+    const platform = mockPlatform();
+    platform.showRewardedAd = async () => {
+      adCalls += 1;
+      return { status: 'success' };
+    };
+    const controller = new GameController(platform);
     const renderer = new CanvasRenderer(canvas, controller);
     renderer.resize(750, 1334, 1);
 
@@ -100,9 +110,9 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
     renderer.render();
 
     const text = renderedText(ctx);
-    expect(text).toContain('观看视频让本关金币奖励翻倍');
-    expect(text).toContain('确认观看');
-    expect(text).toContain('取消');
+    expect(text).not.toContain('确认观看');
+    expect(adCalls).toBe(1);
+    expect(controller.getViewState().winSummary?.doubled).toBe(true);
   });
 
   test('renders legacy special pieces as ordinary pieces without special symbols', async () => {
@@ -447,7 +457,99 @@ describe('CanvasRenderer mini game canvas compatibility', () => {
     expect(label?.x).toBeGreaterThan((icon?.x ?? 0) + 38);
     expect(hitAreas).toHaveLength(1);
   });
+
+  test('every non-empty board cell has a tile after a presentation completes (fuzz)', () => {
+    const failures: Array<{ seed: number; move: number; missing: Position[] }> = [];
+
+    for (let seed = 1; seed <= 12; seed += 1) {
+      let currentNow = 0;
+      const now = vi.spyOn(performance, 'now').mockImplementation(() => currentNow);
+      const { canvas } = createRecordingCanvas();
+      const controller = new GameController(mockPlatform());
+      const renderer = new CanvasRenderer(canvas, controller);
+      renderer.resize(750, 1334, 1);
+
+      try {
+        let session = createSession(levels[0], seed);
+        forcePrivateSession(controller, session);
+
+        currentNow = 1500;
+        renderer.render();
+        currentNow = 3500;
+        renderer.render();
+
+        for (let move = 1; move <= 6; move += 1) {
+          const swap = findValidSwap(session.board);
+          if (!swap) break;
+
+          session = applyMove(session, swap.from, swap.to, seed * 1000 + move);
+          if (session.status !== 'playing') break;
+          forcePrivateSession(controller, session);
+
+          for (let step = 0; step < 200; step += 1) {
+            currentNow += 200;
+            renderer.render();
+          }
+          currentNow += 3000;
+          renderer.render();
+
+          const missing = findMissingTiles(renderer, session.board, currentNow);
+          if (missing.length > 0) {
+            failures.push({ seed, move, missing });
+            break;
+          }
+        }
+      } finally {
+        now.mockRestore();
+      }
+    }
+
+    expect(failures).toEqual([]);
+  });
 });
+
+function findValidSwap(board: Board): { from: Position; to: Position } | null {
+  for (let row = 0; row < board.length; row += 1) {
+    for (let col = 0; col < board[row].length; col += 1) {
+      for (const [dr, dc] of [[0, 1], [1, 0]] as const) {
+        const nextRow = row + dr;
+        const nextCol = col + dc;
+        if (nextRow >= board.length || nextCol >= board[nextRow]?.length) continue;
+        const a = board[row][col];
+        const b = board[nextRow][nextCol];
+        if ((a.kind !== 'normal' && a.kind !== 'special') || (b.kind !== 'normal' && b.kind !== 'special')) continue;
+        const swapped = swapCells(board, { row, col }, { row: nextRow, col: nextCol });
+        if (findMatches(swapped).length > 0) {
+          return { from: { row, col }, to: { row: nextRow, col: nextCol } };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+function findMissingTiles(renderer: CanvasRenderer, board: Board, nowMs: number): Position[] {
+  const visualBoard = (renderer as unknown as { visualBoard: VisualBoardModel }).visualBoard;
+  const tiles: VisualTile[] = visualBoard.tilesAt(nowMs);
+  const occupied = new Set<string>();
+  for (const tile of tiles) {
+    if (tile.removed) continue;
+    if (tile.alpha < 0.5) continue;
+    occupied.add(`${tile.row}:${tile.col}`);
+  }
+
+  const missing: Position[] = [];
+  for (let row = 0; row < board.length; row += 1) {
+    for (let col = 0; col < board[row].length; col += 1) {
+      const cell = board[row][col];
+      if (cell.kind === 'empty') continue;
+      if (!occupied.has(`${row}:${col}`)) {
+        missing.push({ row, col });
+      }
+    }
+  }
+  return missing;
+}
 
 function createMiniGameCanvas(): HTMLCanvasElement & { width: number; height: number } {
   return {
@@ -462,7 +564,7 @@ function createMiniGameCanvas(): HTMLCanvasElement & { width: number; height: nu
 }
 
 function handlePointer(renderer: CanvasRenderer, event: unknown): Promise<void> {
-  return (renderer as unknown as { handlePointer(event: unknown): Promise<void> }).handlePointer(event);
+  return (renderer as unknown as { handlePointerDown(event: unknown): Promise<void> }).handlePointerDown(event);
 }
 
 function consumeRendererImpact(renderer: CanvasRenderer): unknown {

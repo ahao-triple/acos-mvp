@@ -38,11 +38,11 @@ interface InternalTile {
   alpha: NumberTween;
 }
 
-const MOVE_MS = 520;
-const SPAWN_MS = 620;
-const REMOVE_MS = 520;
-const MIN_FALL_MS = 160;
-const FALL_PX_PER_MS = 0.36;
+const MOVE_MS = 360;
+const SPAWN_MS = 420;
+const REMOVE_MS = 360;
+const MIN_FALL_MS = 110;
+const FALL_PX_PER_MS = 0.5;
 
 export class VisualBoardModel {
   private readonly tiles = new Map<string, InternalTile>();
@@ -75,7 +75,7 @@ export class VisualBoardModel {
         const target = this.cellCenter(row, col);
         const existing = this.tiles.get(id);
 
-        if (!existing) {
+        if (!existing || existing.removed) {
           const specialSpawn = cell.kind === 'special';
           const spawn = specialSpawn ? { y: target.y, durationMs: SPAWN_MS } : this.spawnStart(row, col, target.y, stackedSpawnRowsByCol);
           const tile: InternalTile = {

@@ -190,7 +190,7 @@ export function refillBoard(board: Board, piecePool: PieceKind[], seed = Date.no
       }
 
       const kind = pickSafeKind(next, row, col, piecePool, random);
-      next[row][col] = createPiece(kind, `refill-${row}-${col}-${kind}-${Math.floor(random() * 1_000_000)}`);
+      next[row][col] = createPiece(kind, `refill-${row}-${col}-${kind}-${nextPieceSerial()}`);
     }
   }
 
@@ -274,7 +274,7 @@ function generateBoard(piecePool: PieceKind[], width: number, height: number, se
     for (let col = 0; col < width; col += 1) {
       const partial = [...board, cells];
       const kind = pickSafeKind(partial, row, col, piecePool, random);
-      cells.push(createPiece(kind, `${row}-${col}-${kind}-${Math.floor(random() * 1_000_000)}`));
+      cells.push(createPiece(kind, `${row}-${col}-${kind}-${nextPieceSerial()}`));
     }
 
     board.push(cells);
@@ -411,6 +411,13 @@ function shuffle<T>(items: T[], random: () => number): T[] {
     [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
   }
   return shuffled;
+}
+
+let pieceSerial = 0;
+
+function nextPieceSerial(): number {
+  pieceSerial = (pieceSerial + 1) >>> 0;
+  return pieceSerial;
 }
 
 function createSeededRandom(seed: number): () => number {

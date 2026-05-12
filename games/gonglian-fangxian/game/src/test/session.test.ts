@@ -1,7 +1,8 @@
 import { describe, expect, test } from 'vitest';
 import { levels } from '../config/levels';
+import { findMatches, swapCells } from '../core/board';
 import { applyMove, applyPowerUp, createSession, isLevelLost, isLevelWon } from '../core/session';
-import type { Board, GameSession, TargetConfig } from '../core/types';
+import type { Board, GameSession, Position, TargetConfig } from '../core/types';
 
 describe('level sessions', () => {
   test('starts level 1 with configured board size and moves', () => {
@@ -130,4 +131,68 @@ function piece(pieceKind: 'shield' | 'ammo' | 'radar' | 'medal' | 'wrench'): Boa
 
 function blocker(blockerKind: 'sandbag' | 'brokenDefense'): Board[number][number] {
   return { kind: 'blocker', blockerKind, durability: 1 };
+}
+
+describe('board fuzz', () => {
+  test('settled board never contains empty cells after a sequence of valid swaps', () => {
+    const failures: Array<{ seed: number; move: number; emptyAt: Position }> = [];
+
+    for (let seed = 1; seed <= 40; seed += 1) {
+      let session = createSession(levels[0], seed);
+      let firstEmpty = findEmpty(session.board);
+      if (firstEmpty) {
+        failures.push({ seed, move: 0, emptyAt: firstEmpty });
+        continue;
+      }
+
+      for (let move = 1; move <= 25; move += 1) {
+        const swap = findValidSwap(session.board);
+        if (!swap) break;
+
+        session = applyMove(session, swap.from, swap.to, seed * 1000 + move);
+        if (session.status !== 'playing') break;
+
+        const empty = findEmpty(session.board);
+        if (empty) {
+          failures.push({ seed, move, emptyAt: empty });
+          break;
+        }
+      }
+    }
+
+    expect(failures).toEqual([]);
+  });
+});
+
+function findEmpty(board: Board): Position | null {
+  for (let row = 0; row < board.length; row += 1) {
+    for (let col = 0; col < board[row].length; col += 1) {
+      if (board[row][col].kind === 'empty') {
+        return { row, col };
+      }
+    }
+  }
+  return null;
+}
+
+function findValidSwap(board: Board): { from: Position; to: Position } | null {
+  for (let row = 0; row < board.length; row += 1) {
+    for (let col = 0; col < board[row].length; col += 1) {
+      for (const [dr, dc] of [[0, 1], [1, 0]] as const) {
+        const nextRow = row + dr;
+        const nextCol = col + dc;
+        if (nextRow >= board.length || nextCol >= board[nextRow]?.length) continue;
+        const a = board[row][col];
+        const b = board[nextRow][nextCol];
+        if ((a.kind !== 'normal' && a.kind !== 'special') || (b.kind !== 'normal' && b.kind !== 'special')) {
+          continue;
+        }
+        const swapped = swapCells(board, { row, col }, { row: nextRow, col: nextCol });
+        if (findMatches(swapped).length > 0) {
+          return { from: { row, col }, to: { row: nextRow, col: nextCol } };
+        }
+      }
+    }
+  }
+  return null;
 }

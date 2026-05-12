@@ -3,7 +3,7 @@ import { POWER_UP_COIN_COSTS } from '../config/economy';
 import type { Board, BoardCell, PieceKind, Position } from '../core/types';
 import type { EffectsModel } from './effects';
 import { pieceColors, targetProgressText } from './theme';
-import { drawButton, drawPanel, drawText, roundRect, type UiRenderContext } from './uiPrimitives';
+import { drawAdButton, drawButton, drawPanel, drawText, roundRect, type UiRenderContext } from './uiPrimitives';
 import type { VisualBoardModel, VisualTile } from './visualBoard';
 
 export const BOARD_ROWS = 10;
@@ -34,7 +34,7 @@ export function drawGameScreen(context: GameScreenRenderContext, view: AppViewSt
   drawText(context.ui.ctx, `${level?.chapterTitle ?? '防线'}  第 ${session.levelId} 关`, 70, 88, 28, '#ffffff', 'left');
   drawText(context.ui.ctx, `步数 ${session.movesLeft}`, 70, 142, 30, '#fef3c7', 'left');
   drawText(context.ui.ctx, `金币 ${view.save.coins}`, 430, 88, 28, '#ffffff', 'left');
-  drawButton(context.ui, 570, 130, 110, 54, '暂停', { type: 'pause' });
+  drawButton(context.ui, 560, 130, 120, 54, '设置', { type: 'openSettings' });
   drawTargets(context.ui, session);
   context.handleVisualCue(view, context.nowMs);
   drawBoard(context, session);
@@ -72,7 +72,7 @@ function drawPowerUpButton(ui: UiRenderContext, x: number, y: number, width: num
     return;
   }
 
-  drawButton(ui, x, y, width, height, `${cost}币${name}`, action);
+  drawAdButton(ui, x, y, width, height, `${cost}币${name}`, action);
 }
 
 function drawBoard(context: GameScreenRenderContext, session: NonNullable<AppViewState['session']>): void {
