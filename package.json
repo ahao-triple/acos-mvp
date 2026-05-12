@@ -10,7 +10,8 @@
     "smoke": "node scripts/smoke-douyin.mjs",
     "test:game": "pnpm --dir games/gonglian-fangxian/game test",
     "test:pack": "pnpm --dir mini-pack test",
-    "verify": "pnpm test:game && pnpm test:pack && pnpm build games/gonglian-fangxian"
+    "verify": "pnpm test:game && pnpm test:pack && pnpm build games/gonglian-fangxian",
+    "verify:full": "node scripts/verify-full.mjs"
   },
   "pnpm": {
     "overrides": {
