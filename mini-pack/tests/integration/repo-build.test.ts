@@ -9,11 +9,14 @@ import { afterEach, describe, expect, test } from 'vitest';
 const repoRoot = fileURLToPath(new URL('../../../', import.meta.url));
 const douyinGameDir = path.join(repoRoot, 'games/gonglian-fangxian');
 const douyinOutputDir = path.join(douyinGameDir, 'channels/douyin/build');
+const kuaishouGameDir = path.join(repoRoot, 'games/gonglian-fangxian');
+const kuaishouOutputDir = path.join(kuaishouGameDir, 'channels/kuaishou/build');
 const vivoGameDir = path.join(repoRoot, 'games/difference-hunt');
 const vivoOutputDir = path.join(vivoGameDir, 'channels/vivo/build');
 
 afterEach(async () => {
   await fs.rm(douyinOutputDir, { force: true, recursive: true });
+  await fs.rm(kuaishouOutputDir, { force: true, recursive: true });
   await fs.rm(vivoOutputDir, { force: true, recursive: true });
 });
 
@@ -56,6 +59,48 @@ describe('repository game build command', () => {
     });
     expect(report.title).toEqual(expect.any(String));
     expect(report.title).not.toBe('');
+    expect(report.bundle.bytes).toBeGreaterThan(0);
+    expect(report.assets.count).toBeGreaterThan(0);
+  });
+
+  test('builds a Kuaishou package for gonglian-fangxian into channels/kuaishou/build', async () => {
+    const result = await runCommand(
+      ['pnpm', 'build', 'games/gonglian-fangxian', '--platform', 'kuaishou'],
+      repoRoot,
+    );
+
+    expect(result.exitCode).toBe(0);
+
+    await expect(fs.stat(path.join(kuaishouOutputDir, 'game.js'))).resolves.toBeTruthy();
+    await expect(fs.stat(path.join(kuaishouOutputDir, 'game.json'))).resolves.toBeTruthy();
+    await expect(fs.stat(path.join(kuaishouOutputDir, 'project.config.json'))).resolves.toBeTruthy();
+    await expect(fs.stat(path.join(kuaishouOutputDir, 'assets/audio/button.wav'))).resolves.toBeTruthy();
+
+    const gameJs = await fs.readFile(path.join(kuaishouOutputDir, 'game.js'), 'utf8');
+    expect(gameJs).not.toContain('import_meta.env');
+    expect(gameJs).toContain('var ks = root.ks || {};');
+    expect(gameJs).toMatch(/var rewardedAdUnitId = "[^"]*";/);
+
+    const gameJson = JSON.parse(await fs.readFile(path.join(kuaishouOutputDir, 'game.json'), 'utf8'));
+    expect(gameJson).toEqual({
+      deviceOrientation: 'portrait',
+      showStatusBar: false,
+    });
+    const projectConfig = JSON.parse(
+      await fs.readFile(path.join(kuaishouOutputDir, 'project.config.json'), 'utf8'),
+    );
+    expect(typeof projectConfig.appid).toBe('string');
+    expect(projectConfig.appid.length).toBeGreaterThan(0);
+    expect(projectConfig.projectname).toBe('gonglian-fangxian');
+    expect(projectConfig.setting).toEqual({ es6: true });
+
+    const report = JSON.parse(await fs.readFile(path.join(kuaishouOutputDir, 'build-report.json'), 'utf8'));
+    expect(report).toMatchObject({
+      tool: 'mini-pack',
+      platform: 'kuaishou',
+      outDir: 'channels/kuaishou/build',
+      bundle: { file: 'game.js' },
+    });
     expect(report.bundle.bytes).toBeGreaterThan(0);
     expect(report.assets.count).toBeGreaterThan(0);
   });
