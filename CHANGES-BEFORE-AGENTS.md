@@ -172,10 +172,15 @@ gonglian-fangxian × {douyin, kuaishou} + difference-hunt ×
 - [x] 完成
 
 建了 `games/difference-hunt/.env.example`，含 DOUYIN/KUAISHOU 两套 env
-key + SERVER_BASE_URL 注释段，与 `gonglian-fangxian/.env.example` 对齐。
-vivo 不需要 env（materials.ts 全硬编码）所以未列。
+key + SERVER_BASE_URL 注释段（注释段与 `gonglian-fangxian/.env.example`
+字面一致）。vivo 不需要 env（materials.ts 全硬编码）所以未列。
 不补 preflight env 校验——build 内部 materials 校验已给清晰错误，
 preflight 重复造防御无价值。
+
+注：`gonglian-fangxian/.env.example` 当前缺 KUAISHOU_* 两行（P1/3
+时期遗漏），属于已知 follow-up，写 AGENTS.md 时一并补；本次不
+越界改它。
+
 见 `docs/superpowers/specs/2026-05-12-p2-cleanup-design.md`。
 
 **Why**
