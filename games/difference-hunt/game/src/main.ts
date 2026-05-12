@@ -1,4 +1,5 @@
 import { GameController } from './app/controller';
+import { bootstrapVivoSession } from './app/vivoBootstrap';
 import { differenceHuntLevels } from './assets/levels';
 import { createMiniPackPlatformAdapter, type MiniPackGameApp, type MiniPackGameRuntime } from './platform/minipack';
 import { createWebPlatformAdapter } from './platform/web';
@@ -15,6 +16,9 @@ export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
   }
 
   const platform = runtime ? createMiniPackPlatformAdapter(runtime) : createWebPlatformAdapter();
+  if (runtime) {
+    void bootstrapVivoSession(runtime);
+  }
   const controller = new GameController({
     levels: differenceHuntLevels,
     storage: platform.storage,

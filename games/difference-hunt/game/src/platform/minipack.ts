@@ -12,6 +12,7 @@ export interface MiniPackGameRuntime {
   config?: {
     platform: string;
     serverBaseUrl: string;
+    pkgName?: string;
   };
   renderMode?: 'canvas' | 'webgl';
   storage: {

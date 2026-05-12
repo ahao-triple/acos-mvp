@@ -75,6 +75,7 @@ export interface GameRuntime {
 export interface RuntimeConfig {
   platform: PlatformName;
   serverBaseUrl: string;
+  pkgName?: string;
 }
 
 export interface RuntimeStorage {

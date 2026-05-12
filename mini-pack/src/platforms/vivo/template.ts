@@ -181,7 +181,11 @@ export function renderVivoGameJs(bundleCode: string, loaded?: LoadedGameConfig):
   var qg = root.qg || windowTarget.qg || {};
   var runtimeConfig = {
     platform: 'vivo',
-    serverBaseUrl: ${JSON.stringify(loaded?.game.serverBaseUrl ?? '')}
+    serverBaseUrl: ${JSON.stringify(loaded?.game.serverBaseUrl ?? '')}${
+    loaded?.vivoMaterials?.packageName
+      ? `,\n    pkgName: ${JSON.stringify(loaded.vivoMaterials.packageName)}`
+      : ''
+  }
   };
   var bootDebugVersion = '2026-05-11-vivo-webgl-1';
   var bootStep = 0;

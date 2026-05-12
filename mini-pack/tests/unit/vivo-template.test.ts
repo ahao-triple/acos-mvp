@@ -123,6 +123,20 @@ describe('renderVivoGameJs (touch event shim removed)', () => {
     expect(js).toContain("renderMode: 'webgl'");
   });
 
+  it('injects vivoMaterials.packageName into runtimeConfig.pkgName for /vivo/sessions', () => {
+    const loaded = makeLoaded();
+    const withPkg = renderVivoGameJs(
+      'var __MiniPackGameBundle = { createGame: () => ({ start(){} }) };',
+      loaded,
+    );
+    expect(withPkg).toMatch(/pkgName:\s*"com\.example\.app"/);
+    expect(withPkg).toContain("platform: 'vivo'");
+  });
+
+  it('omits pkgName when no vivoMaterials are loaded (build script callable)', () => {
+    expect(js).not.toContain('pkgName');
+  });
+
   it('does not include temporary vivo diagnostics', () => {
     expect(js).not.toContain('MINI-PACK VIVO DIAGNOSTICS');
     expect(js).not.toContain('miniPackDiag');
