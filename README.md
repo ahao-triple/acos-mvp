@@ -56,7 +56,7 @@ games/<game-project>/
 
 约定：
 
-- `game.config.ts` 是游戏共性配置（`title` / `entry` / `publicDir` / `orientation` / `canvas`）；不再承载 `platform` / `outDir` / 渠道字段。
+- `game.config.ts` 是游戏共性配置（`title` / `entry` / `publicDir` / `orientation` / `canvas` / `serverBaseUrl`）；不再承载 `platform` / `outDir` / 渠道字段。
 - `channels/<platform>/materials.ts` 是渠道字段（抖音/快手 `appid`、`projectName`、`rewardedAdUnitId`、`iconPath`；vivo `packageName`、`iconPath`、`versionName`、`versionCode`）。
 - `channels/<platform>/icon.png` 是渠道图标（必填；抖音/快手用于后台提交，vivo 写入构建产物）。
 - `channels/<platform>/build/` 是打包产物目录，已 `.gitignore`。
@@ -119,6 +119,54 @@ pnpm build games/<game-project> --platform vivo
 - `KUAISHOU_APPID`：正式快手小游戏 appid；不设置时默认使用开发测试 appid `kwai_game_test_appid`。
 - `KUAISHOU_REWARDED_AD_UNIT_ID`：快手激励视频广告位 id；不设置时广告能力降级。
 - 快手运行时桥接已接入 `ks.createCanvas`、触摸、存储、音频、激励视频、震动、添加桌面（`ks.checkShortcut` / `ks.addShortcut`）和设为常用（`ks.checkCommonUse` / `ks.addCommonUse`）。
+
+## Server Login And Remote Config
+
+游戏服地址统一写在每个游戏的 `game.config.ts`：
+
+```ts
+serverBaseUrl: 'https://ks-games.xfyccm.cn/api'
+```
+
+`mini-pack` 会把 `serverBaseUrl` 和平台名注入运行时：
+
+- `runtime.config.platform`：`douyin` / `kuaishou` / `vivo`
+- `runtime.config.serverBaseUrl`：游戏服务器地址
+- `runtime.auth.login()`：调用当前平台登录，返回 `{ platform, code }`
+- `runtime.net.request()`：调用当前平台网络请求 API
+
+`games/gonglian-fangxian/game/src/app/remoteConfig.ts` 目前实现的游戏服协议：
+
+```text
+POST https://ks-games.xfyccm.cn/api/game/session
+Content-Type: application/json
+
+{
+  "gameId": "gonglian-fangxian",
+  "channel": "kuaishou",
+  "platform": "kuaishou",
+  "code": "<platform-login-code>"
+}
+```
+
+服务端响应可以直接返回配置，或包在 `config` 字段里：
+
+```json
+{
+  "config": {
+    "adPolicy": {
+      "enabled": true,
+      "trigger": "level_start",
+      "minLevel": 3,
+      "cooldownSeconds": 180,
+      "maxPerSession": 2,
+      "request": { "type": "extraMovesAd" }
+    }
+  }
+}
+```
+
+当前实现按合规方式处理广告策略：远程配置命中时自动弹出广告确认层；用户确认后才调用平台激励视频。服务端未配置或请求失败时走本地默认配置，不影响游戏启动。
 
 不在本 MVP 范围内的平台：
 

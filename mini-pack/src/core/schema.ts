@@ -10,6 +10,7 @@ export const gameConfigSchema = z
       width: z.number().positive('canvas.width must be greater than 0'),
       height: z.number().positive('canvas.height must be greater than 0'),
     }),
+    serverBaseUrl: z.string().trim().optional(),
   })
   .strict();
 

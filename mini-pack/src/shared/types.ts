@@ -61,12 +61,20 @@ export interface GameApp {
 
 export interface GameRuntime {
   canvas: HTMLCanvasElement;
+  config: RuntimeConfig;
   storage: RuntimeStorage;
   audio: RuntimeAudio;
+  auth: RuntimeAuth;
+  net: RuntimeNet;
   ads: RuntimeAds;
   haptics?: RuntimeHaptics;
   rewards: RuntimeRewards;
   logger: RuntimeLogger;
+}
+
+export interface RuntimeConfig {
+  platform: PlatformName;
+  serverBaseUrl: string;
 }
 
 export interface RuntimeStorage {
@@ -80,6 +88,32 @@ export interface RuntimeAudio {
   playMusic(name: string, loop: boolean): Promise<void>;
   stopMusic(): void;
   setMuted(muted: boolean): void;
+}
+
+export interface RuntimeAuth {
+  login(): Promise<RuntimeLoginResult>;
+}
+
+export interface RuntimeLoginResult {
+  platform: PlatformName;
+  code: string;
+}
+
+export interface RuntimeNet {
+  request(options: RuntimeRequestOptions): Promise<RuntimeResponse>;
+}
+
+export interface RuntimeRequestOptions {
+  url: string;
+  method?: 'GET' | 'POST';
+  data?: unknown;
+  headers?: Record<string, string>;
+}
+
+export interface RuntimeResponse {
+  status: number;
+  data: unknown;
+  headers?: Record<string, string>;
 }
 
 export interface RuntimeAds {

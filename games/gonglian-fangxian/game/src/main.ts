@@ -1,5 +1,6 @@
 import { GameController } from './app/controller';
 import { SoundEngine } from './audio/soundEngine';
+import { loginAndLoadRemoteConfig } from './app/remoteConfig';
 import { CanvasRenderer } from './render/canvasRenderer';
 import { canUseDouyinAdapter, createDouyinPlatformAdapter } from './platform/douyin';
 import { createMiniPackPlatformAdapter, createMiniPackSoundOptions, type MiniPackGameApp, type MiniPackGameRuntime } from './platform/minipack';
@@ -71,6 +72,13 @@ export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
       }
       soundEngine.preloadInitialAssets();
       renderer = new CanvasRenderer(canvas, controller);
+      void loginAndLoadRemoteConfig(platform, {
+        serverBaseUrl: runtime?.config?.serverBaseUrl ?? '',
+        gameId: 'gonglian-fangxian',
+        channel: runtime?.config?.platform ?? platform.name,
+      }).then((config) => {
+        controller.applyRemoteConfig(config);
+      });
       resize();
       frame();
     },

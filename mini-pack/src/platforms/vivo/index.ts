@@ -59,7 +59,7 @@ export const vivoPlatformBuilder: PlatformBuilder = {
     });
 
     const bundleCode = await fs.readFile(tempBundle, 'utf8');
-    const finalGameJs = renderVivoGameJs(bundleCode);
+    const finalGameJs = renderVivoGameJs(bundleCode, loaded);
     const gameJsPath = path.join(srcDir, 'game.js');
     await fs.writeFile(gameJsPath, finalGameJs);
     await fs.remove(tempDir);

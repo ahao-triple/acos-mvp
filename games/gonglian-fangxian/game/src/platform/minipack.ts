@@ -12,6 +12,10 @@ export interface MiniPackGameApp {
 
 export interface MiniPackGameRuntime {
   canvas: HTMLCanvasElement;
+  config?: {
+    platform: string;
+    serverBaseUrl: string;
+  };
   storage: {
     getString(key: string): string | null;
     setString(key: string, value: string): void;
@@ -26,6 +30,17 @@ export interface MiniPackGameRuntime {
   ads: {
     isRewardedVideoReady(slot: MiniPackRewardedVideoSlot): boolean;
     showRewardedVideo(slot: MiniPackRewardedVideoSlot): Promise<{ completed: boolean }>;
+  };
+  auth: {
+    login(): Promise<{ platform: string; code: string }>;
+  };
+  net: {
+    request(options: {
+      url: string;
+      method?: 'GET' | 'POST';
+      data?: unknown;
+      headers?: Record<string, string>;
+    }): Promise<{ status: number; data: unknown; headers?: Record<string, string> }>;
   };
   haptics?: {
     trigger(kind: HapticKind): void;
@@ -58,6 +73,12 @@ export function createMiniPackPlatformAdapter(runtime: MiniPackGameRuntime): Pla
       removeItem(key: string) {
         runtime.storage.remove(key);
       },
+    },
+    login() {
+      return runtime.auth.login();
+    },
+    request(options) {
+      return runtime.net.request(options);
     },
     async showRewardedAd(reason): Promise<PlatformResult> {
       const slot = reason === 'extra_moves' ? 'add-steps' : 'claim-reward';

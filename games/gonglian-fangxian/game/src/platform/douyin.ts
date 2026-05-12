@@ -7,6 +7,18 @@ interface DouyinRewardedVideoAd {
 }
 
 interface DouyinApi {
+  login?: (options: {
+    success?: (result: { code?: string; errMsg?: string }) => void;
+    fail?: (error: { errMsg?: string }) => void;
+  }) => void;
+  request?: (options: {
+    url: string;
+    method?: 'GET' | 'POST';
+    data?: unknown;
+    header?: Record<string, string>;
+    success?: (result: { statusCode?: number; data?: unknown; header?: Record<string, string>; headers?: Record<string, string> }) => void;
+    fail?: (error: { errMsg?: string }) => void;
+  }) => void;
   createRewardedVideoAd?: (options: { adUnitId: string }) => DouyinRewardedVideoAd;
   canIUse?: (schema: string) => boolean;
   addShortcut?: DouyinShortcutApi;
@@ -72,6 +84,42 @@ export function createDouyinPlatformAdapter(adUnitId: string): PlatformAdapter {
       removeItem(key: string) {
         tt?.removeStorageSync?.(key);
       },
+    },
+    async login() {
+      if (!tt?.login) {
+        throw new Error('Douyin login API is unavailable.');
+      }
+      return new Promise((resolve, reject) => {
+        tt.login?.({
+          success: (result) => {
+            if (!result.code) {
+              reject(new Error('Douyin login did not return a code.'));
+              return;
+            }
+            resolve({ platform: 'douyin', code: result.code });
+          },
+          fail: (error) => reject(new Error(error.errMsg ?? 'Douyin login failed.')),
+        });
+      });
+    },
+    async request(options) {
+      if (!tt?.request) {
+        throw new Error('Douyin request API is unavailable.');
+      }
+      return new Promise((resolve, reject) => {
+        tt.request?.({
+          url: options.url,
+          method: options.method ?? 'GET',
+          data: options.data,
+          header: options.headers,
+          success: (result) => resolve({
+            status: result.statusCode ?? 0,
+            data: result.data ?? null,
+            headers: result.header ?? result.headers ?? {},
+          }),
+          fail: (error) => reject(new Error(error.errMsg ?? 'Douyin request failed.')),
+        });
+      });
     },
     async showRewardedAd(): Promise<PlatformResult> {
       if (!tt?.createRewardedVideoAd) {

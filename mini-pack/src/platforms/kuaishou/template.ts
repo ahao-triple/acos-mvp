@@ -53,6 +53,10 @@ ${bundleCode}
   var root = typeof globalThis !== 'undefined' ? globalThis : this;
   var ks = root.ks || {};
   var rewardedAdUnitId = ${rewardedAdUnitId};
+  var runtimeConfig = {
+    platform: 'kuaishou',
+    serverBaseUrl: ${JSON.stringify(loaded.game.serverBaseUrl ?? '')}
+  };
 
   function createCanvas() {
     var canvas;
@@ -379,6 +383,71 @@ ${bundleCode}
     }
   }
 
+  var auth = {
+    login: function () {
+      return new Promise(function (resolve, reject) {
+        if (typeof ks.login !== 'function') {
+          reject(new Error('Kuaishou login API is unavailable.'));
+          return;
+        }
+
+        try {
+          ks.login({
+            success: function (result) {
+              var code = result && typeof result.code === 'string' ? result.code : '';
+              if (!code) {
+                reject(new Error('Kuaishou login did not return a code.'));
+                return;
+              }
+              resolve({ platform: 'kuaishou', code: code });
+            },
+            fail: function (error) {
+              reject(error || new Error('Kuaishou login failed.'));
+            }
+          });
+        } catch (error) {
+          reject(error);
+        }
+      });
+    }
+  };
+
+  var net = {
+    request: function (options) {
+      return new Promise(function (resolve, reject) {
+        if (!options || !options.url) {
+          reject(new Error('Request url is required.'));
+          return;
+        }
+        if (typeof ks.request !== 'function') {
+          reject(new Error('Kuaishou request API is unavailable.'));
+          return;
+        }
+
+        try {
+          ks.request({
+            url: options.url,
+            method: options.method || 'GET',
+            data: options.data,
+            header: options.headers || {},
+            success: function (result) {
+              resolve({
+                status: result && typeof result.statusCode === 'number' ? result.statusCode : 0,
+                data: result ? result.data : null,
+                headers: result ? result.header || result.headers || {} : {}
+              });
+            },
+            fail: function (error) {
+              reject(error || new Error('Kuaishou request failed.'));
+            }
+          });
+        } catch (error) {
+          reject(error);
+        }
+      });
+    }
+  };
+
   function callKuaishouApi(name) {
     return new Promise(function (resolve) {
       var api = ks && ks[name];
@@ -582,8 +651,11 @@ ${bundleCode}
 
   var app = createGame({
     canvas: createCanvas(),
+    config: runtimeConfig,
     storage: storage,
     audio: audio,
+    auth: auth,
+    net: net,
     ads: ads,
     rewards: rewards,
     haptics: haptics,

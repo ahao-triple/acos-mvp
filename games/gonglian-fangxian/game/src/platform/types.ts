@@ -12,9 +12,29 @@ export interface LaunchContext {
   isSidebarEntry: boolean;
 }
 
+export interface PlatformLoginResult {
+  platform: string;
+  code: string;
+}
+
+export interface PlatformRequestOptions {
+  url: string;
+  method?: 'GET' | 'POST';
+  data?: unknown;
+  headers?: Record<string, string>;
+}
+
+export interface PlatformResponse {
+  status: number;
+  data: unknown;
+  headers?: Record<string, string>;
+}
+
 export interface PlatformAdapter {
   name: string;
   storage: StorageLike;
+  login(): Promise<PlatformLoginResult>;
+  request(options: PlatformRequestOptions): Promise<PlatformResponse>;
   showRewardedAd(reason: 'extra_moves' | 'reward'): Promise<PlatformResult>;
   addDesktopShortcut(): Promise<PlatformResult>;
   showFavoriteGuide(): Promise<PlatformResult>;

@@ -16,6 +16,21 @@ export function createWebPlatformAdapter(): PlatformAdapter {
         globalThis.localStorage?.removeItem(key);
       },
     },
+    async login() {
+      return { platform: 'web', code: 'web-dev' };
+    },
+    async request(options) {
+      const response = await fetch(options.url, {
+        method: options.method ?? 'GET',
+        headers: options.headers,
+        body: options.data === undefined ? undefined : JSON.stringify(options.data),
+      });
+      return {
+        status: response.status,
+        data: await response.json().catch(() => null),
+        headers: Object.fromEntries(response.headers.entries()),
+      };
+    },
     triggerHaptic() {
       // Browsers do not expose a consistent short haptic API.
     },

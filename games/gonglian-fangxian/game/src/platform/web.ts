@@ -4,6 +4,21 @@ export function createWebPlatformAdapter(): PlatformAdapter {
   return {
     name: 'web',
     storage: getWebStorage(),
+    async login() {
+      return { platform: 'web', code: 'web-dev' };
+    },
+    async request(options) {
+      const response = await fetch(options.url, {
+        method: options.method ?? 'GET',
+        headers: options.headers,
+        body: options.data === undefined ? undefined : JSON.stringify(options.data),
+      });
+      return {
+        status: response.status,
+        data: await response.json().catch(() => null),
+        headers: Object.fromEntries(response.headers.entries()),
+      };
+    },
     async showRewardedAd(): Promise<PlatformResult> {
       return { status: 'unsupported', message: '当前环境暂不支持广告，稍后再试。' };
     },

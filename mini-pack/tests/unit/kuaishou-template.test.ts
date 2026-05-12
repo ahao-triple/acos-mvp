@@ -145,9 +145,73 @@ describe('renderKuaishouGameJs', () => {
 
     await expect(runtime.rewards.requestAddFavorite()).resolves.toBe(true);
   });
+
+  it('exposes platform login through runtime.auth', async () => {
+    const runtime = renderRuntime({
+      login(options: { success(result: { code: string }): void }) {
+        options.success({ code: 'ks-login-code' });
+      },
+    });
+
+    await expect(runtime.auth.login()).resolves.toEqual({
+      platform: 'kuaishou',
+      code: 'ks-login-code',
+    });
+  });
+
+  it('exposes platform request through runtime.net', async () => {
+    const runtime = renderRuntime({
+      request(options: {
+        url: string;
+        method: string;
+        data: unknown;
+        header: Record<string, string>;
+        success(result: { statusCode: number; data: unknown }): void;
+      }) {
+        options.success({
+          statusCode: 200,
+          data: {
+            ok: true,
+            url: options.url,
+            method: options.method,
+            body: options.data,
+            contentType: options.header['Content-Type'],
+          },
+        });
+      },
+    });
+
+    await expect(runtime.net.request({
+      url: 'https://api.example.test/auth/login',
+      method: 'POST',
+      data: { code: 'ks-login-code' },
+      headers: { 'Content-Type': 'application/json' },
+    })).resolves.toEqual({
+      status: 200,
+      data: {
+        ok: true,
+        url: 'https://api.example.test/auth/login',
+        method: 'POST',
+        body: { code: 'ks-login-code' },
+        contentType: 'application/json',
+      },
+      headers: {},
+    });
+  });
 });
 
 interface CapturedRuntime {
+  auth: {
+    login(): Promise<{ platform: string; code: string }>;
+  };
+  net: {
+    request(options: {
+      url: string;
+      method: 'GET' | 'POST';
+      data?: unknown;
+      headers?: Record<string, string>;
+    }): Promise<{ status: number; data: unknown }>;
+  };
   rewards: {
     canAddDesktop(): Promise<boolean>;
     requestAddDesktop(): Promise<boolean>;

@@ -118,6 +118,16 @@ function miniPackRuntime(overrides: Partial<MiniPackGameRuntime> = {}): MiniPack
         return { completed: false };
       },
     },
+    auth: {
+      async login() {
+        return { platform: 'test', code: 'test-code' };
+      },
+    },
+    net: {
+      async request() {
+        return { status: 200, data: null };
+      },
+    },
     rewards: {
       async canAddDesktop() {
         return false;

@@ -109,7 +109,7 @@ Each game keeps its per-channel configuration and outputs under `games/<game>/ch
 - `icon.png`: channel icon (required; uploaded to the douyin/kuaishou console manually, written into the vivo build at `src/icon.png`).
 - `build/`: build output, already `.gitignored`.
 
-`game.config.ts` carries only game-wide fields (`title` / `entry` / `publicDir` / `orientation` / `canvas`); `platform`, `outDir`, and per-channel fields no longer live here.
+`game.config.ts` carries only game-wide fields (`title` / `entry` / `publicDir` / `orientation` / `canvas` / `serverBaseUrl`); `platform`, `outDir`, and per-channel fields no longer live here.
 
 Builds must pass preflight first:
 

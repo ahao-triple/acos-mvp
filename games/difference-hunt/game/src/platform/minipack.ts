@@ -9,6 +9,10 @@ export interface MiniPackGameApp {
 
 export interface MiniPackGameRuntime {
   canvas: HTMLCanvasElement;
+  config?: {
+    platform: string;
+    serverBaseUrl: string;
+  };
   renderMode?: 'canvas' | 'webgl';
   storage: {
     getString(key: string): string | null;
@@ -23,6 +27,17 @@ export interface MiniPackGameRuntime {
   };
   haptics?: {
     trigger(kind: HapticKind): void;
+  };
+  auth: {
+    login(): Promise<{ platform: string; code: string }>;
+  };
+  net: {
+    request(options: {
+      url: string;
+      method?: 'GET' | 'POST';
+      data?: unknown;
+      headers?: Record<string, string>;
+    }): Promise<{ status: number; data: unknown; headers?: Record<string, string> }>;
   };
   ads: {
     isRewardedVideoReady(slot: 'add-steps' | 'claim-reward'): boolean;
@@ -50,6 +65,12 @@ export function createMiniPackPlatformAdapter(runtime: MiniPackGameRuntime): Pla
       removeItem(key) {
         runtime.storage.remove(key);
       },
+    },
+    login() {
+      return runtime.auth.login();
+    },
+    request(options) {
+      return runtime.net.request(options);
     },
     triggerHaptic(kind) {
       runtime.haptics?.trigger(kind);

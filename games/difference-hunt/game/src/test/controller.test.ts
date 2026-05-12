@@ -236,6 +236,12 @@ function createPlatformStub(): PlatformAdapter & { adReasons: RewardedAdReason[]
       setItem() {},
       removeItem() {},
     },
+    async login() {
+      return { platform: 'test', code: 'test-code' };
+    },
+    async request() {
+      return { status: 200, data: null };
+    },
     triggerHaptic() {},
     async playSfx() {},
     async playMusic(name, loop) {

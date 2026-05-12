@@ -50,6 +50,73 @@ ${bundleCode}
   var root = typeof globalThis !== 'undefined' ? globalThis : this;
   var tt = root.tt || {};
   var rewardedAdUnitId = ${rewardedAdUnitId};
+  var runtimeConfig = {
+    platform: 'douyin',
+    serverBaseUrl: ${JSON.stringify(loaded.game.serverBaseUrl ?? '')}
+  };
+
+  var auth = {
+    login: function () {
+      return new Promise(function (resolve, reject) {
+        if (typeof tt.login !== 'function') {
+          reject(new Error('Douyin login API is unavailable.'));
+          return;
+        }
+        try {
+          tt.login({
+            success: function (result) {
+              var code = result && typeof result.code === 'string' ? result.code : '';
+              if (!code) {
+                reject(new Error('Douyin login did not return a code.'));
+                return;
+              }
+              resolve({ platform: 'douyin', code: code });
+            },
+            fail: function (error) {
+              reject(error || new Error('Douyin login failed.'));
+            }
+          });
+        } catch (error) {
+          reject(error);
+        }
+      });
+    }
+  };
+
+  var net = {
+    request: function (options) {
+      return new Promise(function (resolve, reject) {
+        if (!options || !options.url) {
+          reject(new Error('Request url is required.'));
+          return;
+        }
+        if (typeof tt.request !== 'function') {
+          reject(new Error('Douyin request API is unavailable.'));
+          return;
+        }
+        try {
+          tt.request({
+            url: options.url,
+            method: options.method || 'GET',
+            data: options.data,
+            header: options.headers || {},
+            success: function (result) {
+              resolve({
+                status: result && typeof result.statusCode === 'number' ? result.statusCode : 0,
+                data: result ? result.data : null,
+                headers: result ? result.header || result.headers || {} : {}
+              });
+            },
+            fail: function (error) {
+              reject(error || new Error('Douyin request failed.'));
+            }
+          });
+        } catch (error) {
+          reject(error);
+        }
+      });
+    }
+  };
 
   function createCanvas() {
     var canvas;
@@ -613,8 +680,11 @@ ${bundleCode}
 
   var app = createGame({
     canvas: createCanvas(),
+    config: runtimeConfig,
     storage: storage,
     audio: audio,
+    auth: auth,
+    net: net,
     ads: ads,
     rewards: rewards,
     haptics: haptics,

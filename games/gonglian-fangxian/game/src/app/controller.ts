@@ -5,6 +5,7 @@ import type { GameSession, LevelConfig, NodeReward, Position, PowerUpType } from
 import type { PlatformAdapter } from '../platform/types';
 import type { AudioCue, AudioCueType } from '../audio/soundEngine';
 import { debugLog } from './debugLog';
+import type { RemoteGameConfig } from './remoteConfig';
 import { createDefaultSave, loadSave, type SaveData, writeSave } from './save';
 import { claimAdItemReward, claimDesktopReward, claimDoubleCoinsReward, claimFavoriteReward, claimSidebarReward, requestExtraMoves, type InventoryItem } from './rewards';
 import { chapterProgressForSave, levelById, type ChapterProgress } from './campaign';
@@ -92,9 +93,17 @@ export class GameController {
   private cueId = 0;
   private audioCueId = 0;
   private seed = 1000;
+  private remoteConfig: RemoteGameConfig | null = null;
+  private remoteAdCount = 0;
+  private lastRemoteAdAtMs = 0;
 
-  constructor(private readonly platform: PlatformAdapter) {
+  constructor(private readonly platform: PlatformAdapter, options: { remoteConfig?: RemoteGameConfig } = {}) {
     this.save = loadSave(platform.storage);
+    this.remoteConfig = options.remoteConfig ?? null;
+  }
+
+  applyRemoteConfig(config: RemoteGameConfig): void {
+    this.remoteConfig = config;
   }
 
   getViewState(): AppViewState {
@@ -240,6 +249,27 @@ export class GameController {
     this.adPrompt = null;
     this.session = createSession(level, this.seed);
     this.screen = 'playing';
+    this.maybeOpenRemoteAdPrompt('level_start', level.id);
+  }
+
+  private maybeOpenRemoteAdPrompt(trigger: 'level_start', levelId: number): void {
+    const policy = this.remoteConfig?.adPolicy;
+    if (!policy?.enabled || policy.trigger !== trigger || this.adPrompt) {
+      return;
+    }
+    if (levelId < policy.minLevel) {
+      return;
+    }
+    if (policy.maxPerSession > 0 && this.remoteAdCount >= policy.maxPerSession) {
+      return;
+    }
+    const now = Date.now();
+    if (policy.cooldownSeconds > 0 && now - this.lastRemoteAdAtMs < policy.cooldownSeconds * 1000) {
+      return;
+    }
+    this.remoteAdCount += 1;
+    this.lastRemoteAdAtMs = now;
+    this.openRewardedAdPrompt(policy.request);
   }
 
   private openRewardedAdPrompt(request: RewardedAdRequest): void {

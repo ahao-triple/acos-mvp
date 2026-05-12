@@ -205,6 +205,12 @@ function platform(options: {
 }): PlatformAdapter {
   return {
     name: 'test',
+    async login() {
+      return { platform: 'test', code: 'test-code' };
+    },
+    async request() {
+      return { status: 200, data: null };
+    },
     async showRewardedAd() {
       return options.ad ?? { status: 'unsupported' };
     },

@@ -109,7 +109,7 @@
 - `icon.png`：渠道图标（必填；抖音/快手用于后台提交，vivo 写入构建产物 `src/icon.png`）。
 - `build/`：打包产物，已 `.gitignore`。
 
-`game.config.ts` 仅放游戏共性（`title` / `entry` / `publicDir` / `orientation` / `canvas`）；不再含 `platform`、`outDir` 或渠道字段。
+`game.config.ts` 仅放游戏共性（`title` / `entry` / `publicDir` / `orientation` / `canvas` / `serverBaseUrl`）；不再含 `platform`、`outDir` 或渠道字段。
 
 打包前必须通过 preflight：
 

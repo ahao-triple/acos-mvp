@@ -93,6 +93,36 @@ describe('game controller visual cues', () => {
     expect(controller.getViewState().audioCue).toMatchObject({ type: 'reward' });
   });
 
+  test('remote config can open a level-start rewarded ad prompt without showing the ad immediately', async () => {
+    let adCalls = 0;
+    const platform = mockPlatform({ ad: { status: 'success' } });
+    platform.showRewardedAd = async () => {
+      adCalls += 1;
+      return { status: 'success' };
+    };
+    const controller = new GameController(platform, {
+      remoteConfig: {
+        adPolicy: {
+          enabled: true,
+          trigger: 'level_start',
+          minLevel: 1,
+          cooldownSeconds: 0,
+          maxPerSession: 1,
+          request: { type: 'extraMovesAd' },
+        },
+      },
+    });
+
+    await controller.dispatch({ type: 'start' });
+    await controller.dispatch({ type: 'beginLevel' });
+
+    expect(adCalls).toBe(0);
+    expect(controller.getViewState().adPrompt).toMatchObject({
+      title: '观看视频领取 5 步补给',
+      request: { type: 'extraMovesAd' },
+    });
+  });
+
   test('in-game power-up purchase spends coins before falling back to ads', async () => {
     let adCalls = 0;
     const platform = mockPlatform({
@@ -476,6 +506,12 @@ function mockPlatform(
   return {
     name: 'test',
     storage,
+    async login() {
+      return { platform: 'test', code: 'test-code' };
+    },
+    async request() {
+      return { status: 200, data: null };
+    },
     async showRewardedAd() {
       return options.ad ?? { status: 'unsupported' };
     },
