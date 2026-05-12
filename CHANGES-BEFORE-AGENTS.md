@@ -43,7 +43,12 @@
 
 ## [P0] 2. 加最小 CI：跑 `pnpm verify`
 
-- [ ] 完成
+- [x] 完成
+
+实际落地的命令不是 `pnpm verify`，而是 typecheck + test:game + test:pack。
+原因：verify 末段 build 需要 DOUYIN_APPID env，CI 上没有 .env；test:pack
+里 repo-build.test.ts 已经真实跑了三平台 build，是更强的 gate。
+见 `docs/superpowers/specs/2026-05-12-p0-2-ci-design.md`。
 
 **Why**
 `pnpm verify` 已经是现成的 gate（`test:game && test:pack && build gonglian-fangxian`），
