@@ -4,10 +4,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const supportedPlatforms = new Set(['douyin', 'kuaishou', 'vivo']);
+const supportedPlatforms = new Set(['vivo']);
 const defaultGamePath = 'games/gonglian-fangxian';
 const defaultPlatform = 'vivo';
-const usage = 'Usage: pnpm build [games/<game-project>] [--platform douyin|kuaishou|vivo]';
+const usage = 'Usage: pnpm build [games/<game-project>] [--platform vivo]';
 const parsed = parseArgs(process.argv.slice(2));
 
 if (!parsed.ok) {
@@ -34,9 +34,6 @@ run(process.execPath, [
   '--project-root',
   gamePath,
 ]);
-if (platform === 'douyin') {
-  run(process.execPath, ['scripts/smoke-douyin.mjs', gamePath]);
-}
 
 function parseArgs(args) {
   let gamePath;
@@ -63,7 +60,7 @@ function parseArgs(args) {
 
   const usesDefaultGame = !gamePath;
   gamePath ??= defaultGamePath;
-  platform ??= usesDefaultGame ? defaultPlatform : 'douyin';
+  platform ??= defaultPlatform;
   if (!supportedPlatforms.has(platform)) return { ok: false, message: `Unsupported platform: ${platform}\nSupported platforms: ${[...supportedPlatforms].join(', ')}` };
   return { ok: true, gamePath, platform };
 }

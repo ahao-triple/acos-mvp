@@ -3,7 +3,7 @@
  * removePixiExtensionsByRef DOM 路径）是否启用。
  *
  * 三种入口：
- *   1. 小游戏 runtime（vivo qg / 抖音 tt / 快手 ks）→ 自动启用（原有行为）
+ *   1. vivo 小游戏 runtime（qg）→ 自动启用
  *   2. 浏览器 + URL 含 `?vivo-strict` → 显式启用，用于复现真机问题
  *   3. 普通浏览器 dev → 关闭，PixiJS 走纯原生 DOM / EventSystem，表现力最佳
  *
@@ -15,13 +15,10 @@
 function detect(): boolean {
   const g = globalThis as unknown as {
     qg?: unknown;
-    tt?: unknown;
-    ks?: unknown;
     location?: { search?: string };
   };
-  // mini-pack runtime 标志：vivo qg / 抖音 tt / 快手 ks —— 维持原有"小游戏 runtime 始终
-  // 跑 vivo polyfill"行为，避免破坏抖音/快手包。
-  if (typeof g.qg !== 'undefined' || typeof g.tt !== 'undefined' || typeof g.ks !== 'undefined') {
+  // mini-pack runtime 标志：vivo qg。
+  if (typeof g.qg !== 'undefined') {
     return true;
   }
   // 浏览器路径：URL 显式开启。用 indexOf 而不是 URLSearchParams 避免依赖（runtime 可能不

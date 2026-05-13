@@ -3,7 +3,6 @@
  *
  * 布局保持与旧版一致（375 屏宽中心 + 按钮坐标）。动态更新：
  *  - 当前章节标题、进度（中部面板内）
- *  - 平台特有按钮（抖音有"入口奖励"，vivo/web 没有）
  */
 import { Container } from 'pixi.js';
 import type { AppViewState } from '../../app/controller';
@@ -139,7 +138,7 @@ export class MenuScreen implements PixiScreen {
     }
     setText(this.progressText, `当前进度 ${view.highestLevel}/${view.levelCount}`);
 
-    const showAdButton = view.platformName === 'douyin';
+    const showAdButton = false;
     if (showAdButton !== this.platformAdButtonVisible) {
       this.platformAdButtonVisible = showAdButton;
       this.platformAdButton.container.visible = showAdButton;

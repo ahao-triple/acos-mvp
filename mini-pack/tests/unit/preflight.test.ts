@@ -35,30 +35,30 @@ async function makeProject(opts: {
 describe('runPreflight', () => {
   it('reports missing game.config.ts', async () => {
     const root = await makeProject({ withGameConfig: false });
-    const result = await runPreflight({ projectRoot: root, platform: 'douyin' });
+    const result = await runPreflight({ projectRoot: root, platform: 'vivo' });
     expect(result.issues.some((i) => i.code === 'MISSING_GAME_CONFIG')).toBe(true);
     await fs.rm(root, { recursive: true, force: true });
   });
 
   it('reports missing materials.ts', async () => {
     const root = await makeProject({});
-    const result = await runPreflight({ projectRoot: root, platform: 'douyin' });
+    const result = await runPreflight({ projectRoot: root, platform: 'vivo' });
     expect(result.issues.some((i) => i.code === 'MISSING_MATERIALS')).toBe(true);
     await fs.rm(root, { recursive: true, force: true });
   });
 
-  it('reports empty appid (douyin)', async () => {
+  it('reports empty rewardedAdUnitId', async () => {
     const root = await makeProject({});
-    await fs.mkdir(path.join(root, 'channels/douyin'), { recursive: true });
+    await fs.mkdir(path.join(root, 'channels/vivo'), { recursive: true });
     await fs.writeFile(
-      path.join(root, 'channels/douyin/materials.ts'),
-      `import { defineDouyinMaterials } from '${indexPath}';
-       export default defineDouyinMaterials({ appid: '', projectName: 'p', iconPath: 'icon.png' });`,
+      path.join(root, 'channels/vivo/materials.ts'),
+      `import { defineVivoMaterials } from '${indexPath}';
+       export default defineVivoMaterials({ packageName: 'com.example.fixture', rewardedAdUnitId: '', iconPath: 'icon.png' });`,
     );
-    await fs.writeFile(path.join(root, 'channels/douyin/icon.png'), 'fakepng');
+    await fs.writeFile(path.join(root, 'channels/vivo/icon.png'), 'fakepng');
 
-    const result = await runPreflight({ projectRoot: root, platform: 'douyin' });
-    expect(result.issues.some((i) => i.code === 'EMPTY_FIELD' && i.message.includes('appid'))).toBe(true);
+    const result = await runPreflight({ projectRoot: root, platform: 'vivo' });
+    expect(result.issues.some((i) => i.code === 'EMPTY_FIELD' && i.message.includes('rewardedAdUnitId'))).toBe(true);
     await fs.rm(root, { recursive: true, force: true });
   });
 
@@ -69,17 +69,17 @@ describe('runPreflight', () => {
     await fs.rm(root, { recursive: true, force: true });
   });
 
-  it('passes with valid douyin setup', async () => {
+  it('passes with valid vivo setup', async () => {
     const root = await makeProject({});
-    await fs.mkdir(path.join(root, 'channels/douyin'), { recursive: true });
+    await fs.mkdir(path.join(root, 'channels/vivo'), { recursive: true });
     await fs.writeFile(
-      path.join(root, 'channels/douyin/materials.ts'),
-      `import { defineDouyinMaterials } from '${indexPath}';
-       export default defineDouyinMaterials({ appid: 'tt12345', projectName: 'p', iconPath: 'icon.png' });`,
+      path.join(root, 'channels/vivo/materials.ts'),
+      `import { defineVivoMaterials } from '${indexPath}';
+       export default defineVivoMaterials({ packageName: 'com.example.fixture', iconPath: 'icon.png' });`,
     );
-    await fs.writeFile(path.join(root, 'channels/douyin/icon.png'), 'fakepng');
+    await fs.writeFile(path.join(root, 'channels/vivo/icon.png'), 'fakepng');
 
-    const result = await runPreflight({ projectRoot: root, platform: 'douyin' });
+    const result = await runPreflight({ projectRoot: root, platform: 'vivo' });
     expect(result.issues).toEqual([]);
     await fs.rm(root, { recursive: true, force: true });
   });

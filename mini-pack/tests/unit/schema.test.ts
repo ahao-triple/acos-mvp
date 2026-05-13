@@ -1,12 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   gameConfigSchema,
-  douyinMaterialsSchema,
-  kuaishouMaterialsSchema,
   vivoMaterialsSchema,
   defineGameConfig,
-  defineDouyinMaterials,
-  defineKuaishouMaterials,
   defineVivoMaterials,
 } from '../../src/core/schema.js';
 
@@ -29,7 +25,7 @@ describe('gameConfigSchema', () => {
       publicDir: 'p',
       orientation: 'portrait',
       canvas: { width: 1, height: 1 },
-      douyin: { appid: '' },
+      platform: 'unexpected',
     });
     expect(result.success).toBe(false);
   });
@@ -46,77 +42,6 @@ describe('gameConfigSchema', () => {
   });
 });
 
-describe('douyinMaterialsSchema', () => {
-  it('accepts valid douyin materials with default iconPath', () => {
-    const result = douyinMaterialsSchema.safeParse({
-      appid: 'tt12345',
-      projectName: 'difference-hunt',
-    });
-    expect(result.success).toBe(true);
-    expect(result.success && result.data.iconPath).toBe('icon.png');
-  });
-
-  it('allows empty appid (preflight strictness, not schema)', () => {
-    const result = douyinMaterialsSchema.safeParse({
-      appid: '',
-      projectName: 'difference-hunt',
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it('rejects empty projectName', () => {
-    const result = douyinMaterialsSchema.safeParse({
-      appid: 'tt12345',
-      projectName: '',
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it('rejects extra keys', () => {
-    const result = douyinMaterialsSchema.safeParse({
-      appid: 'tt12345',
-      projectName: 'difference-hunt',
-      packageName: 'com.x.y',
-    });
-    expect(result.success).toBe(false);
-  });
-});
-
-describe('kuaishouMaterialsSchema', () => {
-  it('accepts valid kuaishou materials with default iconPath', () => {
-    const result = kuaishouMaterialsSchema.safeParse({
-      appid: 'kwai_game_test_appid',
-      projectName: 'difference-hunt',
-    });
-    expect(result.success).toBe(true);
-    expect(result.success && result.data.iconPath).toBe('icon.png');
-  });
-
-  it('allows empty appid (preflight strictness, not schema)', () => {
-    const result = kuaishouMaterialsSchema.safeParse({
-      appid: '',
-      projectName: 'difference-hunt',
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it('rejects empty projectName', () => {
-    const result = kuaishouMaterialsSchema.safeParse({
-      appid: 'kwai_game_test_appid',
-      projectName: '',
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it('rejects extra keys', () => {
-    const result = kuaishouMaterialsSchema.safeParse({
-      appid: 'kwai_game_test_appid',
-      projectName: 'difference-hunt',
-      packageName: 'com.x.y',
-    });
-    expect(result.success).toBe(false);
-  });
-});
 
 describe('vivoMaterialsSchema', () => {
   it('accepts valid vivo materials and applies defaults', () => {
@@ -188,16 +113,6 @@ describe('define*', () => {
       canvas: { width: 1, height: 1 },
     };
     expect(defineGameConfig(config)).toBe(config);
-  });
-
-  it('defineDouyinMaterials returns its input', () => {
-    const m = { appid: 'a', projectName: 'p', iconPath: 'icon.png' };
-    expect(defineDouyinMaterials(m)).toBe(m);
-  });
-
-  it('defineKuaishouMaterials returns its input', () => {
-    const m = { appid: 'a', projectName: 'p', iconPath: 'icon.png' };
-    expect(defineKuaishouMaterials(m)).toBe(m);
   });
 
   it('defineVivoMaterials returns its input', () => {

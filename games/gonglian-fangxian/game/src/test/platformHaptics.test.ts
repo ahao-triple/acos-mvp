@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { createDouyinPlatformAdapter } from '../platform/douyin';
 import { createMiniPackPlatformAdapter, type MiniPackGameRuntime } from '../platform/minipack';
 import { createWebPlatformAdapter } from '../platform/web';
 
@@ -24,23 +23,6 @@ describe('platform haptics', () => {
     expect(patterns).toEqual([24, 70]);
   });
 
-  test('douyin adapter maps short and long haptics to tt vibration APIs', () => {
-    const calls: string[] = [];
-    vi.stubGlobal('tt', {
-      vibrateShort() {
-        calls.push('short');
-      },
-      vibrateLong() {
-        calls.push('long');
-      },
-    });
-
-    const adapter = createDouyinPlatformAdapter('');
-    adapter.triggerHaptic('short');
-    adapter.triggerHaptic('long');
-
-    expect(calls).toEqual(['short', 'long']);
-  });
 
   test('mini-pack adapter forwards haptics when runtime bridge exists', () => {
     const calls: string[] = [];
@@ -93,10 +75,7 @@ describe('platform haptics', () => {
   });
 
   test('adapters ignore missing haptic support without throwing', () => {
-    vi.stubGlobal('tt', {});
-
     expect(() => createWebPlatformAdapter().triggerHaptic('short')).not.toThrow();
-    expect(() => createDouyinPlatformAdapter('').triggerHaptic('long')).not.toThrow();
     expect(() => createMiniPackPlatformAdapter(miniPackRuntime()).triggerHaptic('short')).not.toThrow();
   });
 });

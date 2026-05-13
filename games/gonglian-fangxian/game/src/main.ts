@@ -7,7 +7,6 @@ import { SoundEngine } from './audio/soundEngine';
 import { setSfxEnabled, unlockSfx } from './audio/sfx';
 import { loginAndLoadRemoteConfig } from './app/remoteConfig';
 import { PixiRenderer } from './pixi/renderer';
-import { canUseDouyinAdapter, createDouyinPlatformAdapter } from './platform/douyin';
 import { createMiniPackPlatformAdapter, createMiniPackSoundOptions, type MiniPackGameApp, type MiniPackGameRuntime } from './platform/minipack';
 import { probeCanvas2DText } from './platform/vivo/canvas2d-text-probe';
 import { createVivoEventBridge } from './platform/vivo/event-bridge';
@@ -21,7 +20,7 @@ export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
 
   // 一次性 vivo Canvas2D Text 渲染诊断：v1.0.37 真机 Pixi.Text 颜色失真，
   // 通过 probe 直接验证 fillStyle / fillRect / fillText 各路径上的真实行为。
-  // 仅在 vivo runtime 跑（不影响浏览器、抖音、快手）；输出 4 条 log 看 vConsole。
+  // 仅在 vivo runtime 跑（不影响浏览器）；输出 4 条 log 看 vConsole。
   if (runtime?.config?.platform === 'vivo') {
     try {
       probeCanvas2DText();
@@ -32,9 +31,7 @@ export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
 
   const platform = runtime
     ? createMiniPackPlatformAdapter(runtime)
-    : canUseDouyinAdapter()
-      ? createDouyinPlatformAdapter('')
-      : createWebPlatformAdapter();
+    : createWebPlatformAdapter();
   const controller = new GameController(platform);
   const soundEngine = new SoundEngine(runtime ? createMiniPackSoundOptions(runtime) : {});
   let renderer: PixiRenderer | null = null;
@@ -182,22 +179,12 @@ export function resolveRuntimeCanvasSize(canvas: HTMLCanvasElement): { width: nu
 
 function readMiniGameWindowInfo(): { width: number; height: number; dpr: number } | null {
   const miniGameGlobal = globalThis as typeof globalThis & {
-    ks?: {
-      getWindowInfo?: () => unknown;
-      getSystemInfoSync?: () => unknown;
-    };
-    tt?: {
-      getWindowInfo?: () => unknown;
-      getSystemInfoSync?: () => unknown;
-    };
     qg?: {
       getSystemInfoSync?: () => unknown;
     };
   };
-  const ksInfo = asRecord(miniGameGlobal.ks?.getWindowInfo?.()) ?? asRecord(miniGameGlobal.ks?.getSystemInfoSync?.());
-  const ttInfo = asRecord(miniGameGlobal.tt?.getWindowInfo?.()) ?? asRecord(miniGameGlobal.tt?.getSystemInfoSync?.());
   const qgInfo = asRecord(miniGameGlobal.qg?.getSystemInfoSync?.());
-  const info = ksInfo ?? ttInfo ?? qgInfo;
+  const info = qgInfo;
   if (!info) {
     return null;
   }

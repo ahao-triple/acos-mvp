@@ -7,10 +7,10 @@
     "bootstrap": "pnpm install",
     "build": "node scripts/build-game.mjs",
     "preflight": "node scripts/preflight.mjs",
-    "smoke": "node scripts/smoke-douyin.mjs",
     "test:game": "pnpm --dir games/gonglian-fangxian/game test",
     "test:pack": "pnpm --dir mini-pack test",
-    "verify": "pnpm test:game && pnpm test:pack && pnpm build games/gonglian-fangxian",
+    "test": "pnpm test:game && pnpm test:pack",
+    "verify": "pnpm test:game && pnpm test:pack && pnpm build",
     "verify:full": "node scripts/verify-full.mjs"
   },
   "pnpm": {

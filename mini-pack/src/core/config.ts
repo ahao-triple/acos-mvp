@@ -6,13 +6,9 @@ import { pathToFileURL } from 'node:url';
 import type { ZodType } from 'zod';
 
 import {
-  douyinMaterialsSchema,
   gameConfigSchema,
-  kuaishouMaterialsSchema,
   vivoMaterialsSchema,
-  type DouyinMaterials,
   type GameConfig,
-  type KuaishouMaterials,
   type VivoMaterials,
 } from './schema.js';
 import { resolveProjectPath } from './paths.js';
@@ -103,20 +99,12 @@ export async function loadGameConfig(options: LoadGameConfigOptions): Promise<Lo
       iconAbs,
       outDirAbs,
     },
-    douyinMaterials: platform === 'douyin' ? (materials as DouyinMaterials) : undefined,
-    kuaishouMaterials: platform === 'kuaishou' ? (materials as KuaishouMaterials) : undefined,
-    vivoMaterials: platform === 'vivo' ? (materials as VivoMaterials) : undefined,
+    vivoMaterials: materials as VivoMaterials,
   };
 }
 
 function parseChannelMaterials(platform: PlatformName, raw: unknown): ChannelMaterials {
-  if (platform === 'douyin') {
-    return parseMaterials(douyinMaterialsSchema, raw, 'douyin');
-  }
-  if (platform === 'kuaishou') {
-    return parseMaterials(kuaishouMaterialsSchema, raw, 'kuaishou');
-  }
-  return parseMaterials(vivoMaterialsSchema, raw, 'vivo');
+  return parseMaterials(vivoMaterialsSchema, raw, platform);
 }
 
 function parseMaterials<T>(schema: ZodType<T>, raw: unknown, platform: string): T {

@@ -2,13 +2,12 @@
   "project": "gonglian-fangxian",
   "title": "全民爆梗游戏软件",
   "theme": "military-defense",
-  "targetPlatform": "douyin-minigame",
+  "targetPlatform": "vivo-minigame",
   "assetPolicy": {
     "raw": "assets/raw",
     "processed": "assets/processed",
     "generated": "assets/generated",
-    "runtimePublic": "game/public-pack",
-    "douyinMaterials": "platform/douyin/materials"
+    "runtimePublic": "game/public-pack"
   },
   "requiredMvpAssets": {
     "pieces": [
@@ -36,10 +35,6 @@
       "win",
       "lose",
       "reward"
-    ],
-    "douyinMaterials": [
-      "icon-600x600.png",
-      "share-4x3.png"
     ]
   }
 }

@@ -66,7 +66,7 @@ for (const inc of includes) {
 const scannedFiles = targetFiles.filter(shouldScan);
 
 // 也扫 channels/<platform>/build/src/manifest.json（产物 manifest 的 name 字段也可能含字）
-for (const platform of ['douyin', 'kuaishou', 'vivo']) {
+for (const platform of ['vivo']) {
   const candidate = path.join(repoRoot, `games/gonglian-fangxian/channels/${platform}/build/src/manifest.json`);
   if (fs.existsSync(candidate)) scannedFiles.push(candidate);
 }

@@ -16,7 +16,7 @@ describe('bundleGameEntry', () => {
   test('bundles a TypeScript game entry into a JavaScript file', async () => {
     const outfile = path.join(tmpRoot, 'game.bundle.mjs');
     const result = await bundleGameEntry({
-      entryAbs: path.join(fixturePath('valid-douyin-game'), 'game/main.ts'),
+      entryAbs: path.join(fixturePath('valid-vivo-game'), 'game/main.ts'),
       outfile,
     });
 
@@ -25,7 +25,7 @@ describe('bundleGameEntry', () => {
     expect(output).toContain('createGame');
   });
 
-  test('downlevels ES2020 syntax unsupported by the Douyin upload compiler', async () => {
+  test('downlevels ES2020 syntax for mini game runtimes', async () => {
     const entry = path.join(tmpRoot, 'modern-entry.ts');
     const outfile = path.join(tmpRoot, 'modern-entry.bundle.js');
     await fs.mkdir(tmpRoot, { recursive: true });

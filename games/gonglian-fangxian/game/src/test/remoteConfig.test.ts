@@ -25,7 +25,7 @@ describe('remote game config', () => {
     const config = await loginAndLoadRemoteConfig(platform, {
       serverBaseUrl: 'https://ks-games.xfyccm.cn/api',
       gameId: 'gonglian-fangxian',
-      channel: 'kuaishou',
+      channel: 'vivo',
     });
 
     expect(request).toHaveBeenCalledWith({
@@ -34,8 +34,8 @@ describe('remote game config', () => {
       headers: { 'Content-Type': 'application/json' },
       data: {
         gameId: 'gonglian-fangxian',
-        channel: 'kuaishou',
-        platform: 'kuaishou',
+        channel: 'vivo',
+        platform: 'vivo',
         code: 'platform-code',
       },
     });
@@ -94,7 +94,7 @@ function platformStub(options: {
       setItem() {},
       removeItem() {},
     },
-    login: options.login ?? (async () => ({ platform: 'kuaishou', code: 'platform-code' })),
+    login: options.login ?? (async () => ({ platform: 'vivo', code: 'platform-code' })),
     request: options.request ?? (async () => ({ status: 200, data: {} })),
     async showRewardedAd() {
       return { status: 'unsupported' };

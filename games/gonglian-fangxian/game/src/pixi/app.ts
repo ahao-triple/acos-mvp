@@ -5,7 +5,7 @@
  *  - Smoke 是临时验证脚本；这里是正式生命周期，由 PixiRenderer 持有 app。
  *  - 走相同的兼容性处理：vivo 路径 import polyfill + unsafe-eval + DOMAdapter.set +
  *    extensions._queue mutate 卸载 DOM 依赖 pipe/system。
- *  - 非 vivo（web/抖音/快手）也用同一份代码 —— polyfill 是条件式（已存在不覆盖），
+ *  - web 也用同一份代码 —— polyfill 是条件式（已存在不覆盖），
  *    在浏览器上是 no-op；DOMAdapter.set 会换掉 BrowserAdapter，浏览器上略有性能
  *    损失但行为一致。
  *
@@ -111,7 +111,7 @@ export async function createPixiApp(options: CreatePixiAppOptions): Promise<Pixi
   // dom-polyfill 里被 stub 成 noop，不崩；canvas.addEventListener 走 wrapperCanvas（main.ts
   // 接入 vivoCanvasAdapter 时设置 Pixi events.setTargetElement(wrapperCanvas)）。
   //
-  // 严格模式 gate：只有 vivo 真机 / 抖音/快手 runtime / ?vivo-strict URL 才执行。
+  // 严格模式 gate：只有 vivo 真机 / ?vivo-strict URL 才执行。
   // 普通浏览器 dev 走 PixiJS 默认 BrowserAdapter + EventSystem 原生路径，DOM pipe/system
   // 保留可让 HTMLText 之类的高级功能正常工作（调试时有用）。
   if (isVivoStrictMode()) {

@@ -78,7 +78,6 @@ Phase 1 PixiJS 迁移期间规范没有进入实现上下文，导致以下结�
 | 用户信息按钮 | 打开「设置弹窗」 | "用户信息" → `openSettings` | ✅ |
 | 加桌按钮 | 触发**平台加桌能力** | "加桌领奖" → `desktopReward`，含**复合奖励逻辑** | ⚠️ 命名/行为偏离 |
 | 设置常用按钮 | 触发**平台"设为常用"能力** | "设为常用领奖" → `favoriteReward`，含**复合奖励逻辑** | ⚠️ 命名/行为偏离 |
-| 入口奖励按钮（仅抖音） | 仅抖音平台显示，打开「入口奖励弹窗」 | "入口奖励" 仅 `platformName==='douyin'` 时显示（`menu.ts:146-150`），但**直接 dispatch `requestRewardedAd`**，没有"弹窗呈现奖励内容"步骤 | ⚠️ 流程错误 |
 | 关卡选择按钮 | 打开「关卡选择弹窗」 | "关卡选择" → `openLevels` | ✅ |
 | 开始游戏（主 CTA） | 进入 GamePage（当前关卡） | "继续作战"（primary variant）→ `start`，先进 **briefing** 再进 playing | ⚠️ 多了 briefing |
 
@@ -277,15 +276,11 @@ Toast 整套系统不存在，广告完成提示是用户最直接的回执，�
 | 跳过本关（广告） | ❌ | ✅ | ✅ Game 时显示，variant='ad' | ✅（toast 缺失） |
 
 **缺失：**
-- 返回桌面：当前实现的是"返回主页"语义，规范要求"退出小游戏到平台桌面"——需要在 `PlatformAdapter` 上新增 `exitMiniGame()`，vivo 调 `qg.exitMiniProgram`，douyin 调 `tt.exitMiniProgram`。
 
-### 4.2 入口奖励弹窗（仅抖音）
 
 | 项 | 规范 | 现状 |
 |----|------|------|
-| 触发 | HomePage 入口奖励按钮 | ✅ MenuScreen 有按钮且仅抖音显示 |
 | 行为 | **弹窗呈现奖励内容**，完成后弹 toast | ❌ 现在直接 dispatch `requestRewardedAd type:'extraMovesAd'`，无弹窗 |
-| 非抖音平台 | 按钮不显示 | ✅ `view.platformName === 'douyin'` 判断 |
 
 **缺失：**
 - 入口奖励弹窗 screen 完全不存在 — P1
@@ -352,9 +347,7 @@ Toast 整套系统不存在，广告完成提示是用户最直接的回执，�
 | 返回桌面 | **not wired** | `PlatformAdapter` 无 `exitMiniGame`；vivo SDK 有 `qg.exitMiniProgram` — **需要查 vivo API 文档** |
 | 振动 | **wired** | `triggerHaptic` ✓ |
 
-### 抖音平台
 
-`platform/douyin.ts` 实现较完整：login、request、createRewardedVideoAd、addShortcut、checkShortcut、showFavoriteGuide、navigateToScene、vibrateShort/Long、storage。但同样缺：
 - ❌ `tt.showToast` 桥接
 - ❌ `tt.exitMiniProgram` 桥接
 - ❌ `tt.shareAppMessage` 桥接
@@ -381,7 +374,6 @@ Toast 整套系统不存在，广告完成提示是用户最直接的回执，�
 1. 入口奖励弹窗缺失（应弹窗呈现奖励内容，当前直接调广告） — §6
 2. 关卡选择"看广告解锁"业务逻辑实现 — §6
 3. 设置弹窗"返回桌面"应调用平台退出 API，当前是"返回主页" — §6
-4. 分享按钮未接入平台 SDK（vivo/douyin 都缺） — §4
 5. 广告失败 toast 反馈未消费 feedback string — §3 / §5
 6. 动画期间锁定道具按钮（需验证） — §3
 7. 加桌 / 设为常用按钮命名与行为偏离规范（"加桌领奖"复合行为 vs "加桌按钮"纯触发） — §2
@@ -468,10 +460,8 @@ grep -rn "Assets.load\|Loader.load\|Texture.from\|new Audio\|loadAudio" src/ | g
 不在本次审计输出范围内，仅供参考决策：
 
 - **第 1 步（P0 监管）** 新建 LoadingScreen，恢复 CADPA + 软著号 + 健康忠告 + 进度条；恢复 drawAgeRatingVector 矢量绘制
-- **第 2 步（P0 toast）** 在 `PlatformAdapter` 加 `showToast(message: string)`，vivo/douyin/web 三端各自桥接；controller `feedback` 改走 `platform.showToast`；所有广告完成路径统一调
 - **第 3 步（P0 道具按钮）** 改 `controller.usePowerUp` 路径：0 库存先广告，去掉金币购买；UI 改 variant='ad'
 - **第 4 步（P1 关卡解锁）** LevelsScreen 未解锁关卡支持点击 → 广告 → 解锁 → toast
-- **第 5 步（P1 入口奖励弹窗）** 抖音平台新建独立 modal screen
 - **第 6 步（P1 返回桌面 / 分享）** `PlatformAdapter` 加 `exitMiniGame` / `share` API，三端桥接
 - **第 7 步（P2 细节）** 安全区、金币位置、棋盘滑动手势
 

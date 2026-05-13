@@ -5,42 +5,41 @@ import { loadGameConfig } from '../../src/core/config.js';
 import { isUserError } from '../../src/shared/errors.js';
 
 const fixturesDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../fixtures');
-const validGame = path.join(fixturesDir, 'valid-douyin-game');
+const validGame = path.join(fixturesDir, 'valid-vivo-game');
+
+async function expectUserError(promise: Promise<unknown>): Promise<void> {
+  await expect(promise).rejects.toSatisfy((error) => isUserError(error));
+}
 
 describe('loadGameConfig', () => {
-  it('loads game.config.ts and douyin materials.ts', async () => {
+  it('loads game.config.ts and vivo materials.ts', async () => {
     const loaded = await loadGameConfig({
       projectRoot: validGame,
-      platform: 'douyin',
+      platform: 'vivo',
     });
 
     expect(loaded.game.title).toBe('Fixture Game');
-    expect(loaded.platform).toBe('douyin');
-    expect(loaded.douyinMaterials?.appid).toBe('tt-fixture-appid');
-    expect(loaded.douyinMaterials?.projectName).toBe('fixture');
-    expect(loaded.paths.channelRoot).toBe(path.join(validGame, 'channels/douyin'));
-    expect(loaded.paths.materialsAbs).toBe(path.join(validGame, 'channels/douyin/materials.ts'));
-    expect(loaded.paths.iconAbs).toBe(path.join(validGame, 'channels/douyin/icon.png'));
-    expect(loaded.paths.outDirAbs).toBe(path.join(validGame, 'channels/douyin/build'));
+    expect(loaded.platform).toBe('vivo');
+    expect(loaded.vivoMaterials?.packageName).toBe('com.example.fixture');
+    expect(loaded.paths.channelRoot).toBe(path.join(validGame, 'channels/vivo'));
+    expect(loaded.paths.materialsAbs).toBe(path.join(validGame, 'channels/vivo/materials.ts'));
+    expect(loaded.paths.iconAbs).toBe(path.join(validGame, 'channels/vivo/icon.png'));
+    expect(loaded.paths.outDirAbs).toBe(path.join(validGame, 'channels/vivo/build'));
     expect(loaded.paths.entryAbs).toBe(path.join(validGame, 'game/main.ts'));
     expect(loaded.paths.publicDirAbs).toBe(path.join(validGame, 'game/public-pack'));
   });
 
   it('throws UserError when channels/<platform>/materials.ts is missing', async () => {
-    await expect(
-      loadGameConfig({
-        projectRoot: validGame,
-        platform: 'vivo', // valid fixture has no vivo channel
-      }),
-    ).rejects.toSatisfy((error) => isUserError(error));
+    await expectUserError(loadGameConfig({
+      projectRoot: path.join(fixturesDir, 'missing-entry'),
+      platform: 'vivo',
+    }));
   });
 
   it('throws UserError when project root has no game.config.ts', async () => {
-    await expect(
-      loadGameConfig({
-        projectRoot: fixturesDir, // not a project
-        platform: 'douyin',
-      }),
-    ).rejects.toSatisfy((error) => isUserError(error));
+    await expectUserError(loadGameConfig({
+      projectRoot: fixturesDir,
+      platform: 'vivo',
+    }));
   });
 });

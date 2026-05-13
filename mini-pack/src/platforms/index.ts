@@ -1,5 +1,3 @@
-import { douyinPlatformBuilder } from './douyin/index.js';
-import { kuaishouPlatformBuilder } from './kuaishou/index.js';
 import { vivoPlatformBuilder } from './vivo/index.js';
 import { UserError } from '../shared/errors.js';
 import type { BuildReport, LoadedGameConfig, PlatformName } from '../shared/types.js';
@@ -13,11 +11,9 @@ export interface PlatformBuilder {
   build(loaded: LoadedGameConfig, options?: PlatformBuildOptions): Promise<BuildReport>;
 }
 
-const supportedPlatforms = ['douyin', 'kuaishou', 'vivo'] as const;
+const supportedPlatforms = ['vivo'] as const;
 
 export function getPlatformBuilder(platform: string): PlatformBuilder {
-  if (platform === 'douyin') return douyinPlatformBuilder;
-  if (platform === 'kuaishou') return kuaishouPlatformBuilder;
   if (platform === 'vivo') return vivoPlatformBuilder;
 
   throw new UserError(

@@ -128,7 +128,6 @@ game/
 │   ├── core/               棋盘核心算法（与渲染无关）
 │   ├── config/             关卡数据
 │   ├── pixi/               PixiJS 渲染层（app / renderer / screens / pieces / ui）
-│   ├── platform/           平台适配（web / 抖音 / vivo / minipack）
 │   ├── render/             跨渲染层共享代码（visualBoard / animation / theme）
 │   ├── test/               vitest 单测
 │   └── main.ts             入口

@@ -4,8 +4,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const supportedPlatforms = new Set(['douyin', 'kuaishou', 'vivo']);
-const usage = 'Usage: pnpm preflight games/<game-project> [--platform douyin|kuaishou|vivo]';
+const supportedPlatforms = new Set(['vivo']);
+const usage = 'Usage: pnpm preflight games/<game-project> [--platform vivo]';
 const parsed = parseArgs(process.argv.slice(2));
 
 if (!parsed.ok) {
@@ -35,7 +35,7 @@ run(process.execPath, [
 
 function parseArgs(args) {
   let gamePath;
-  let platform = 'douyin';
+  let platform = 'vivo';
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     if (arg === '--platform') {
