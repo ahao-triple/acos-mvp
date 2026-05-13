@@ -5,7 +5,9 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const supportedPlatforms = new Set(['douyin', 'kuaishou', 'vivo']);
-const usage = 'Usage: pnpm build games/<game-project> [--platform douyin|kuaishou|vivo]';
+const defaultGamePath = 'games/gonglian-fangxian';
+const defaultPlatform = 'vivo';
+const usage = 'Usage: pnpm build [games/<game-project>] [--platform douyin|kuaishou|vivo]';
 const parsed = parseArgs(process.argv.slice(2));
 
 if (!parsed.ok) {
@@ -38,7 +40,7 @@ if (platform === 'douyin') {
 
 function parseArgs(args) {
   let gamePath;
-  let platform = 'douyin';
+  let platform;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -59,7 +61,9 @@ function parseArgs(args) {
     gamePath = arg;
   }
 
-  if (!gamePath) return { ok: false, message: 'Missing game project path.' };
+  const usesDefaultGame = !gamePath;
+  gamePath ??= defaultGamePath;
+  platform ??= usesDefaultGame ? defaultPlatform : 'douyin';
   if (!supportedPlatforms.has(platform)) return { ok: false, message: `Unsupported platform: ${platform}\nSupported platforms: ${[...supportedPlatforms].join(', ')}` };
   return { ok: true, gamePath, platform };
 }
