@@ -123,7 +123,7 @@ sh scripts/apply-pixi-patch.sh
 ```
 game/
 ├── src/
-│   ├── app/                业务逻辑（controller / campaign / remoteConfig）
+│   ├── app/                业务逻辑（controller / campaign）
 │   ├── audio/              声音引擎
 │   ├── core/               棋盘核心算法（与渲染无关）
 │   ├── config/             关卡数据
