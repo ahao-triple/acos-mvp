@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const SUPPORTED_PLATFORMS = ['vivo'] as const;
+export const SUPPORTED_PLATFORMS = ['vivo', 'oppo'] as const;
 
 export const gameConfigSchema = z
   .object({
@@ -42,6 +42,14 @@ export const vivoMaterialsSchema = z
 export type VivoMaterials = z.infer<typeof vivoMaterialsSchema>;
 
 export function defineVivoMaterials(materials: VivoMaterials): VivoMaterials {
+  return materials;
+}
+
+export const oppoMaterialsSchema = vivoMaterialsSchema;
+
+export type OppoMaterials = z.infer<typeof oppoMaterialsSchema>;
+
+export function defineOppoMaterials(materials: OppoMaterials): OppoMaterials {
   return materials;
 }
 

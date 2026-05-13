@@ -1,0 +1,5 @@
+{
+  "platform": "oppo",
+  "serverBaseUrl": "https://ks-games.xfyccm.cn/api",
+  "output": "dist"
+}

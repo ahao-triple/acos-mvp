@@ -1,9 +1,11 @@
+import { oppoPlatformBuilder } from './oppo/index.js';
 import { vivoPlatformBuilder } from './vivo/index.js';
 import { SUPPORTED_PLATFORMS } from '../core/schema.js';
 import { UserError } from '../shared/errors.js';
 import type { BuildReport, LoadedGameConfig, PlatformName } from '../shared/types.js';
 
 export interface PlatformBuildOptions {
+  skipRpk?: boolean;
   skipVivoRpk?: boolean;
 }
 
@@ -13,6 +15,7 @@ export interface PlatformBuilder {
 }
 
 const platformBuilders: Partial<Record<PlatformName, PlatformBuilder>> = {
+  oppo: oppoPlatformBuilder,
   vivo: vivoPlatformBuilder,
 };
 

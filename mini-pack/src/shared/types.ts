@@ -1,12 +1,13 @@
 import type {
   GameConfig,
+  OppoMaterials,
   SUPPORTED_PLATFORMS,
   VivoMaterials,
 } from '../core/schema.js';
 
 export type PlatformName = (typeof SUPPORTED_PLATFORMS)[number];
 
-export type ChannelMaterials = VivoMaterials;
+export type ChannelMaterials = VivoMaterials | OppoMaterials;
 
 export interface ResolvedPaths {
   configFileAbs: string;
@@ -24,6 +25,7 @@ export interface LoadedGameConfig {
   materials: ChannelMaterials;
   projectRoot: string;
   paths: ResolvedPaths;
+  oppoMaterials?: OppoMaterials;
   vivoMaterials?: VivoMaterials;
 }
 

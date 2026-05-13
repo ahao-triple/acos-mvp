@@ -6,6 +6,7 @@ import { isUserError } from '../../src/shared/errors.js';
 
 const fixturesDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../fixtures');
 const validGame = path.join(fixturesDir, 'valid-vivo-game');
+const validOppoGame = path.join(fixturesDir, 'valid-oppo-game');
 
 async function expectUserError(promise: Promise<unknown>): Promise<void> {
   await expect(promise).rejects.toSatisfy((error) => isUserError(error));
@@ -27,6 +28,22 @@ describe('loadGameConfig', () => {
     expect(loaded.paths.outDirAbs).toBe(path.join(validGame, 'channels/vivo/build'));
     expect(loaded.paths.entryAbs).toBe(path.join(validGame, 'game/main.ts'));
     expect(loaded.paths.publicDirAbs).toBe(path.join(validGame, 'game/public-pack'));
+  });
+
+  it('loads game.config.ts and oppo materials.ts', async () => {
+    const loaded = await loadGameConfig({
+      projectRoot: validOppoGame,
+      platform: 'oppo',
+    });
+
+    expect(loaded.game.title).toBe('Fixture Game');
+    expect(loaded.platform).toBe('oppo');
+    expect(loaded.oppoMaterials?.packageName).toBe('com.example.oppo.fixture');
+    expect(loaded.vivoMaterials).toBeUndefined();
+    expect(loaded.paths.channelRoot).toBe(path.join(validOppoGame, 'channels/oppo'));
+    expect(loaded.paths.materialsAbs).toBe(path.join(validOppoGame, 'channels/oppo/materials.ts'));
+    expect(loaded.paths.iconAbs).toBe(path.join(validOppoGame, 'channels/oppo/icon.png'));
+    expect(loaded.paths.outDirAbs).toBe(path.join(validOppoGame, 'channels/oppo/build'));
   });
 
   it('throws UserError when channels/<platform>/materials.ts is missing', async () => {

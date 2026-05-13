@@ -8,8 +8,10 @@ import type { ZodType } from 'zod';
 import {
   SUPPORTED_PLATFORMS,
   gameConfigSchema,
+  oppoMaterialsSchema,
   vivoMaterialsSchema,
   type GameConfig,
+  type OppoMaterials,
   type VivoMaterials,
 } from './schema.js';
 import { resolveProjectPath } from './paths.js';
@@ -86,7 +88,7 @@ export async function loadGameConfig(options: LoadGameConfigOptions): Promise<Lo
   const iconAbs = path.resolve(channelRoot, materials.iconPath);
   const outDirAbs = path.join(channelRoot, 'build');
 
-  return {
+  const loaded: LoadedGameConfig = {
     game,
     platform,
     materials,
@@ -100,12 +102,24 @@ export async function loadGameConfig(options: LoadGameConfigOptions): Promise<Lo
       iconAbs,
       outDirAbs,
     },
-    vivoMaterials: materials as VivoMaterials,
   };
+  if (platform === 'vivo') {
+    loaded.vivoMaterials = materials as VivoMaterials;
+  }
+  if (platform === 'oppo') {
+    loaded.oppoMaterials = materials as OppoMaterials;
+  }
+  return loaded;
 }
 
 function parseChannelMaterials(platform: PlatformName, raw: unknown): ChannelMaterials {
-  return parseMaterials(vivoMaterialsSchema, raw, platform);
+  if (platform === 'vivo') {
+    return parseMaterials(vivoMaterialsSchema, raw, platform);
+  }
+  if (platform === 'oppo') {
+    return parseMaterials(oppoMaterialsSchema, raw, platform);
+  }
+  throw new UserError(`Unsupported platform: ${platform}`);
 }
 
 function parsePlatformName(platform: string): PlatformName {

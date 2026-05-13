@@ -30,6 +30,7 @@ export interface PreflightResult {
 }
 
 const PLATFORM_LABEL: Record<PlatformName, string> = {
+  oppo: 'oppo',
   vivo: 'vivo',
 };
 
@@ -67,11 +68,11 @@ export async function runPreflight(options: PreflightOptions): Promise<Preflight
     });
   }
 
-  if (loaded.vivoMaterials?.rewardedAdUnitId !== undefined && !loaded.vivoMaterials.rewardedAdUnitId.trim()) {
+  if (loaded.materials.rewardedAdUnitId !== undefined && !loaded.materials.rewardedAdUnitId.trim()) {
     issues.push({
       code: 'EMPTY_FIELD',
       path: relPath(projectRoot, loaded.paths.materialsAbs),
-      message: 'materials.ts 中 rewardedAdUnitId 设置但为空（请填入 vivo 激励视频广告位 id，或删除该字段）',
+      message: `materials.ts 中 rewardedAdUnitId 设置但为空（请填入 ${PLATFORM_LABEL[platform]} 激励视频广告位 id，或删除该字段）`,
     });
   }
 

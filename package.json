@@ -7,6 +7,8 @@
     "dev": "node scripts/dev-game.mjs",
     "build": "node scripts/build-game.mjs",
     "pack": "node scripts/pack-game.mjs",
+    "pack:vivo": "node scripts/pack-game.mjs --platform vivo",
+    "pack:oppo": "node scripts/pack-game.mjs --platform oppo",
     "prepack": "node scripts/pack-game.mjs",
     "postpack": "node scripts/remove-pack-tarball.mjs",
     "preflight": "node scripts/preflight.mjs",

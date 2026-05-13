@@ -27,6 +27,7 @@ function parseArgs(args) {
   let platform = defaultPlatform;
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
+    if (arg === '--') continue;
     if (arg === '--platform') {
       const value = args[index + 1];
       if (!value || value.startsWith('--')) return { ok: false, message: 'Missing value for --platform.' };

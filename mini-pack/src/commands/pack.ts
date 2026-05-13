@@ -28,11 +28,11 @@ export async function runPackCommand(options: PackCommandOptions): Promise<void>
 
   const baseLoaded = await loadGameConfig({ projectRoot, platform: config.platform });
   assertPlatformMatchesChannel(config, baseLoaded);
-  const vivoMaterials = baseLoaded.vivoMaterials;
-  if (!vivoMaterials?.packageName) {
+  const platformMaterials = getPlatformMaterials(baseLoaded);
+  if (!platformMaterials?.packageName) {
     throw new UserError(`Missing packageName in channels/${config.platform}/materials.ts.`);
   }
-  const packageName = vivoMaterials.packageName;
+  const packageName = platformMaterials.packageName;
 
   const outputDirAbs = path.isAbsolute(config.output) ? config.output : path.resolve(projectRoot, config.output);
   const tempOutDir = path.join(projectRoot, '.mini-pack', `${config.platform}-build-${packageName}`);
@@ -77,8 +77,14 @@ export async function runPackCommand(options: PackCommandOptions): Promise<void>
 
   const printable = path.relative(process.cwd(), finalRpk) || finalRpk;
   logger.success(
-    `Built ${config.platform} .rpk (v${vivoMaterials.versionName} / code ${vivoMaterials.versionCode}) -> ${printable}`,
+    `Built ${config.platform} .rpk (v${platformMaterials.versionName} / code ${platformMaterials.versionCode}) -> ${printable}`,
   );
+}
+
+function getPlatformMaterials(loaded: LoadedGameConfig) {
+  if (loaded.platform === 'vivo') return loaded.vivoMaterials;
+  if (loaded.platform === 'oppo') return loaded.oppoMaterials;
+  return undefined;
 }
 
 async function readConfigJson(file: string): Promise<unknown> {

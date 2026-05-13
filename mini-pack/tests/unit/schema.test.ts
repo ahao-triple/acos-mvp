@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  oppoMaterialsSchema,
   gameConfigSchema,
   vivoMaterialsSchema,
   defineGameConfig,
+  defineOppoMaterials,
   defineVivoMaterials,
 } from '../../src/core/schema.js';
 
@@ -103,6 +105,41 @@ describe('vivoMaterialsSchema', () => {
   });
 });
 
+describe('oppoMaterialsSchema', () => {
+  it('accepts valid oppo materials and applies defaults', () => {
+    const result = oppoMaterialsSchema.safeParse({
+      packageName: 'com.example.oppo',
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.iconPath).toBe('icon.png');
+      expect(result.data.versionName).toBe('1.0.0');
+      expect(result.data.versionCode).toBe(1);
+    }
+  });
+
+  it('accepts the same optional fields as vivo materials', () => {
+    const result = oppoMaterialsSchema.safeParse({
+      packageName: 'com.example.oppo',
+      rewardedAdUnitId: 'oppo-rwd-001',
+      releaseSignDir: '../../oppo-pem',
+      homePage: '/logo.png',
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.rewardedAdUnitId).toBe('oppo-rwd-001');
+      expect(result.data.releaseSignDir).toBe('../../oppo-pem');
+      expect(result.data.homePage).toBe('/logo.png');
+    }
+  });
+
+  it('rejects invalid oppo package names', () => {
+    const result = oppoMaterialsSchema.safeParse({ packageName: 'bad-name' });
+    expect(result.success).toBe(false);
+  });
+});
+
 describe('define*', () => {
   it('defineGameConfig returns its input', () => {
     const config = {
@@ -118,5 +155,10 @@ describe('define*', () => {
   it('defineVivoMaterials returns its input', () => {
     const m = { packageName: 'com.x.y', iconPath: 'icon.png', versionName: '1.0.0', versionCode: 1 };
     expect(defineVivoMaterials(m)).toBe(m);
+  });
+
+  it('defineOppoMaterials returns its input', () => {
+    const m = { packageName: 'com.x.y', iconPath: 'icon.png', versionName: '1.0.0', versionCode: 1 };
+    expect(defineOppoMaterials(m)).toBe(m);
   });
 });
