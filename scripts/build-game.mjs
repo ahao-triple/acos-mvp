@@ -25,7 +25,7 @@ if (!fs.existsSync(configFile)) {
   process.exit(1);
 }
 
-run('pnpm', ['--dir', 'mini-pack', 'build']);
+runLocalBin('tsc', ['-p', 'mini-pack/tsconfig.json']);
 run(process.execPath, [
   'mini-pack/dist/cli.js',
   'build',
@@ -33,6 +33,7 @@ run(process.execPath, [
   platform,
   '--project-root',
   gamePath,
+  '--skip-vivo-rpk',
 ]);
 
 function parseArgs(args) {
@@ -71,9 +72,13 @@ function run(command, args) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
+function runLocalBin(bin, args) {
+  run(path.join(repoRoot, 'node_modules', '.bin', process.platform === 'win32' ? `${bin}.cmd` : bin), args);
+}
+
 function resolveCommand(command, args) {
-  if (process.platform === 'win32' && command === 'pnpm') {
-    return { command: 'cmd.exe', args: ['/d', '/s', '/c', 'pnpm', ...args] };
+  if (process.platform === 'win32' && command.endsWith('.cmd')) {
+    return { command: 'cmd.exe', args: ['/d', '/s', '/c', command, ...args] };
   }
   return { command, args };
 }

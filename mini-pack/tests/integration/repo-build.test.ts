@@ -15,12 +15,10 @@ afterEach(async () => {
 });
 
 describe('repository game build command', () => {
-  test('builds a vivo package for gonglian-fangxian into channels/vivo/build without changing game files', async () => {
+  test('builds a vivo project for gonglian-fangxian into channels/vivo/build without changing game files', async () => {
     const beforeSnapshot = await snapshotFiles(vivoGameDir, ['channels/vivo/build']);
 
-    const result = await runCommand(['pnpm', 'build', 'games/gonglian-fangxian', '--platform', 'vivo'], repoRoot, {
-      MINI_PACK_VIVO_FAKE_RPK: '1',
-    });
+    const result = await runCommand(['pnpm', 'build', 'games/gonglian-fangxian', '--platform', 'vivo'], repoRoot);
 
     const afterSnapshot = await snapshotFiles(vivoGameDir, ['channels/vivo/build']);
     expect(afterSnapshot).toEqual(beforeSnapshot);
@@ -35,9 +33,6 @@ describe('repository game build command', () => {
     await expect(fs.stat(path.join(vivoOutputDir, 'src/icon.png'))).resolves.toBeTruthy();
     await expect(fs.stat(path.join(vivoOutputDir, 'src/audio/bgm.mp3'))).resolves.toBeTruthy();
     await expect(fs.stat(path.join(vivoOutputDir, 'build-report.json'))).resolves.toBeTruthy();
-
-    const rpkFiles = await findRpkFiles(vivoOutputDir);
-    expect(rpkFiles).toEqual([path.join(vivoOutputDir, 'dist/debug/com.jnsy.qmbg.vivominigame.rpk')]);
 
     const manifest = JSON.parse(await fs.readFile(path.join(vivoOutputDir, 'src/manifest.json'), 'utf8'));
     expect(manifest.package).toBe('com.jnsy.qmbg.vivominigame');
@@ -86,20 +81,6 @@ function resolveCommand(command: string, args: string[]): { command: string; arg
     return { command: 'cmd.exe', args: ['/d', '/s', '/c', 'pnpm', ...args] };
   }
   return { command, args };
-}
-
-async function findRpkFiles(dir: string): Promise<string[]> {
-  const entries = await fs.readdir(dir, { withFileTypes: true });
-  const files = await Promise.all(
-    entries.map(async (entry) => {
-      const entryPath = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        return findRpkFiles(entryPath);
-      }
-      return entry.isFile() && entry.name.endsWith('.rpk') ? [entryPath] : [];
-    }),
-  );
-  return files.flat().sort();
 }
 
 async function snapshotFiles(dir: string, excludeRelPaths: string[] = []): Promise<Record<string, string>> {

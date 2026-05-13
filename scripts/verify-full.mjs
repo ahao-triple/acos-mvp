@@ -10,7 +10,7 @@ const matrix = collectMatrix(gamesDir);
 console.log(`[verify:full] 矩阵：${matrix.map((m) => `${m.gameName}×${m.platform}`).join(', ')}`);
 
 runOrExit('pnpm', ['test:game'], 'test:game', process.env);
-runOrExit('pnpm', ['test:pack'], 'test:pack', process.env);
+runOrExit('pnpm', ['test:cli'], 'test:cli', process.env);
 
 for (const { gameName, platform } of matrix) {
   const env = platform === 'vivo'

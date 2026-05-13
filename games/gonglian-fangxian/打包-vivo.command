@@ -16,15 +16,8 @@ if ! command -v pnpm >/dev/null 2>&1; then
   read -r -p "按回车关闭..."; exit 1
 fi
 
-echo "🔨 编译 mini-pack ..."
-if ! pnpm --dir mini-pack build; then
-  echo "❌ mini-pack 编译失败"
-  read -r -p "按回车关闭..."; exit 1
-fi
-
-echo
 echo "📦 打包 vivo ..."
-node mini-pack/dist/cli.js pack "$SCRIPT_DIR/build.vivo.json"
+pnpm pack
 status=$?
 
 echo

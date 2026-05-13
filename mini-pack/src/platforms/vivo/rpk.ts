@@ -124,7 +124,7 @@ function runCommand(cliCommand: VivoCliCommand, cwd: string): Promise<VivoCliRun
       reject(
         new UserError(
           `Failed to start Vivo CLI: ${error.message}`,
-          `Command: ${cliCommand.command} ${cliCommand.args.join(' ')}\nProject: ${cwd}\nInstall mini-pack dependencies with pnpm --dir mini-pack install so the local ${VIVO_CLI_BIN} command is available.`,
+          `Command: ${cliCommand.command} ${cliCommand.args.join(' ')}\nProject: ${cwd}\nInstall dependencies from the repository root so ${VIVO_CLI_BIN} is available.`,
         ),
       );
     });

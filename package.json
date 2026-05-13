@@ -4,14 +4,20 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "bootstrap": "pnpm install",
+    "dev": "node scripts/dev-game.mjs",
     "build": "node scripts/build-game.mjs",
+    "pack": "node scripts/pack-game.mjs",
+    "prepack": "node scripts/pack-game.mjs",
+    "postpack": "node scripts/remove-pack-tarball.mjs",
     "preflight": "node scripts/preflight.mjs",
-    "test:game": "pnpm --dir games/gonglian-fangxian/game test",
-    "test:pack": "pnpm --dir mini-pack test",
-    "test": "pnpm test:game && pnpm test:pack",
-    "verify": "pnpm test:game && pnpm test:pack && pnpm build",
-    "verify:full": "node scripts/verify-full.mjs"
+    "test": "vitest --run",
+    "test:game": "vitest --run games/gonglian-fangxian",
+    "test:cli": "vitest --run mini-pack",
+    "typecheck": "tsc -p mini-pack/tsconfig.json --noEmit && tsc -p mini-pack/tsconfig.test.json --noEmit && tsc -p games/gonglian-fangxian/game/tsconfig.json --noEmit",
+    "verify": "pnpm install && pnpm build && pnpm test && pnpm pack",
+    "clean": "node scripts/clean.mjs",
+    "verify:full": "node scripts/verify-full.mjs",
+    "postinstall": "sh games/gonglian-fangxian/game/scripts/apply-pixi-patch.sh"
   },
   "pnpm": {
     "overrides": {

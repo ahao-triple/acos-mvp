@@ -5,7 +5,8 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const supportedPlatforms = new Set(['vivo']);
-const usage = 'Usage: pnpm preflight games/<game-project> [--platform vivo]';
+const defaultGamePath = 'games/gonglian-fangxian';
+const usage = 'Usage: pnpm preflight [games/<game-project>] [--platform vivo]';
 const parsed = parseArgs(process.argv.slice(2));
 
 if (!parsed.ok) {
@@ -23,7 +24,7 @@ if (!fs.existsSync(configFile)) {
   process.exit(1);
 }
 
-run('pnpm', ['--dir', 'mini-pack', 'build']);
+runLocalBin('tsc', ['-p', 'mini-pack/tsconfig.json']);
 run(process.execPath, [
   'mini-pack/dist/cli.js',
   'preflight',
@@ -54,7 +55,7 @@ function parseArgs(args) {
     if (gamePath) return { ok: false, message: `Unexpected argument: ${arg}` };
     gamePath = arg;
   }
-  if (!gamePath) return { ok: false, message: 'Missing game project path.' };
+  gamePath ??= defaultGamePath;
   if (!supportedPlatforms.has(platform)) return { ok: false, message: `Unsupported platform: ${platform}\nSupported platforms: ${[...supportedPlatforms].join(', ')}` };
   return { ok: true, gamePath, platform };
 }
@@ -65,9 +66,13 @@ function run(command, args) {
   if (result.status !== 0) process.exit(result.status ?? 1);
 }
 
+function runLocalBin(bin, args) {
+  run(path.join(repoRoot, 'node_modules', '.bin', process.platform === 'win32' ? `${bin}.cmd` : bin), args);
+}
+
 function resolveCommand(command, args) {
-  if (process.platform === 'win32' && command === 'pnpm') {
-    return { command: 'cmd.exe', args: ['/d', '/s', '/c', 'pnpm', ...args] };
+  if (process.platform === 'win32' && command.endsWith('.cmd')) {
+    return { command: 'cmd.exe', args: ['/d', '/s', '/c', command, ...args] };
   }
   return { command, args };
 }

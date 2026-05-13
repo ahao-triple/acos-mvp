@@ -15,8 +15,12 @@
 
 set -e
 
-PATCH_FILE="patches/pixi.js+8.18.1.patch"
-TARGET="node_modules/pixi.js"
+SCRIPT_DIR="$(CDPATH= cd -- "$(dirname "$0")" && pwd)"
+GAME_DIR="$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)"
+REPO_ROOT="$(CDPATH= cd -- "$GAME_DIR/../../.." && pwd)"
+
+PATCH_FILE="$GAME_DIR/patches/pixi.js+8.18.1.patch"
+TARGET="$REPO_ROOT/node_modules/pixi.js"
 MARKER='[pixi-patch:uint16]'
 MARKER_FILE="$TARGET/lib/rendering/batcher/shared/Batcher.mjs"
 
