@@ -131,6 +131,32 @@ describe('vivoMaterialsSchema', () => {
     }
   });
 
+  it('accepts optional rewardedAdUnitId for vivo ad placement configuration', () => {
+    const result = vivoMaterialsSchema.safeParse({
+      packageName: 'com.example.app',
+      rewardedAdUnitId: 'vivo-rwd-001',
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.rewardedAdUnitId).toBe('vivo-rwd-001');
+    }
+  });
+
+  it('accepts optional vivo release signing directory and homePage asset', () => {
+    const result = vivoMaterialsSchema.safeParse({
+      packageName: 'com.example.app',
+      releaseSignDir: '../../vivo-pem',
+      homePage: '/icon.png',
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.releaseSignDir).toBe('../../vivo-pem');
+      expect(result.data.homePage).toBe('/icon.png');
+    }
+  });
+
   it('rejects packageName missing dot', () => {
     const result = vivoMaterialsSchema.safeParse({ packageName: 'singletoken' });
     expect(result.success).toBe(false);

@@ -64,7 +64,7 @@ export async function buildVivoRpk(projectDir: string, loaded: LoadedGameConfig)
 export function createVivoCliCommand(packageRoot: string, platform = process.platform): VivoCliCommand {
   return {
     command: VIVO_CLI_BIN,
-    args: ['build'],
+    args: ['release'],
     spawnOptions: {
       env: {
         ...process.env,

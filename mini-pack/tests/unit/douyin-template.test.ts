@@ -9,7 +9,7 @@ import type { LoadedGameConfig } from '../../src/shared/types.js';
 function makeLoaded(): LoadedGameConfig {
   return {
     game: {
-      title: '共联防线软件',
+      title: '全民爆梗游戏软件',
       entry: 'game/src/main.ts',
       publicDir: 'game/public-pack',
       orientation: 'portrait',

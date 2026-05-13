@@ -82,9 +82,25 @@ export const vivoPlatformBuilder: PlatformBuilder = {
     await writeBuildReport(path.join(outDir, 'build-report.json'), report);
 
     if (!options.skipVivoRpk) {
+      await copyVivoReleaseSigningFiles(loaded);
       await buildVivoRpk(outDir, loaded);
     }
 
     return report;
   },
 };
+
+export async function copyVivoReleaseSigningFiles(loaded: LoadedGameConfig): Promise<void> {
+  if (loaded.platform !== 'vivo' || !loaded.vivoMaterials?.releaseSignDir) {
+    return;
+  }
+
+  const sourceDir = path.resolve(loaded.projectRoot, loaded.vivoMaterials.releaseSignDir);
+  const privateKeySource = path.join(sourceDir, 'private.pem');
+  const certificateSource = path.join(sourceDir, 'certificate.pem');
+  const releaseSignDir = path.join(loaded.paths.outDirAbs, 'sign', 'release');
+
+  await fs.ensureDir(releaseSignDir);
+  await fs.copyFile(privateKeySource, path.join(releaseSignDir, 'private.pem'));
+  await fs.copyFile(certificateSource, path.join(releaseSignDir, 'certificate.pem'));
+}

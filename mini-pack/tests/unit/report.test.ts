@@ -6,7 +6,7 @@ describe('createBuildReport', () => {
   test('creates the documented report shape', () => {
     const report = createBuildReport({
       platform: 'douyin',
-      title: '共联防线',
+      title: '全民爆梗游戏软件',
       entry: 'game/src/main.ts',
       publicDir: 'game/public',
       outDir: 'builds/douyin',
@@ -18,7 +18,7 @@ describe('createBuildReport', () => {
     expect(report).toEqual({
       tool: 'mini-pack',
       platform: 'douyin',
-      title: '共联防线',
+      title: '全民爆梗游戏软件',
       entry: 'game/src/main.ts',
       publicDir: 'game/public',
       outDir: 'builds/douyin',
@@ -37,7 +37,7 @@ describe('createBuildReport', () => {
   test('adds non-blocking warnings for large outputs', () => {
     const report = createBuildReport({
       platform: 'douyin',
-      title: '共联防线',
+      title: '全民爆梗游戏软件',
       entry: 'game/src/main.ts',
       publicDir: 'game/public',
       outDir: 'builds/douyin',

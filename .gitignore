@@ -1,5 +1,19 @@
 .DS_Store
 
+# Font source (OFL-1.1 OTF/TTF/TTC 体积大，手动按 assets/fonts/source/LICENSE.md 下载)
+assets/fonts/source/*.otf
+assets/fonts/source/*.ttf
+assets/fonts/source/*.ttc
+assets/raw/fonts/*.otf
+assets/raw/fonts/*.ttf
+assets/raw/fonts/*.ttc
+games/*/assets/raw/fonts/*.otf
+games/*/assets/raw/fonts/*.ttf
+games/*/assets/raw/fonts/*.ttc
+
+# Atlas 工具链本地 install（msdf-bmfont-xml + 锁定的 opentype.js@1.3.4）
+.tools/
+
 # Dependencies
 node_modules/
 
@@ -7,9 +21,12 @@ node_modules/
 build/
 builds/
 dist/
+*.rpk
 mini-pack/dist/
 games/*/game/dist/
 games/*/channels/*/build/
+games/*/.mini-pack/
+.mini-pack/
 games/difference-hunt/levels/library/
 games/difference-hunt/levels/temp/
 games/difference-hunt/levels/local/
@@ -19,6 +36,7 @@ games/difference-hunt/levels/node_modules/
 # Local environment
 .env
 games/*/.env
+vivo-pem/
 
 # Tool caches and temporary files
 .claude/
@@ -27,10 +45,22 @@ games/*/.env
 .vite-temp/
 .pnpm-store/
 coverage/
+debug/
+test-results/
+playwright-report/
+games/*/game/test-results/
+games/*/game/playwright-report/
 tmp/
 temp/
 png/
 mini-pack/tests/tmp/
+
+# Root-level ad-hoc screenshots and debug dumps.
+/*.png
+/*.jpg
+/*.jpeg
+/*.log
+/*.tmp
 
 # Local reference projects
 example/

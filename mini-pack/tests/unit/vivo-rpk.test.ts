@@ -6,6 +6,7 @@ import { PassThrough } from 'node:stream';
 
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
+import { copyVivoReleaseSigningFiles } from '../../src/platforms/vivo/index.js';
 import { buildVivoRpk, createVivoCliCommand } from '../../src/platforms/vivo/rpk.js';
 import type { LoadedGameConfig } from '../../src/shared/types.js';
 
@@ -25,7 +26,7 @@ describe('createVivoCliCommand', () => {
     const command = createVivoCliCommand(packageRoot, 'win32');
 
     expect(command.command).toBe('mgs');
-    expect(command.args).toEqual(['build']);
+    expect(command.args).toEqual(['release']);
     expect(command.spawnOptions.shell).toBe(true);
     expect(
       command.spawnOptions.env?.PATH?.startsWith(`${path.join(packageRoot, 'node_modules/.bin')}${path.delimiter}`),
@@ -37,7 +38,7 @@ describe('createVivoCliCommand', () => {
     const command = createVivoCliCommand(packageRoot, 'darwin');
 
     expect(command.command).toBe('mgs');
-    expect(command.args).toEqual(['build']);
+    expect(command.args).toEqual(['release']);
     expect(command.spawnOptions.shell).toBe(false);
     expect(command.spawnOptions.env?.PATH?.split(path.delimiter)[0]).toBe(path.join(packageRoot, 'node_modules/.bin'));
   });
@@ -114,11 +115,35 @@ describe('buildVivoRpk', () => {
   });
 });
 
-function createLoaded(): LoadedGameConfig {
-  const projectRoot = path.join(os.tmpdir(), 'gonglian-fangxian');
+describe('copyVivoReleaseSigningFiles', () => {
+  test('copies configured release PEM files into the generated vivo project sign/release directory', async () => {
+    const projectRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'mini-pack-vivo-sign-'));
+    const sourceDir = path.join(projectRoot, 'vivo-pem');
+    await fs.mkdir(sourceDir, { recursive: true });
+    await fs.writeFile(path.join(sourceDir, 'private.pem'), 'private-key\n');
+    await fs.writeFile(path.join(sourceDir, 'certificate.pem'), 'certificate\n');
+
+    const loaded = createLoaded(projectRoot);
+    loaded.vivoMaterials!.releaseSignDir = 'vivo-pem';
+    (loaded.materials as { releaseSignDir?: string }).releaseSignDir = 'vivo-pem';
+
+    await copyVivoReleaseSigningFiles(loaded);
+
+    await expect(fs.readFile(path.join(loaded.paths.outDirAbs, 'sign/release/private.pem'), 'utf8')).resolves.toBe(
+      'private-key\n',
+    );
+    await expect(fs.readFile(path.join(loaded.paths.outDirAbs, 'sign/release/certificate.pem'), 'utf8')).resolves.toBe(
+      'certificate\n',
+    );
+
+    await fs.rm(projectRoot, { recursive: true, force: true });
+  });
+});
+
+function createLoaded(projectRoot = path.join(os.tmpdir(), 'gonglian-fangxian')): LoadedGameConfig {
   return {
     game: {
-      title: '共联防线',
+      title: '全民爆梗游戏软件',
       entry: 'game/src/main.ts',
       publicDir: 'game/public',
       orientation: 'portrait',

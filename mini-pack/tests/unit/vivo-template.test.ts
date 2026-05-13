@@ -23,6 +23,9 @@ function makeLoaded(): LoadedGameConfig {
       iconPath: 'icon.png',
       versionName: '2.5.0',
       versionCode: 7,
+      rewardedAdUnitId: 'vivo-rwd-001',
+      homePage: '/icon.png',
+      releaseSignDir: '../../vivo-pem',
     },
     projectRoot: '/tmp/x',
     paths: {
@@ -39,6 +42,9 @@ function makeLoaded(): LoadedGameConfig {
       iconPath: 'icon.png',
       versionName: '2.5.0',
       versionCode: 7,
+      rewardedAdUnitId: 'vivo-rwd-001',
+      homePage: '/icon.png',
+      releaseSignDir: '../../vivo-pem',
     },
   };
 }
@@ -52,8 +58,17 @@ describe('createVivoManifest', () => {
     expect(manifest.versionCode).toBe(7);
     expect(manifest.deviceOrientation).toBe('portrait');
     expect(manifest.icon).toBe('/icon.png');
+    expect(manifest.homePage).toBe('/icon.png');
     expect(manifest.type).toBe('game');
     expect(manifest.minPlatformVersion).toBe(1060);
+  });
+
+  it('keeps rewardedAdUnitId in the same manifest config as package metadata', () => {
+    const manifest = createVivoManifest(makeLoaded());
+    expect(manifest.config).toMatchObject({
+      logLevel: 'debug',
+      rewardedAdUnitId: 'vivo-rwd-001',
+    });
   });
 });
 
@@ -133,8 +148,24 @@ describe('renderVivoGameJs (touch event shim removed)', () => {
     expect(withPkg).toContain("platform: 'vivo'");
   });
 
+  it('embeds materials.rewardedAdUnitId into vivo rewarded video creation', () => {
+    const withRewardedAd = renderVivoGameJs(
+      'var __MiniPackGameBundle = { createGame: () => ({ start(){} }) };',
+      makeLoaded(),
+    );
+
+    expect(withRewardedAd).toContain('var rewardedAdUnitId = "vivo-rwd-001";');
+    expect(withRewardedAd).toContain('qg.createRewardedVideoAd({ adUnitId: rewardedAdUnitId })');
+    expect(withRewardedAd).toContain("Boolean(rewardedAdUnitId && typeof qg.createRewardedVideoAd === 'function')");
+  });
+
   it('omits pkgName when no vivoMaterials are loaded (build script callable)', () => {
     expect(js).not.toContain('pkgName');
+  });
+
+  it('does not call vivo qg.login from the generated runtime auth bridge', () => {
+    expect(js).not.toContain('qg.login');
+    expect(js).toContain("resolve({ platform: 'vivo', code: '' });");
   });
 
   it('does not include temporary vivo diagnostics', () => {

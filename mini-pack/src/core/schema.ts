@@ -61,6 +61,9 @@ export const vivoMaterialsSchema = z
     iconPath: z.string().trim().min(1).default('icon.png'),
     versionName: z.string().trim().min(1).default('1.0.0'),
     versionCode: z.number().int().positive().default(1),
+    rewardedAdUnitId: z.string().optional(),
+    releaseSignDir: z.string().trim().min(1).optional(),
+    homePage: z.string().trim().min(1).optional(),
   })
   .strict();
 
