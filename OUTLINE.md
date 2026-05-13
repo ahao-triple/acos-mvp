@@ -8,9 +8,9 @@
 |---|---|
 | 项目类型 | pnpm workspace，包含一个小游戏项目和一个内部打包 CLI。 |
 | 游戏 | `gonglian-fangxian`，展示标题为 `全民爆梗游戏软件`，竖屏画布 `750x1334`。 |
-| 打包工具 | `mini-pack`，从 `game.config.ts` 和渠道物料生成 vivo 小游戏工程，并可进一步打 `.rpk`。 |
-| 发布目标 | vivo 小游戏；浏览器/Vite 仅用于本地开发和自动化验证。 |
-| 主要技术 | TypeScript ESM、PixiJS 8、Vite、Vitest、Playwright、esbuild、Zod、@vivo-minigame/cli。 |
+| 打包工具 | `mini-pack`，从 `game.config.ts`、`build.<platform>.json` 和渠道物料生成小游戏工程，并可进一步打 `.rpk`。 |
+| 发布目标 | vivo 小游戏为现有真实打包链路；OPPO 小游戏骨架已接入，可生成工程和 fake `.rpk`；浏览器/Vite 仅用于本地开发和自动化验证。 |
+| 主要技术 | TypeScript ESM、PixiJS 8、Vite、Vitest、Playwright、esbuild、Zod、@vivo-minigame/cli；OPPO CLI 预留为 `@oppo-minigame/cli` / `quickgame`，当前未安装。 |
 | 依赖管理 | 所有依赖和用户命令都集中在根 `package.json`。 |
 
 ## 目录布局
@@ -29,12 +29,15 @@
 │   ├── src/commands/               # 命令实现
 │   ├── src/core/                   # 配置加载、schema、bundle、assets、report
 │   ├── src/platforms/vivo/         # vivo 工程模板、runtime adapter、RPK 调用
+│   ├── src/platforms/oppo/         # OPPO 工程模板、runtime adapter、fake/真实 RPK 调用入口
 │   ├── tests/                      # CLI 单测、集成测试、fixture
 │   └── stubs/puppeteer/            # 让 vivo CLI 依赖可安装的本地 stub
 └── games/gonglian-fangxian/
     ├── game.config.ts              # mini-pack 读取的游戏声明
-    ├── build.vivo.json             # `pnpm pack` 使用的 vivo 打包配置
+    ├── build.vivo.json             # vivo 打包配置
+    ├── build.oppo.json             # OPPO 打包配置
     ├── channels/vivo/              # vivo 图标和 materials.ts
+    ├── channels/oppo/              # OPPO 图标和 materials.ts
     ├── assets/                     # 原始/处理后/生成素材目录和 manifest
     └── game/                       # PixiJS 游戏本体
         ├── src/main.ts             # 游戏入口，安装 vivo hooks 并启动 Pixi renderer
@@ -56,10 +59,11 @@
 
 | 平台 | 用途 | 入口/配置 | 产物 |
 |---|---|---|---|
-| vivo | 唯一发布平台 | `channels/vivo/materials.ts`、`build.vivo.json`、`mini-pack/src/platforms/vivo/` | `channels/vivo/build/` 工程、`dist/*.rpk` |
+| vivo | 现有真实发布平台 | `channels/vivo/materials.ts`、`build.vivo.json`、`mini-pack/src/platforms/vivo/` | `channels/vivo/build/` 工程、`dist/com.jnsy.qmbg.vivominigame.rpk` |
+| oppo | 新增骨架平台，当前用于工程生成和 fake RPK 验证；真实 CLI 待 Phase 4 | `channels/oppo/materials.ts`、`build.oppo.json`、`mini-pack/src/platforms/oppo/` | `channels/oppo/build/` 工程、fake `dist/com.jnsy.qmbg.oppominigame.rpk` |
 | web | 本地开发/测试 | `games/gonglian-fangxian/game/src/platform/web.ts`、Vite dev server | 不作为发布产物 |
 
-当前代码中没有抖音、快手、微信等平台实现；`mini-pack` 的 platform builder 也只保留 vivo。
+当前代码中没有抖音、快手、微信等平台实现；`mini-pack` 的 platform builder 当前注册 vivo 和 oppo。
 
 ## 构建与运行命令
 
@@ -69,9 +73,11 @@
 |---|---|
 | `pnpm install` | 安装依赖，并通过 postinstall 应用 PixiJS vivo 兼容 patch。 |
 | `pnpm dev` | 启动 `gonglian-fangxian/game` 的 Vite dev server。 |
-| `pnpm build` | 编译 `mini-pack`，生成 vivo 工程到 `games/gonglian-fangxian/channels/vivo/build/`，不打 `.rpk`。 |
-| `pnpm pack` | 编译 `mini-pack`，按 `games/gonglian-fangxian/build.vivo.json` 打真实 vivo `.rpk`。 |
-| `pnpm preflight` | 校验默认游戏的 vivo 配置和渠道物料。 |
+| `pnpm build` | 默认生成 vivo 工程；可用 `pnpm build --platform oppo` 生成 OPPO 工程。 |
+| `pnpm pack` | 默认走 vivo 打包；保留但会和 pnpm 内置 pack 语义混淆，建议用显式平台命令。 |
+| `pnpm pack:vivo` | 按 `build.vivo.json` 打真实 vivo `.rpk`。 |
+| `MINI_PACK_OPPO_FAKE_RPK=1 pnpm pack:oppo` | 按 `build.oppo.json` 打 OPPO fake `.rpk`；未安装 OPPO CLI 时真实打包会清晰报错。 |
+| `pnpm preflight` | 校验默认游戏的渠道配置和物料；可用 `--platform vivo|oppo` 指定平台。 |
 | `pnpm test` | 跑全部 Vitest 测试。 |
 | `pnpm test:game` | 只跑游戏侧测试。 |
 | `pnpm test:cli` | 只跑 `mini-pack` 测试。 |
@@ -84,8 +90,10 @@
 | 流程 | 经过的关键文件 |
 |---|---|
 | 本地开发 | `scripts/dev-game.mjs` → `games/gonglian-fangxian/game/vite.config.ts` → `src/main.ts` |
-| vivo 工程构建 | `scripts/build-game.mjs` → `mini-pack/dist/cli.js build` → `mini-pack/src/commands/build.ts` → `mini-pack/src/platforms/vivo/index.ts` |
-| vivo RPK 打包 | `scripts/pack-game.mjs` → `mini-pack/dist/cli.js pack` → `mini-pack/src/commands/pack.ts` → `mini-pack/src/platforms/vivo/rpk.ts` |
+| vivo 工程构建 | `scripts/build-game.mjs --platform vivo` → `mini-pack/dist/cli.js build` → `mini-pack/src/commands/build.ts` → `mini-pack/src/platforms/vivo/index.ts` |
+| OPPO 工程构建 | `scripts/build-game.mjs --platform oppo` → `mini-pack/dist/cli.js build` → `mini-pack/src/commands/build.ts` → `mini-pack/src/platforms/oppo/index.ts` |
+| vivo RPK 打包 | `scripts/pack-game.mjs --platform vivo` → `mini-pack/dist/cli.js pack` → `mini-pack/src/commands/pack.ts` → `mini-pack/src/platforms/vivo/rpk.ts` |
+| OPPO RPK 打包 | `scripts/pack-game.mjs --platform oppo` → `mini-pack/dist/cli.js pack` → `mini-pack/src/commands/pack.ts` → `mini-pack/src/platforms/oppo/rpk.ts` |
 | 游戏启动 | `src/main.ts` → `src/platform/vivo/*` hooks → `src/pixi/app.ts` / `src/pixi/renderer.ts` → `src/app/controller.ts` |
 | 测试 | 根 `vitest.config.ts` → `game/src/test/*.test.ts` + `mini-pack/tests/**/*.test.ts`；Playwright 用 `game/tests/` 下配置。 |
 | 字体维护 | `scripts/scan-charset.mjs`、`scripts/build-font-atlas.sh`、`game/docs/font-charset.txt`、`game/public-pack/fonts/` |
@@ -99,7 +107,7 @@
 | 部分屏幕 | `src/pixi/screens/stub.ts` 仍是占位屏实现，界面完整度需要按实际产品范围继续补。 |
 | 视觉素材 | `pieceSprite.ts` 注释显示棋子详细 icon 仍是后续阶段；当前更偏几何/文字化表达。 |
 | 平台能力奖励 | `rewards.ts` / `platform/minipack.ts` 对添加桌面、常用、侧边栏等能力有失败/未完成反馈，依赖 vivo 能力和真机验证。 |
-| vivo 字体/渲染兼容 | `src/platform/vivo/` 保留大量 runtime workaround；`vivo-quirks.md` 中仍有 MSDF/WebGL 相关待验证项。 |
-| 字符集工具路径 | `scripts/build-font-atlas.sh` 当前查找 `docs/font-charset.txt`，而实际字符集文件在 `games/gonglian-fangxian/game/docs/font-charset.txt`；需要后续校准工具链。 |
-| 测试打包 | `mini-pack` 中保留 `MINI_PACK_VIVO_FAKE_RPK=1` 的 fake RPK 路径，只用于测试，不代表真实打包。 |
+| vivo 字体/渲染兼容 | `src/platform/vivo/` 保留大量 runtime workaround；OPPO 运行时 game adapter 尚未进入游戏代码。 |
+| OPPO 真机接入 | `mini-pack/src/platforms/oppo/` 已能生成工程和 fake RPK；尚未安装/验证 `@oppo-minigame/cli`，也未新增 `game/src/platform/oppo/`。 |
+| 测试打包 | `mini-pack` 中保留 `MINI_PACK_VIVO_FAKE_RPK=1` 和 `MINI_PACK_OPPO_FAKE_RPK=1` 的 fake RPK 路径，只用于测试，不代表真实打包。 |
 | 文档 | 游戏侧 docs 仍包含历史总结/方案类材料，是否继续保留需要按当前维护价值再筛。 |

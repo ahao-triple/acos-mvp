@@ -5,7 +5,7 @@
 
 ## 项目是什么
 
-pnpm workspace，产出唯一一个小游戏 `gonglian-fangxian`，通过内部 CLI 工具 `mini-pack` 打包到 vivo 平台。**没有其他游戏，也没有其他平台。**
+pnpm workspace，产出唯一一个小游戏 `gonglian-fangxian`，通过内部 CLI 工具 `mini-pack` 打包到 vivo 和 OPPO 平台。vivo 是现有真实打包链路；OPPO 已有平台骨架、工程生成和 fake RPK 链路，真机 runtime 接入仍在后续阶段。**没有其他游戏，也没有抖音、快手、微信等其他平台。**
 
 技术栈：TypeScript + ESM、Pixi.js（渲染）、Vite（dev/build）、Vitest（测试）、Playwright（e2e）、pnpm workspace、Node ≥ 20。
 
@@ -15,9 +15,11 @@ pnpm workspace，产出唯一一个小游戏 `gonglian-fangxian`，通过内部 
 | ---------------- | --------------------------------------- |
 | `pnpm install`   | 装依赖                                  |
 | `pnpm dev`       | 启动游戏 vite dev server                |
-| `pnpm build`     | 构建 vivo 工程（不出 rpk）              |
-| `pnpm pack`      | 出 vivo `.rpk`                          |
-| `pnpm preflight` | 校验 game config 和资源                 |
+| `pnpm build`     | 默认构建 vivo 工程；可用 `--platform oppo` |
+| `pnpm pack`      | 默认打 vivo `.rpk`，但建议用显式平台命令 |
+| `pnpm pack:vivo` | 出 vivo `.rpk`                          |
+| `pnpm pack:oppo` | 出 OPPO `.rpk`；当前需 `MINI_PACK_OPPO_FAKE_RPK=1` 或安装 OPPO CLI |
+| `pnpm preflight` | 校验 game config 和资源，可用 `--platform vivo|oppo` |
 | `pnpm test`      | 全部测试                                |
 | `pnpm test:game` | 仅游戏测试                              |
 | `pnpm test:cli`  | 仅 mini-pack 测试                       |
@@ -42,6 +44,7 @@ pnpm workspace，产出唯一一个小游戏 `gonglian-fangxian`，通过内部 
 └── games/gonglian-fangxian/
     ├── game/              # 游戏本体（workspace 子包）
     ├── channels/vivo/     # vivo 渠道物料
+    ├── channels/oppo/     # OPPO 渠道物料
     ├── assets/            # 原始 + 处理后资源
     ├── docs/              # 游戏专属文档
     └── game.config.ts     # mini-pack 读取的游戏声明
@@ -104,7 +107,8 @@ pnpm workspace，产出唯一一个小游戏 `gonglian-fangxian`，通过内部 
 
 ## 项目专属约束
 
-- **vivo 是唯一支持的平台**。不写抖音、快手、微信小游戏、其他渠道的代码路径。
+- **当前只支持 vivo + OPPO**。不要写抖音、快手、微信小游戏、其他渠道的代码路径。
+- **OPPO 目前是骨架平台**。`mini-pack/src/platforms/oppo/`、`channels/oppo/`、`build.oppo.json` 已存在；不要假设 OPPO 真机 runtime 已完成，也不要未经要求去改 `game/src/platform/` 或 `game/patches/`。
 - **`web` adapter 只为浏览器 dev 模式存在**，不当发布目标。
 - **游戏只有 `gonglian-fangxian` 一个**。不要给"未来的第二个游戏"搭脚手架。
 - **mini-pack 是内部工具**。不加 npm 发布流程、不加版本号管理 CI。
