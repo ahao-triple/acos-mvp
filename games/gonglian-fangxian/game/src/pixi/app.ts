@@ -56,7 +56,7 @@ import { isVivoStrictMode } from '../platform/vivo/strict-mode';
   }
 }
 
-/** 把 extensions._queue 里指定的 ref 全部过滤掉。详见 phase0-changelog.md 修复 6/8。 */
+/** 把 extensions._queue 里指定的 ref 全部过滤掉。详见 docs/vivo-quirks.md。 */
 function removePixiExtensionsByRef(...refs: unknown[]): void {
   const ext = extensions as unknown as {
     _queue?: Record<string, Array<{ ref: unknown }>>;

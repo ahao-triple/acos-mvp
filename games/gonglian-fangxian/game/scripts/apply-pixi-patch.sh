@@ -11,7 +11,7 @@
 # 这里用 marker 字符串 grep 做幂等判断：patch 里的 console.warn `[pixi-patch:uint16]` 是
 # 我们注入的独有标记，原版 pixi.js 没有。出现就是已 applied，否则跑 patch。
 #
-# 详见 patches/pixi.js+8.18.1.patch 与 docs/phase0-changelog.md。
+# 详见 patches/pixi.js+8.18.1.patch 与 docs/vivo-quirks.md。
 
 set -e
 

@@ -3,11 +3,7 @@
 | 文档 | 给谁 | 何时读 |
 |---|---|---|
 | `vivo-quirks.md` | 维护代码 / 接入新平台的 AI / 人 | 撞 vivo runtime 怪异行为时 |
-| `phase1-summary.md` | 新人 / 半年后的自己 | 想了解项目历程 |
-| `platform-checklist.md` | 平台适配维护 | 检查 vivo 适配约束时 |
 | `audio-audit.md` | 音效维护 | 修音效 / 加 BGM 时 |
-| `visual-upgrade-proposal.md` | 美术 / 视觉升级 | 调表现力时 |
-| `phase0-changelog.md` | 归档 | 极少看，只为复盘 |
 | `font-charset.txt` | 工程 / 字体维护 | 改中文文案、重打 atlas 时 |
 
 ## 维护约定

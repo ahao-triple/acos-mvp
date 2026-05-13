@@ -7,7 +7,7 @@ diff --git a/lib/rendering/batcher/shared/Batcher.mjs b/lib/rendering/batcher/sh
      newSize += newSize % 2;
 -    const newIndexBuffer = newSize > 65535 ? new Uint32Array(newSize) : new Uint16Array(newSize);
 +    if (newSize > 60000) {
-+      console.warn(`[pixi-patch:uint16] index buffer size ${newSize} approaching 65535 limit at Batcher._resizeIndexBuffer (gonglian-fangxian patched, see docs/phase0-changelog.md)`);
++      console.warn(`[pixi-patch:uint16] index buffer size ${newSize} approaching 65535 limit at Batcher._resizeIndexBuffer (gonglian-fangxian patched, see docs/vivo-quirks.md)`);
 +    }
 +    const newIndexBuffer = new Uint16Array(newSize);
      if (newIndexBuffer.BYTES_PER_ELEMENT !== indexBuffer.BYTES_PER_ELEMENT) {
@@ -44,7 +44,7 @@ diff --git a/lib/filters/FilterSystem.mjs b/lib/filters/FilterSystem.mjs
  "use strict";
 +const filterQuadIndices = [0, 1, 2, 0, 2, 3];
 +if (filterQuadIndices.length > 60000) {
-+  console.warn(`[pixi-patch:uint16] index buffer size ${filterQuadIndices.length} approaching 65535 limit at FilterSystem quadGeometry (gonglian-fangxian patched, see docs/phase0-changelog.md)`);
++  console.warn(`[pixi-patch:uint16] index buffer size ${filterQuadIndices.length} approaching 65535 limit at FilterSystem quadGeometry (gonglian-fangxian patched, see docs/vivo-quirks.md)`);
 +}
  const quadGeometry = new Geometry({
    attributes: {
@@ -68,7 +68,7 @@ diff --git a/lib/scene/graphics/shared/utils/buildGeometryFromPath.mjs b/lib/sce
      }
    });
 +  if (indices.length > 60000) {
-+    console.warn(`[pixi-patch:uint16] index buffer size ${indices.length} approaching 65535 limit at buildGeometryFromPath (gonglian-fangxian patched, see docs/phase0-changelog.md)`);
++    console.warn(`[pixi-patch:uint16] index buffer size ${indices.length} approaching 65535 limit at buildGeometryFromPath (gonglian-fangxian patched, see docs/vivo-quirks.md)`);
 +  }
    const out = options.out;
    if (out) {
@@ -95,7 +95,7 @@ diff --git a/lib/scene/mesh-plane/PlaneGeometry.mjs b/lib/scene/mesh-plane/Plane
      this.buffers[1].data = new Float32Array(uvs);
 -    this.indexBuffer.data = new Uint32Array(indices);
 +    if (indices.length > 60000) {
-+      console.warn(`[pixi-patch:uint16] index buffer size ${indices.length} approaching 65535 limit at PlaneGeometry (gonglian-fangxian patched, see docs/phase0-changelog.md)`);
++      console.warn(`[pixi-patch:uint16] index buffer size ${indices.length} approaching 65535 limit at PlaneGeometry (gonglian-fangxian patched, see docs/vivo-quirks.md)`);
 +    }
 +    this.indexBuffer.data = new Uint16Array(indices);
      this.buffers[0].update();
@@ -110,7 +110,7 @@ diff --git a/lib/scene/mesh-simple/RopeGeometry.mjs b/lib/scene/mesh-simple/Rope
      const { width, points, textureScale } = { ..._RopeGeometry.defaultOptions, ...options };
 +    const indexSize = (points.length - 1) * 6;
 +    if (indexSize > 60000) {
-+      console.warn(`[pixi-patch:uint16] index buffer size ${indexSize} approaching 65535 limit at RopeGeometry (gonglian-fangxian patched, see docs/phase0-changelog.md)`);
++      console.warn(`[pixi-patch:uint16] index buffer size ${indexSize} approaching 65535 limit at RopeGeometry (gonglian-fangxian patched, see docs/vivo-quirks.md)`);
 +    }
      super({
        positions: new Float32Array(points.length * 4),
@@ -144,7 +144,7 @@ diff --git a/lib/scene/particle-container/shared/utils/createIndicesForQuads.mjs
 -  } else {
 -    outBuffer || (outBuffer = new Uint16Array(totalIndices));
 +  if (totalIndices > 60000) {
-+    console.warn(`[pixi-patch:uint16] index buffer size ${totalIndices} approaching 65535 limit at createIndicesForQuads (gonglian-fangxian patched, see docs/phase0-changelog.md)`);
++    console.warn(`[pixi-patch:uint16] index buffer size ${totalIndices} approaching 65535 limit at createIndicesForQuads (gonglian-fangxian patched, see docs/vivo-quirks.md)`);
    }
 +  outBuffer || (outBuffer = new Uint16Array(totalIndices));
    if (outBuffer.length !== totalIndices) {
