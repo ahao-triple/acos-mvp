@@ -96,7 +96,7 @@ export class GameController {
   private cueId = 0;
   private audioCueId = 0;
   private seed = 1000;
-  private remoteConfig: ControllerAdConfig = {
+  private adConfig: ControllerAdConfig = {
     adPolicy: {
       enabled: false,
       trigger: 'level_start',
@@ -110,9 +110,9 @@ export class GameController {
   private lastRemoteAdAtMs = 0;
   private readonly userId: string;
 
-  constructor(private readonly platform: PlatformAdapter, options: { remoteConfig?: ControllerAdConfig } = {}) {
+  constructor(private readonly platform: PlatformAdapter, options: { adConfig?: ControllerAdConfig } = {}) {
     this.save = loadSave(platform.storage);
-    this.remoteConfig = options.remoteConfig ?? this.remoteConfig;
+    this.adConfig = options.adConfig ?? this.adConfig;
     this.userId = String(Math.abs(this.seed * 971 + 2077) % 10_000_000).padStart(7, '0');
   }
 
@@ -253,7 +253,7 @@ export class GameController {
   }
 
   private async maybeRunRemoteAd(trigger: 'level_start', levelId: number): Promise<void> {
-    const policy = this.remoteConfig.adPolicy;
+    const policy = this.adConfig.adPolicy;
     if (!policy.enabled || policy.trigger !== trigger) {
       return;
     }
