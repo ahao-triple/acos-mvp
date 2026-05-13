@@ -5,7 +5,6 @@ import './platform/vivo/dom-polyfill';
 import { GameController } from './app/controller';
 import { SoundEngine } from './audio/soundEngine';
 import { setSfxEnabled, unlockSfx } from './audio/sfx';
-import { loginAndLoadRemoteConfig } from './app/remoteConfig';
 import { PixiRenderer } from './pixi/renderer';
 import { createMiniPackPlatformAdapter, createMiniPackSoundOptions, type MiniPackGameApp, type MiniPackGameRuntime } from './platform/minipack';
 import { probeCanvas2DText } from './platform/vivo/canvas2d-text-probe';
@@ -107,14 +106,6 @@ export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
         if (!running) return;
         renderer?.start();
         startAudioTick();
-      });
-
-      void loginAndLoadRemoteConfig(platform, {
-        serverBaseUrl: runtime?.config?.serverBaseUrl ?? '',
-        gameId: 'gonglian-fangxian',
-        channel: runtime?.config?.platform ?? platform.name,
-      }).then((config) => {
-        controller.applyRemoteConfig(config);
       });
     },
     pause() {
