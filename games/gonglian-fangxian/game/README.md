@@ -14,7 +14,7 @@
 
 **`?vivo-strict` 模式下**：所有 vivo hook 全开，控制台能看到 `[vivo-polyfill] init complete` / `[listener-store] forceInstall ...` / `[vivo-pixi-adapter] DOMAdapter installed` / `[pixi-patch] EventSystem.prototype._addEvents / _removeEvents patched`，与 vivo 真机日志一致。
 
-切换条件由 `src/platform/vivo/strict-mode.ts:isVivoStrictMode()` 在模块顶层 freeze：检测 `globalThis.qg / tt / ks`（mini-pack runtime 始终启用，维持原有行为）或 `location.search` 含 `vivo-strict`。
+切换条件由 `src/platform/vivo/strict-mode.ts:isVivoStrictMode()` 在模块顶层 freeze：检测 `globalThis.qg`（vivo mini-pack runtime 始终启用）或 `location.search` 含 `vivo-strict`。
 
 ## 自测工作流
 
