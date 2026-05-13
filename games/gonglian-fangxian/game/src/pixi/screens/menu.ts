@@ -2,22 +2,22 @@
  * 菜单 screen（对应旧 drawMenuScreen）。
  *
  * 布局保持与旧版一致（375 屏宽中心 + 按钮坐标）。动态更新：
- *  - 金币数（左上文本）
  *  - 当前章节标题、进度（中部面板内）
  *  - 平台特有按钮（抖音有"入口奖励"，vivo/web 没有）
  */
-import { Container, Text } from 'pixi.js';
+import { Container } from 'pixi.js';
 import type { AppViewState } from '../../app/controller';
 import { createButton, type ButtonHandle } from '../ui/button';
 import { createPanel } from '../ui/panel';
-import { createText, setText } from '../ui/text';
+import { createText, setText, type AppText } from '../ui/text';
 import type { PixiScreen, ScreenContext } from './base';
+
+const TEXT_COLOR = 0x1a2332;
 
 export class MenuScreen implements PixiScreen {
   readonly container: Container;
-  private readonly coinText: Text;
-  private readonly chapterTitleText: Text;
-  private readonly progressText: Text;
+  private readonly chapterTitleText: AppText;
+  private readonly progressText: AppText;
   private readonly platformAdButton: ButtonHandle;
   private platformAdButtonVisible = false;
 
@@ -25,16 +25,13 @@ export class MenuScreen implements PixiScreen {
     this.container = new Container();
     this.container.label = 'menu';
 
-    this.coinText = createText({ text: '金币 0', size: 26, color: 0xf8fafc, x: 110, y: 54 });
-    this.container.addChild(this.coinText);
-
-    const title = createText({ text: '共联防线软件', size: 68, color: 0xffffff, x: 375, y: 118 });
+    const title = createText({ text: '全民爆梗游戏软件', size: 60, color: TEXT_COLOR, x: 375, y: 118 });
     this.container.addChild(title);
 
     const subtitle = createText({
-      text: '调度资源，修复防线，守住前线',
+      text: '收集爆梗，逐关上分',
       size: 28,
-      color: 0xd1fae5,
+      color: TEXT_COLOR,
       x: 375,
       y: 176,
     });
@@ -42,10 +39,10 @@ export class MenuScreen implements PixiScreen {
 
     this.container.addChild(createPanel({ x: 70, y: 245, width: 610, height: 620 }));
 
-    this.chapterTitleText = createText({ text: '', size: 38, color: 0xffffff, x: 375, y: 320 });
+    this.chapterTitleText = createText({ text: '', size: 38, color: TEXT_COLOR, x: 375, y: 320 });
     this.container.addChild(this.chapterTitleText);
 
-    this.progressText = createText({ text: '', size: 30, color: 0xfef3c7, x: 375, y: 372 });
+    this.progressText = createText({ text: '', size: 30, color: TEXT_COLOR, x: 375, y: 372 });
     this.container.addChild(this.progressText);
 
     // 主按钮：金黄高亮，区别于其他白色次按钮。
@@ -55,7 +52,7 @@ export class MenuScreen implements PixiScreen {
         y: 430,
         width: 450,
         height: 82,
-        label: '继续作战',
+        label: '开整',
         variant: 'primary',
         onTap: () => ctx.dispatch({ type: 'start' }),
       }).container,
@@ -136,7 +133,6 @@ export class MenuScreen implements PixiScreen {
   }
 
   update(view: AppViewState, _nowMs: number): void {
-    setText(this.coinText, `金币 ${view.save.coins}`);
     const current = view.chapterProgress.find((c) => c.current) ?? view.chapterProgress[0];
     if (current) {
       setText(this.chapterTitleText, current.title);

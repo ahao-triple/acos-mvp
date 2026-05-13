@@ -25,9 +25,9 @@ describe('campaign helpers', () => {
 
   test('computes per-chapter progress from highest unlocked level', () => {
     expect(chapterProgressForSave(12)).toEqual([
-      { id: 1, title: '前线集结', startLevel: 1, endLevel: 10, unlockedCount: 10, completedCount: 10, current: false },
-      { id: 2, title: '阵地修复', startLevel: 11, endLevel: 20, unlockedCount: 2, completedCount: 1, current: true },
-      { id: 3, title: '最终防线', startLevel: 21, endLevel: 30, unlockedCount: 0, completedCount: 0, current: false },
+      { id: 1, title: '初出茅庐', startLevel: 1, endLevel: 10, unlockedCount: 10, completedCount: 10, current: false },
+      { id: 2, title: '玩梗高手', startLevel: 11, endLevel: 20, unlockedCount: 2, completedCount: 1, current: true },
+      { id: 3, title: '梗王登场', startLevel: 21, endLevel: 30, unlockedCount: 0, completedCount: 0, current: false },
     ]);
   });
 
@@ -57,6 +57,6 @@ describe('campaign helpers', () => {
       piecePool: levels[0].piecePool,
     };
 
-    expect(remainingTargetsText(session)).toBe('护盾 6/10  沙袋 2/4');
+    expect(remainingTargetsText(session)).toBe('笑梗 6/10  障碍 2/4');
   });
 });

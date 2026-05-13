@@ -19,9 +19,14 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
-    // vitest 跑 src/test/*.test.ts；Playwright 的 tests/e2e/*.spec.ts 由 playwright runner
-    // 独立编译运行，必须从 vitest include 中排除（否则 vitest 把 @playwright/test 的 test()
-    // 误当成自己的，抛 "did not expect test() to be called here"）。
-    exclude: ['**/node_modules/**', '**/dist/**', '**/tests/e2e/**'],
+    // vitest 跑 src/test/*.test.ts；Playwright 的 tests/e2e/*.spec.ts 与 tests/browser-verify/*.spec.ts
+    // 都由 playwright runner 独立编译运行，必须从 vitest include 中排除（否则 vitest 把
+    // @playwright/test 的 test() 误当成自己的，抛 "did not expect test() to be called here"）。
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/tests/e2e/**',
+      '**/tests/browser-verify/**',
+    ],
   },
 });

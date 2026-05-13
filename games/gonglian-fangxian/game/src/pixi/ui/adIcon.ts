@@ -18,7 +18,7 @@ export function createAdIcon(opts: CreateAdIconOptions): Graphics {
   const y = opts.y ?? 0;
   const w = opts.width;
   const h = opts.height;
-  const color = opts.color ?? 0x111827;
+  const color = opts.color ?? 0x1a2332;
   const triColor = opts.triangleColor ?? 0xf8fafc;
   const cornerR = Math.min(w, h) * 0.18;
 

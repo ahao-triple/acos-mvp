@@ -80,54 +80,25 @@ export async function claimAdItemReward(save: SaveData, item: InventoryItem, pla
   };
 }
 
-export async function claimDoubleCoinsReward(save: SaveData, coins: number, platform: PlatformAdapter): Promise<SaveRewardOutcome> {
-  const result = await platform.showRewardedAd('reward');
-  debugLog('rewarded_ad_result', {
-    reason: 'double_win_coins',
-    coins,
-    status: result.status,
-    fallbackGrant: shouldGrantAdFallback(result),
-    message: result.message ?? null,
-  });
-
-  if (result.status !== 'success' && !shouldGrantAdFallback(result)) {
-    return {
-      granted: false,
-      feedback: adFeedback(result),
-      save,
-    };
-  }
-
-  return {
-    granted: true,
-    feedback: result.status === 'success' ? '奖励已翻倍。' : adFallbackRewardFeedback(result, '翻倍金币'),
-    save: {
-      ...save,
-      coins: save.coins + coins,
-    },
-  };
-}
-
 export async function claimDesktopReward(save: SaveData, platform: PlatformAdapter): Promise<SaveRewardOutcome> {
   if (save.desktopRewardClaimed) {
-    return { granted: false, feedback: '加桌奖励已领取。', save };
+    return { granted: false, feedback: '加桌已完成。', save };
   }
 
   const result = await platform.addDesktopShortcut();
   if (result.status !== 'success') {
     return {
       granted: false,
-      feedback: platformFeedback(result, '当前环境暂不支持添加到桌面。', '添加到桌面未完成，暂未获得奖励。'),
+      feedback: platformFeedback(result, '当前环境暂不支持添加到桌面。', '添加到桌面未完成。'),
       save,
     };
   }
 
   return {
     granted: true,
-    feedback: '已领取加桌补给。',
+    feedback: '已添加到桌面。',
     save: {
       ...save,
-      coins: save.coins + 100,
       desktopRewardClaimed: true,
     },
   };
@@ -163,7 +134,7 @@ export async function claimFavoriteReward(save: SaveData, platform: PlatformAdap
 
 export async function claimSidebarReward(save: SaveData, platform: PlatformAdapter): Promise<SaveRewardOutcome> {
   if (save.sidebarRewardClaimed) {
-    return { granted: false, feedback: '侧边栏奖励已领取。', save };
+    return { granted: false, feedback: '侧边栏任务已完成。', save };
   }
 
   if (!(await platform.didEnterFromSidebar())) {
@@ -171,24 +142,23 @@ export async function claimSidebarReward(save: SaveData, platform: PlatformAdapt
     if (result.status === 'success') {
       return {
         granted: false,
-        feedback: '已打开侧边栏。请从侧边栏卡片重新进入《共联防线软件》，返回补给页后再次点击任务领取80金币。',
+        feedback: '已打开侧边栏。请从侧边栏卡片重新进入《全民爆梗游戏软件》后再次点击任务。',
         save,
       };
     }
 
     return {
       granted: false,
-      feedback: platformFeedback(result, '当前环境暂不支持侧边栏跳转。', '侧边栏跳转未完成，暂未获得奖励。'),
+      feedback: platformFeedback(result, '当前环境暂不支持侧边栏跳转。', '侧边栏跳转未完成。'),
       save,
     };
   }
 
   return {
     granted: true,
-    feedback: '已领取侧边栏回归补给。',
+    feedback: '已完成侧边栏任务。',
     save: {
       ...save,
-      coins: save.coins + 80,
       sidebarRewardClaimed: true,
     },
   };

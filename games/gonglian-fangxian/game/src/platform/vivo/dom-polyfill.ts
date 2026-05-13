@@ -145,6 +145,13 @@ import { isVivoStrictMode } from './strict-mode';
       querySelectorAll: emptyArrFn,
       getElementsByTagName: emptyArrFn,
       getElementsByClassName: emptyArrFn,
+      // HTMLVideoElement stub：PixiJS v8 Assets 启动时调 document.createElement('video').canPlayType('video/mp4')
+      // 来检测视频支持。返 '' 表示不支持任何格式，PIXI 会跳过 video texture 路径。
+      canPlayType: () => '',
+      // HTMLMediaElement stub：play / pause / load 等方法 PIXI 可能在 cleanup 时触碰
+      play: () => Promise.resolve(),
+      pause: noop,
+      load: noop,
     };
     return stub;
   }

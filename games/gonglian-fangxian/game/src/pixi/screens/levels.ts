@@ -1,10 +1,12 @@
 /** 关卡选择 screen（对应旧 drawLevelsScreen）。 */
-import { Container, Text } from 'pixi.js';
+import { Container } from 'pixi.js';
 import type { AppViewState } from '../../app/controller';
 import { createButton, type ButtonHandle } from '../ui/button';
 import { createPanel } from '../ui/panel';
-import { createText, setText } from '../ui/text';
+import { createText, setText, type AppText } from '../ui/text';
 import type { PixiScreen, ScreenContext } from './base';
+
+const TEXT_COLOR = 0x1a2332;
 
 interface LevelButtonRef {
   handle: ButtonHandle;
@@ -13,23 +15,23 @@ interface LevelButtonRef {
 
 export class LevelsScreen implements PixiScreen {
   readonly container: Container;
-  private readonly chapterTitleTexts: Text[] = [];
+  private readonly chapterTitleTexts: AppText[] = [];
   private readonly levelButtons: LevelButtonRef[] = [];
 
   constructor(private readonly ctx: ScreenContext) {
     this.container = new Container();
     this.container.label = 'levels';
 
-    this.container.addChild(createText({ text: '关卡选择', size: 54, color: 0xffffff, x: 375, y: 86 }));
+    this.container.addChild(createText({ text: '关卡选择', size: 54, color: TEXT_COLOR, x: 375, y: 86 }));
     this.container.addChild(
-      createText({ text: '完成当前关卡后解锁下一关', size: 24, color: 0xd1fae5, x: 375, y: 132 }),
+      createText({ text: '完成当前关卡后解锁下一关', size: 24, color: TEXT_COLOR, x: 375, y: 132 }),
     );
     this.container.addChild(createPanel({ x: 38, y: 170, width: 674, height: 1010 }));
 
     // 章节 + 关卡按钮网格预创建（章节数固定 3 章 × 10 关）。
     for (let chapterIndex = 0; chapterIndex < 3; chapterIndex += 1) {
       const y = 220 + chapterIndex * 300;
-      const titleText = createText({ text: '', size: 28, color: 0xffffff, align: 'left', x: 80, y });
+      const titleText = createText({ text: '', size: 28, color: TEXT_COLOR, align: 'left', x: 80, y });
       this.container.addChild(titleText);
       this.chapterTitleTexts.push(titleText);
 

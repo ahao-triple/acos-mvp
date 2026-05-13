@@ -12,14 +12,14 @@ export interface ChapterProgress {
 }
 
 const targetLabels: Record<TargetConfig['kind'], string> = {
-  shield: '护盾',
-  ammo: '弹药',
-  radar: '雷达',
-  medal: '勋章',
-  wrench: '扳手',
-  energy: '能量',
-  sandbag: '沙袋',
-  brokenDefense: '破损防线',
+  shield: '笑梗',
+  ammo: '哭梗',
+  radar: '怒梗',
+  medal: '萌梗',
+  wrench: '燃梗',
+  energy: '酷梗',
+  sandbag: '障碍',
+  brokenDefense: '裂缝',
 };
 
 const rewardLabels: Record<PowerUpType, string> = {

@@ -7,9 +7,9 @@ describe('campaign level configuration', () => {
     expect(levels).toHaveLength(30);
     expect(levels.map((level) => level.id)).toEqual(Array.from({ length: 30 }, (_, index) => index + 1));
     expect(CHAPTERS).toEqual([
-      { id: 1, title: '前线集结', startLevel: 1, endLevel: 10 },
-      { id: 2, title: '阵地修复', startLevel: 11, endLevel: 20 },
-      { id: 3, title: '最终防线', startLevel: 21, endLevel: 30 },
+      { id: 1, title: '初出茅庐', startLevel: 1, endLevel: 10 },
+      { id: 2, title: '玩梗高手', startLevel: 11, endLevel: 20 },
+      { id: 3, title: '梗王登场', startLevel: 21, endLevel: 30 },
     ]);
   });
 
@@ -19,7 +19,6 @@ describe('campaign level configuration', () => {
       expect(level.chapterId).toBeLessThanOrEqual(3);
       expect(level.chapterTitle).toBe(chapterForLevel(level.id).title);
       expect(level.briefing.length).toBeGreaterThan(6);
-      expect(level.rewards.coins).toBeGreaterThan(0);
       expect(level.targets.length).toBeGreaterThan(0);
     }
   });

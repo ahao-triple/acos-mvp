@@ -6,6 +6,8 @@ import { createPanel } from '../ui/panel';
 import { createText } from '../ui/text';
 import type { PixiScreen, ScreenContext } from './base';
 
+const TEXT_COLOR = 0x1a2332;
+
 export class SuppliesScreen implements PixiScreen {
   readonly container: Container;
 
@@ -13,7 +15,7 @@ export class SuppliesScreen implements PixiScreen {
     this.container = new Container();
     this.container.label = 'supplies';
 
-    this.container.addChild(createText({ text: '补给', size: 64, color: 0xffffff, x: 375, y: 126 }));
+    this.container.addChild(createText({ text: '补给', size: 64, color: TEXT_COLOR, x: 375, y: 126 }));
     this.container.addChild(createPanel({ x: 80, y: 240, width: 590, height: 790 }));
 
     this.container.addChild(
@@ -29,10 +31,9 @@ export class SuppliesScreen implements PixiScreen {
       }).container,
     );
 
-    this.container.addChild(createText({ text: '侧边栏复访任务', size: 34, color: 0xffffff, x: 375, y: 552 }));
-    this.container.addChild(createText({ text: '任务指引：点击下方按钮打开侧边栏', size: 24, color: 0xd1fae5, x: 375, y: 600 }));
-    this.container.addChild(createText({ text: '从侧边栏卡片重新进入游戏后领取奖励', size: 24, color: 0xd1fae5, x: 375, y: 638 }));
-    this.container.addChild(createText({ text: '奖励：80金币，仅可领取一次', size: 24, color: 0xfef3c7, x: 375, y: 676 }));
+    this.container.addChild(createText({ text: '侧边栏复访任务', size: 34, color: TEXT_COLOR, x: 375, y: 552 }));
+    this.container.addChild(createText({ text: '任务指引：点击下方按钮打开侧边栏', size: 24, color: TEXT_COLOR, x: 375, y: 600 }));
+    this.container.addChild(createText({ text: '从侧边栏卡片重新进入游戏后完成任务', size: 24, color: TEXT_COLOR, x: 375, y: 638 }));
 
     this.container.addChild(
       createButton({

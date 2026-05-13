@@ -10,7 +10,6 @@ describe('game controller visual cues', () => {
     const controller = new GameController(mockPlatform());
 
     await controller.dispatch({ type: 'start' });
-    await controller.dispatch({ type: 'beginLevel' });
     await controller.dispatch({ type: 'tapCell', position: { row: 0, col: 0 } });
 
     expect(controller.getViewState().audioCue).toMatchObject({ type: 'select' });
@@ -20,7 +19,6 @@ describe('game controller visual cues', () => {
     const controller = new GameController(mockPlatform());
 
     await controller.dispatch({ type: 'start' });
-    await controller.dispatch({ type: 'beginLevel' });
     await controller.dispatch({ type: 'tapCell', position: { row: 0, col: 0 } });
     await controller.dispatch({ type: 'tapCell', position: { row: 1, col: 1 } });
 
@@ -67,7 +65,7 @@ describe('game controller visual cues', () => {
     expect(controller.getViewState().audioCue).toBeNull();
   });
 
-  test('in-game ad power-up directly shows rewarded video when out of stock and coins', async () => {
+  test('in-game power-up directly shows rewarded video when out of stock', async () => {
     let adCalls = 0;
     const platform = mockPlatform({ ad: { status: 'success' } });
     platform.showRewardedAd = async () => {
@@ -77,7 +75,6 @@ describe('game controller visual cues', () => {
     const controller = new GameController(platform);
 
     await controller.dispatch({ type: 'start' });
-    await controller.dispatch({ type: 'beginLevel' });
     await controller.dispatch({ type: 'usePowerUp', item: 'bomb' });
 
     expect(adCalls).toBe(1);
@@ -107,56 +104,8 @@ describe('game controller visual cues', () => {
     });
 
     await controller.dispatch({ type: 'start' });
-    await controller.dispatch({ type: 'beginLevel' });
 
     expect(adCalls).toBe(1);
-  });
-
-  test('in-game power-up purchase spends coins before falling back to ads', async () => {
-    let adCalls = 0;
-    const platform = mockPlatform({
-      storedSave: {
-        ...createDefaultSave(),
-        coins: 120,
-      },
-    });
-    platform.showRewardedAd = async () => {
-      adCalls += 1;
-      return { status: 'success' };
-    };
-    const controller = new GameController(platform);
-
-    await controller.dispatch({ type: 'start' });
-    await controller.dispatch({ type: 'beginLevel' });
-    await controller.dispatch({ type: 'usePowerUp', item: 'bomb' });
-
-    expect(adCalls).toBe(0);
-    expect(controller.getViewState().save.coins).toBe(0);
-    expect(controller.getViewState().save.items.bomb).toBe(1);
-    expect(controller.getViewState().activePowerUp).toBe('bomb');
-  });
-
-  test('in-game power-up directly shows ad when coins are insufficient', async () => {
-    let adCalls = 0;
-    const platform = mockPlatform({
-      storedSave: {
-        ...createDefaultSave(),
-        coins: 119,
-      },
-    });
-    platform.showRewardedAd = async () => {
-      adCalls += 1;
-      return { status: 'success' };
-    };
-    const controller = new GameController(platform);
-
-    await controller.dispatch({ type: 'start' });
-    await controller.dispatch({ type: 'beginLevel' });
-    await controller.dispatch({ type: 'usePowerUp', item: 'bomb' });
-
-    expect(adCalls).toBe(1);
-    expect(controller.getViewState().save.coins).toBe(119);
-    expect(controller.getViewState().activePowerUp).toBe('bomb');
   });
 
   test('logs in-game rewarded power-up flow for device debugging', async () => {
@@ -165,7 +114,6 @@ describe('game controller visual cues', () => {
 
     try {
       await controller.dispatch({ type: 'start' });
-      await controller.dispatch({ type: 'beginLevel' });
       await controller.dispatch({ type: 'usePowerUp', item: 'bomb' });
 
       const events = info.mock.calls.map((call) => call[1]);
@@ -181,7 +129,6 @@ describe('game controller visual cues', () => {
     const controller = new GameController(mockPlatform());
 
     await controller.dispatch({ type: 'start' });
-    await controller.dispatch({ type: 'beginLevel' });
     await controller.dispatch({ type: 'pause' });
     await controller.dispatch({ type: 'home' });
 
@@ -190,7 +137,7 @@ describe('game controller visual cues', () => {
   });
 });
 
-describe('game controller briefing flow', () => {
+describe('game controller navigation flow', () => {
   test('openSupplies opens the supplies screen', async () => {
     const controller = new GameController(mockPlatform());
 
@@ -199,12 +146,11 @@ describe('game controller briefing flow', () => {
     expect(controller.getViewState().screen).toBe('supplies');
   });
 
-  test('start opens a briefing for the highest unlocked level before play', async () => {
+  test('start enters playing for the highest unlocked level directly', async () => {
     const controller = new GameController(mockPlatform({
       storedSave: {
         version: 1,
         highestUnlockedLevel: 12,
-        coins: 0,
         items: { extraMoves: 0, bomb: 0, suck: 0, shuffle: 0 },
         desktopRewardClaimed: false,
         favoriteRewardClaimed: false,
@@ -216,17 +162,12 @@ describe('game controller briefing flow', () => {
 
     await controller.dispatch({ type: 'start' });
 
-    expect(controller.getViewState().screen).toBe('briefing');
-    expect(controller.getViewState().pendingLevel?.id).toBe(12);
-    expect(controller.getViewState().pendingLevel?.chapterTitle).toBe('阵地修复');
-
-    await controller.dispatch({ type: 'beginLevel' });
-
     expect(controller.getViewState().screen).toBe('playing');
     expect(controller.getViewState().session?.levelId).toBe(12);
+    expect(controller.getViewState().pendingLevel?.chapterTitle).toBe('玩梗高手');
   });
 
-  test('unlocked level selection opens briefing for the selected level', async () => {
+  test('unlocked level selection enters playing directly', async () => {
     const controller = new GameController(mockPlatform({
       storedSave: {
         ...createDefaultSave(),
@@ -238,8 +179,8 @@ describe('game controller briefing flow', () => {
     await controller.dispatch({ type: 'openLevels' });
     await controller.dispatch({ type: 'selectLevel', levelId: 3 });
 
-    expect(controller.getViewState().screen).toBe('briefing');
-    expect(controller.getViewState().pendingLevel?.id).toBe(3);
+    expect(controller.getViewState().screen).toBe('playing');
+    expect(controller.getViewState().session?.levelId).toBe(3);
   });
 
   test('locked level selection stays on levels screen with feedback', async () => {
@@ -250,22 +191,20 @@ describe('game controller briefing flow', () => {
 
     expect(controller.getViewState().screen).toBe('levels');
     expect(controller.getViewState().feedback).toContain('尚未解锁');
-    expect(controller.getViewState().pendingLevel).toBeNull();
+    expect(controller.getViewState().pendingLevel?.id).not.toBe(5);
   });
 
-  test('retry from a played level returns to briefing for the same level', async () => {
+  test('retry from a played level restarts the same level directly', async () => {
     const controller = new GameController(mockPlatform());
 
     await controller.dispatch({ type: 'start' });
-    await controller.dispatch({ type: 'beginLevel' });
     await controller.dispatch({ type: 'retry' });
 
-    expect(controller.getViewState().screen).toBe('briefing');
-    expect(controller.getViewState().pendingLevel?.id).toBe(1);
-    expect(controller.getViewState().session).toBeNull();
+    expect(controller.getViewState().screen).toBe('playing');
+    expect(controller.getViewState().session?.levelId).toBe(1);
   });
 
-  test('nextLevel from a won current session opens briefing for the next level', async () => {
+  test('nextLevel from a won current session enters the next level directly', async () => {
     const controller = new GameController(mockPlatform({
       storedSave: {
         ...createDefaultSave(),
@@ -275,13 +214,11 @@ describe('game controller briefing flow', () => {
     }));
 
     await controller.dispatch({ type: 'selectLevel', levelId: 2 });
-    await controller.dispatch({ type: 'beginLevel' });
     completeLevel(controller, 2);
     await controller.dispatch({ type: 'nextLevel' });
 
-    expect(controller.getViewState().screen).toBe('briefing');
-    expect(controller.getViewState().pendingLevel?.id).toBe(3);
-    expect(controller.getViewState().session).toBeNull();
+    expect(controller.getViewState().screen).toBe('playing');
+    expect(controller.getViewState().session?.levelId).toBe(3);
   });
 
   test('view state exposes chapter progress for rendering', () => {
@@ -290,9 +227,9 @@ describe('game controller briefing flow', () => {
 
     expect(progress).toBeDefined();
     expect(progress.map((chapter) => chapter.title)).toEqual([
-      '前线集结',
-      '阵地修复',
-      '最终防线',
+      '初出茅庐',
+      '玩梗高手',
+      '梗王登场',
     ]);
   });
 });
@@ -308,7 +245,6 @@ describe('game controller campaign progress', () => {
     const storedSave = readStoredSave(storage);
     expect(save.completedLevelCount).toBe(1);
     expect(save.highestUnlockedLevel).toBe(2);
-    expect(save.coins).toBe(levels[0].rewards.coins);
     expect(storedSave.completedLevelCount).toBe(1);
     expect(storedSave.highestUnlockedLevel).toBe(2);
   });
@@ -318,7 +254,6 @@ describe('game controller campaign progress', () => {
     const { completedLevelCount: _completedLevelCount, ...legacySave } = {
       ...oldSave,
       highestUnlockedLevel: 30,
-      coins: 200,
     };
     const storage = new MemoryStorage({ [SAVE_KEY]: JSON.stringify(legacySave) });
     const controller = new GameController(mockPlatform({ storage }));
@@ -331,7 +266,6 @@ describe('game controller campaign progress', () => {
     const storedSave = readStoredSave(storage);
     expect(save.completedLevelCount).toBe(30);
     expect(save.highestUnlockedLevel).toBe(30);
-    expect(save.coins).toBe(200 + levels[29].rewards.coins);
     expect(storedSave.completedLevelCount).toBe(30);
     expect(storedSave.highestUnlockedLevel).toBe(30);
   });
@@ -345,107 +279,10 @@ describe('game controller campaign progress', () => {
     expect(controller.getViewState().save.items.bomb).toBe(1);
     expect(controller.getViewState().winSummary).toMatchObject({
       levelId: 10,
-      chapterTitle: '前线集结',
-      baseCoins: levels[9].rewards.coins,
+      chapterTitle: '初出茅庐',
       nodeReward: { bomb: 1 },
       nextLevelId: 11,
-      doubled: false,
     });
-  });
-
-  test('double win reward can only be claimed once', async () => {
-    const controller = new GameController(mockPlatform({ ad: { status: 'success' } }));
-
-    forcePrivateWinSummary(controller, {
-      levelId: 1,
-      chapterTitle: '前线集结',
-      baseCoins: 70,
-      nodeReward: null,
-      nextLevelId: 2,
-      doubled: false,
-    });
-    await controller.dispatch({ type: 'doubleWinReward' });
-    const afterFirst = controller.getViewState().save.coins;
-    await controller.dispatch({ type: 'doubleWinReward' });
-
-    expect(afterFirst).toBe(70);
-    expect(controller.getViewState().save.coins).toBe(afterFirst);
-    expect(controller.getViewState().feedback).toContain('已领取');
-    expect(controller.getViewState().winSummary?.doubled).toBe(true);
-  });
-
-  test('double win reward triggers rewarded video directly on request', async () => {
-    let adCalls = 0;
-    const platform = mockPlatform({ ad: { status: 'success' } });
-    platform.showRewardedAd = async () => {
-      adCalls += 1;
-      return { status: 'success' };
-    };
-    const controller = new GameController(platform);
-
-    forcePrivateWinSummary(controller, {
-      levelId: 1,
-      chapterTitle: '前线集结',
-      baseCoins: 70,
-      nodeReward: null,
-      nextLevelId: 2,
-      doubled: false,
-    });
-
-    await controller.dispatch({ type: 'requestRewardedAd', request: { type: 'doubleWinReward' } });
-
-    expect(adCalls).toBe(1);
-    expect(controller.getViewState().winSummary?.doubled).toBe(true);
-  });
-
-  test('concurrent double win reward dispatches only grant once', async () => {
-    let resolveAd: (value: { status: 'success' }) => void = () => undefined;
-    let adCalls = 0;
-    const adResult = new Promise<{ status: 'success' }>((resolve) => {
-      resolveAd = resolve;
-    });
-    const platform = mockPlatform();
-    platform.showRewardedAd = async () => {
-      adCalls += 1;
-      return adResult;
-    };
-    const controller = new GameController(platform);
-
-    forcePrivateWinSummary(controller, {
-      levelId: 1,
-      chapterTitle: '前线集结',
-      baseCoins: 70,
-      nodeReward: null,
-      nextLevelId: 2,
-      doubled: false,
-    });
-    const first = controller.dispatch({ type: 'doubleWinReward' });
-    const second = controller.dispatch({ type: 'doubleWinReward' });
-
-    resolveAd({ status: 'success' });
-    await Promise.all([first, second]);
-
-    expect(adCalls).toBe(1);
-    expect(controller.getViewState().save.coins).toBe(70);
-    expect(controller.getViewState().winSummary?.doubled).toBe(true);
-  });
-
-  test('cancelled double win reward does not mark reward doubled', async () => {
-    const controller = new GameController(mockPlatform({ ad: { status: 'cancelled' } }));
-
-    forcePrivateWinSummary(controller, {
-      levelId: 1,
-      chapterTitle: '前线集结',
-      baseCoins: 70,
-      nodeReward: null,
-      nextLevelId: 2,
-      doubled: false,
-    });
-    await controller.dispatch({ type: 'doubleWinReward' });
-
-    expect(controller.getViewState().save.coins).toBe(0);
-    expect(controller.getViewState().feedback).toContain('未完整观看');
-    expect(controller.getViewState().winSummary?.doubled).toBe(false);
   });
 });
 
@@ -494,11 +331,6 @@ function mockPlatform(
 
 function completeLevel(controller: GameController, levelId: number): void {
   (controller as unknown as { handleWin(session: GameSession): void }).handleWin(createWonSession(levelId));
-}
-
-function forcePrivateWinSummary(controller: GameController, summary: unknown): void {
-  (controller as unknown as { winSummary: unknown; screen: string }).winSummary = summary;
-  (controller as unknown as { screen: string }).screen = 'won';
 }
 
 function forcePrivatePlayingSession(controller: GameController, session: GameSession): void {

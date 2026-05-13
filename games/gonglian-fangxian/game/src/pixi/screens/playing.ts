@@ -31,11 +31,13 @@
  *   - 监听 pointertap，event.global → container.toLocal → cellAt → dispatch tapCell
  */
 
-import { Container, Graphics, Rectangle, RenderTexture, Sprite, Text } from 'pixi.js';
+import { Container, Graphics, Rectangle, RenderTexture, Sprite } from 'pixi.js';
 import type { AppViewState } from '../../app/controller';
-import { POWER_UP_COIN_COSTS } from '../../config/economy';
+import { playCombo, playMatch } from '../../audio/sfx';
 import type { BoardCell, PowerUpType, Position } from '../../core/types';
-import { pieceColors, targetProgressText } from '../../render/theme';
+import type { AppText } from '../ui/text';
+import { targetProgressText } from '../../app/campaign';
+import { pieceColors } from '../../render/theme';
 import { VisualBoardModel, type VisualTile } from '../../render/visualBoard';
 import { createButton, type ButtonHandle } from '../ui/button';
 import { createPanel } from '../ui/panel';
@@ -53,6 +55,7 @@ const BOARD_GAP = 5;
 const BOARD_START_X = 43;
 const BOARD_START_Y = 286;
 const BOARD_AREA_SIZE = BOARD_COLS * BOARD_CELL_SIZE + (BOARD_COLS - 1) * BOARD_GAP;
+const TEXT_COLOR = 0x1a2332;
 
 const POWER_UPS: Array<{ type: PowerUpType; x: number; label: string }> = [
   { type: 'bomb', x: 60, label: '炸开' },
@@ -72,10 +75,9 @@ export class PlayingScreen implements PixiScreen {
   private readonly effects = new EffectsLayer(80);
 
   // 顶部信息
-  private readonly chapterTitleText: Text;
-  private readonly movesText: Text;
-  private readonly coinText: Text;
-  private readonly targetText: Text;
+  private readonly chapterTitleText: AppText;
+  private readonly movesText: AppText;
+  private readonly targetText: AppText;
 
   // 棋盘
   private readonly gameLayer = new Container();
@@ -117,11 +119,10 @@ export class PlayingScreen implements PixiScreen {
 
     // ─────────────────── 顶部信息条 ───────────────────
     this.container.addChild(createPanel({ x: 36, y: 36, width: 678, height: 196 }));
-    this.chapterTitleText = createText({ text: '', size: 28, color: 0xffffff, align: 'left', x: 70, y: 88 });
-    this.movesText = createText({ text: '', size: 30, color: 0xfef3c7, align: 'left', x: 70, y: 142 });
-    this.coinText = createText({ text: '', size: 28, color: 0xffffff, align: 'left', x: 430, y: 88 });
-    this.targetText = createText({ text: '', size: 24, color: 0xd1fae5, x: 375, y: 202 });
-    this.container.addChild(this.chapterTitleText, this.movesText, this.coinText, this.targetText);
+    this.chapterTitleText = createText({ text: '', size: 28, color: TEXT_COLOR, align: 'left', x: 70, y: 88 });
+    this.movesText = createText({ text: '', size: 30, color: TEXT_COLOR, align: 'left', x: 70, y: 142 });
+    this.targetText = createText({ text: '', size: 24, color: TEXT_COLOR, x: 375, y: 202 });
+    this.container.addChild(this.chapterTitleText, this.movesText, this.targetText);
     this.container.addChild(
       createButton({
         x: 560, y: 130, width: 120, height: 54, label: '设置', labelSize: 22,
@@ -139,7 +140,7 @@ export class PlayingScreen implements PixiScreen {
     this.selectedGlow = new Graphics();
     this.selectedGlow
       .roundRect(0, 0, BOARD_CELL_SIZE, BOARD_CELL_SIZE, 8)
-      .fill({ color: 0xfef3c7 })
+      .fill({ color: 0xffedd5 })
       .stroke({ color: 0xf59e0b, width: 5 });
     this.selectedGlow.visible = false;
     this.gameLayer.addChild(this.selectedGlow);
@@ -156,9 +157,10 @@ export class PlayingScreen implements PixiScreen {
     this.container.addChild(this.boardHit);
 
     // ─────────────────── 底部道具按钮 ───────────────────
+    // variant='ad' 统一带广告标识：库存>0 时是"消耗"，库存=0 时点击直接广告（规范 §2.4 §三 P3）。
     for (const def of POWER_UPS) {
       const handle = createButton({
-        x: def.x, y: 1148, width: 190, height: 70, label: `${def.label} 0`,
+        x: def.x, y: 1148, width: 190, height: 70, label: `${def.label} 0`, variant: 'ad',
         onTap: () => ctx.dispatch({ type: 'usePowerUp', item: def.type }),
       });
       this.container.addChild(handle.container);
@@ -201,9 +203,8 @@ export class PlayingScreen implements PixiScreen {
     }
 
     // ─────── 顶部文本 ───────
-    setText(this.chapterTitleText, `${view.pendingLevel?.chapterTitle ?? '防线'}  第 ${session.levelId} 关`);
+    setText(this.chapterTitleText, `${view.pendingLevel?.chapterTitle ?? '梗谱'}  第 ${session.levelId} 关`);
     setText(this.movesText, `步数 ${session.movesLeft}`);
-    setText(this.coinText, `金币 ${view.save.coins}`);
     const targetStr = session.targets
       .map((t) => targetProgressText(t, session.targetProgress))
       .join('  ');
@@ -213,7 +214,7 @@ export class PlayingScreen implements PixiScreen {
     const board = this.presentation.boardFor(session, nowMs);
     const changes = this.visualBoard.sync(board, nowMs);
 
-    // ─────── 消除特效（每个 step 独立 burst + 连消 floatText） ───────
+    // ─────── 消除特效（每个 step 独立 burst + 连消 floatText + 合成音） ───────
     for (const tile of changes.removed) {
       this.effects.burst(
         tile.x + BOARD_CELL_SIZE / 2,
@@ -223,9 +224,13 @@ export class PlayingScreen implements PixiScreen {
         7,
       );
     }
+    if (changes.removed.length > 0) {
+      // 合成 match 音；频率随同 step 消除数量递增（4+ 连消会更高亢）
+      playMatch(changes.removed.length);
+    }
     if (changes.removed.length >= 4) {
       const center = averageTileCenters(changes.removed);
-      this.effects.floatText(`${changes.removed.length} 连消`, center.x, center.y, '#ffd166', nowMs);
+      this.effects.floatText(`${changes.removed.length} 连消`, center.x, center.y, '#1a2332', nowMs);
     }
 
     // ─────── presentation 新进入 clear step → 震动 ───────
@@ -312,8 +317,8 @@ export class PlayingScreen implements PixiScreen {
         const y = BOARD_START_Y + row * (BOARD_CELL_SIZE + BOARD_GAP);
         slots
           .roundRect(x, y, BOARD_CELL_SIZE, BOARD_CELL_SIZE, 8)
-          .fill({ color: 0xffffff, alpha: 0.12 })
-          .stroke({ color: 0xffffff, alpha: 0.18, width: 2 });
+          .fill({ color: 0xffffff, alpha: 0.82 })
+          .stroke({ color: 0xd7d1c5, alpha: 1, width: 2 });
       }
     }
     bake.addChild(slots);
@@ -369,7 +374,8 @@ export class PlayingScreen implements PixiScreen {
 
     if (cue.type === 'combo') {
       const text = cue.combo >= 5 ? `超级连击 x${cue.combo}` : `连击 x${cue.combo}`;
-      this.effects.floatText(text, 375, 275, '#ffd166', nowMs);
+      this.effects.floatText(text, 375, 275, '#1a2332', nowMs);
+      playCombo(cue.combo);
       return;
     }
 
@@ -377,9 +383,9 @@ export class PlayingScreen implements PixiScreen {
     const from = this.visualBoard.cellCenter(cue.from.row, cue.from.col);
     const to = this.visualBoard.cellCenter(cue.to.row, cue.to.col);
     const half = BOARD_CELL_SIZE / 2;
-    this.effects.floatText('未形成消除', (from.x + to.x) / 2 + half, (from.y + to.y) / 2 + half, '#ffd166', nowMs);
-    this.effects.burst(from.x + half, from.y + half, '#ffd166', nowMs, 4);
-    this.effects.burst(to.x + half, to.y + half, '#ffd166', nowMs, 4);
+    this.effects.floatText('未形成消除', (from.x + to.x) / 2 + half, (from.y + to.y) / 2 + half, '#1a2332', nowMs);
+    this.effects.burst(from.x + half, from.y + half, '#f59e0b', nowMs, 4);
+    this.effects.burst(to.x + half, to.y + half, '#f59e0b', nowMs, 4);
   }
 
   // ───────────────────────────────────────────────────────────────────────
@@ -390,10 +396,13 @@ export class PlayingScreen implements PixiScreen {
     const count = view.save.items[button.type];
     const active = view.activePowerUp === button.type;
     const def = POWER_UPS.find((d) => d.type === button.type)!;
+    // 库存 0 时仅显示道具名，左侧 ad 图标已表达"看广告"语义（规范 §2.4 广告标识图标已满足）；
+    // 文案再加"看广告"前缀会撑爆 190 px 道具按钮（中文字符 1.0 倍字号宽，6 字 22 号 ≈ 132 px），
+    // 真机上字会被 Text canvas measureText 裁掉右侧字符。
     if (count > 0) {
       button.handle.setLabel(`${active ? '>' : ''}${def.label} ${count}`);
     } else {
-      button.handle.setLabel(`${POWER_UP_COIN_COSTS[button.type]}币${def.label}`);
+      button.handle.setLabel(def.label);
     }
   }
 
@@ -440,7 +449,7 @@ function cellAt(x: number, y: number): Position | null {
 
 function colorForCell(cell: BoardCell): string {
   if (cell.kind === 'normal' || cell.kind === 'special') return pieceColors[cell.pieceKind];
-  if (cell.kind === 'blocker') return cell.blockerKind === 'sandbag' ? '#9b6a3a' : '#6b7280';
+  if (cell.kind === 'blocker') return cell.blockerKind === 'sandbag' ? '#e9c99b' : '#cbd5e1';
   return '#ffffff';
 }
 

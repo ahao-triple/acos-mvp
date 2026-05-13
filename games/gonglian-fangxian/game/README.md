@@ -75,6 +75,27 @@ Playwright 跑 **chromium 真渲染** + 注入 vivo 严格性 hook，能在本�
 4. **再跑 `pnpm check:full` 全绿**
 5. **commit**（测试与修复同一 commit，未来回归时这条 bug 自动被守住）
 
+## 字体资源（手动下载）
+
+游戏所有 UI 文字走 **BitmapText + SDF atlas**（绕开 vivo Canvas2D fillText alpha 衰减 bug，见 `docs/vivo-quirks.md`）。字体源 OTF 因体积大不进 git，工具链 + atlas 生成是离线步骤。
+
+**首次开发或重新生成 atlas 之前必须做：**
+
+1. **下载字体源** —— 按 `assets/fonts/source/LICENSE.md` 步骤，从 adobe-fonts/source-han-sans 官方 release 拉 `SourceHanSansCN-Bold.otf`（8.1 MB）到 `assets/fonts/source/`
+2. **装 atlas 工具链** —— `npm i -g msdf-bmfont-xml`（首次跑 `scripts/build-font-atlas.sh` 会自检并提示）
+3. **生成 atlas** —— `sh scripts/build-font-atlas.sh`，产物落 `public-pack/fonts/main.{png,xml}`（约 1.5 MB PNG）
+4. **CI 暂不跑这一步**（避免远程下载依赖），开发者本地手动维护
+
+字符集 source of truth 在 `docs/font-charset.txt`（由 `scripts/scan-charset.mjs` 从源码 + 强制叠加 + Q2/Q3 预扩字符自动生成）。字符变化时：
+
+```bash
+node scripts/scan-charset.mjs       # 重扫，更新 docs/font-charset.txt
+sh scripts/build-font-atlas.sh      # 重打 atlas
+git add docs/font-charset.txt public-pack/fonts/
+```
+
+**绝不从中文字体下载站拉字体**（商用授权红线），详见 `assets/fonts/source/LICENSE.md`。
+
 ## PixiJS uint16 index patch
 
 vivo runtime 的 WebGL 1 严格驱动不支持 `OES_element_index_uint` 扩展（2026-05-13 真机事故），PixiJS v8 默认用 32 位 index 会触发 `drawElements failed / glType not correct`。我们在 `patches/pixi.js+8.18.1.patch` 里强制 9 处 index buffer 走 Uint16Array，并在接近上限时打 warn 兜底。

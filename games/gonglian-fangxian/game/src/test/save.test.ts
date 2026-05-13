@@ -8,7 +8,6 @@ describe('save data', () => {
     expect(save.version).toBe(1);
     expect(save.highestUnlockedLevel).toBe(1);
     expect(save.completedLevelCount).toBe(0);
-    expect(save.coins).toBe(0);
     expect(save.items.extraMoves).toBe(0);
     expect(save.items.bomb).toBe(0);
     expect(save.items.suck).toBe(0);
@@ -24,14 +23,12 @@ describe('save data', () => {
     const save = repairSaveData({
       version: 1,
       highestUnlockedLevel: 4,
-      coins: 'bad',
       items: { bomb: 2, suck: 1, shuffle: 3 },
       desktopRewardClaimed: true,
     });
 
     expect(save.highestUnlockedLevel).toBe(4);
     expect(save.completedLevelCount).toBe(3);
-    expect(save.coins).toBe(0);
     expect(save.items.extraMoves).toBe(0);
     expect(save.items.bomb).toBe(2);
     expect(save.items.suck).toBe(1);
@@ -80,7 +77,6 @@ describe('save data', () => {
     const storage = new MemoryStorage();
     const save = createDefaultSave();
     save.highestUnlockedLevel = 5;
-    save.coins = 120;
     save.items.extraMoves = 1;
     save.soundEnabled = false;
 
@@ -96,7 +92,6 @@ describe('save data', () => {
     const save = loadSave(storage);
 
     expect(save.highestUnlockedLevel).toBe(1);
-    expect(save.coins).toBe(0);
   });
 });
 

@@ -8,21 +8,22 @@
  *  - resize 时同步舞台缩放
  *
  * Screen 调度（modal 叠加）：
- *  - primary screen（独占底层）：menu / levels / briefing / playing
+ *  - primary screen（独占底层）：menu / levels / playing
  *  - modal screen（叠在 primary 之上）：paused / won / lost / settings / supplies
  *  - view.screen 是 modal 时，primary 保持显示（playing 继续 visualBoard tween / effects 推进），
  *    modal 内容叠加；旧 canvasRenderer 也是同样的视觉效果（modal case 自己画底层背景 + 浮层）。
  *  - primary 由 view 推断：view.session 存在则 'playing'，否则 'menu'。
  */
-import type { Application } from 'pixi.js';
+import { Assets, type Application } from 'pixi.js';
 import type { AppAction, AppViewState, Screen as ScreenName } from '../app/controller';
 import type { GameController } from '../app/controller';
 import { createPixiApp, type PixiAppHandle } from './app';
 import { createStage, resizeStage, type StageLayers } from './stage';
+import { LoadingScreen } from './screens/loading';
 import { MenuScreen } from './screens/menu';
 import { LevelsScreen } from './screens/levels';
-import { BriefingScreen } from './screens/briefing';
 import { PausedScreen, WonScreen, LostScreen } from './screens/result';
+import { markAtlasReady } from './ui/text';
 import { SettingsScreen } from './screens/settings';
 import { SuppliesScreen } from './screens/supplies';
 import { PlayingScreen } from './screens/playing';
@@ -43,7 +44,7 @@ function isModal(name: ScreenName): boolean {
 function inferPrimary(view: AppViewState): ScreenName {
   // view.session 存在意味着关卡正在进行（或刚结束等待结算）—— primary 是 playing。
   // 否则 primary 是 menu。
-  // 注：levels / briefing 不是 modal，view.screen 直接就是它们时 inferPrimary 不会被用到
+  // 注：levels 不是 modal，view.screen 直接就是它时 inferPrimary 不会被用到
   // （applyScreens 看 view.screen 不是 modal 时 primary 就是 view.screen 自己）。
   if (view.session) return 'playing';
   return 'menu';
@@ -96,6 +97,35 @@ export class PixiRenderer {
       } catch (e) {
         console.warn('[pixi-renderer] events.setTargetElement failed:', (e as Error).message);
       }
+    }
+
+    // 加载 SDF 字体 atlas（绕开 vivo Canvas2D fillText alpha bug，见 docs/vivo-quirks.md）
+    // 路径用相对路径 'fonts/main.fnt'，**绝对不能加前导斜杠**：vivo runtime 的 qg.request
+    // 会把 '/fonts/...' 当成 https://<current-domain>/fonts/... 网络请求 → 404 → atlas
+    // 加载失败 → 回退 PixiJS Text → 撞上 fillText alpha bug → 全屏文字深色。
+    // 见 docs/vivo-quirks.md "资源加载 - 前导斜杠"段。
+    // 加载失败时 createText 回退 PixiJS Text（浏览器仍能渲染），vivo 上则承担 alpha bug 风险
+    try {
+      const font = await Assets.load('fonts/main.fnt');
+      const chars = (font as { chars?: Record<string, unknown> })?.chars;
+      if (chars && typeof chars === 'object') {
+        markAtlasReady({ chars });
+        const glyphCount = Object.keys(chars).length;
+        console.log('[pixi-renderer] BitmapFont atlas loaded: %d glyphs', glyphCount);
+      } else {
+        console.warn('[pixi-renderer] atlas load returned but chars missing; fallback to PixiJS Text');
+      }
+    } catch (e) {
+      // PixiJS Loader 把底层 reject 的 error.message 包成顶层 'ERROR' 占位，根因在 e.cause 或 stack 里。
+      // 这里把所有字段都打出来避免下一次诊断时被 'Error: ERROR' 误导。
+      const err = e as { message?: string; stack?: string; cause?: unknown; url?: string };
+      console.error('[pixi-renderer] atlas load failed, fallback to PixiJS Text:', {
+        message: err?.message,
+        stack: err?.stack,
+        cause: err?.cause,
+        raw: String(e),
+        fontUrl: err?.url,
+      });
     }
 
     this.registerScreens();
@@ -158,7 +188,7 @@ export class PixiRenderer {
     addScreen('playing', new PlayingScreen(this.screenCtx));
     addScreen('menu', new MenuScreen(this.screenCtx));
     addScreen('levels', new LevelsScreen(this.screenCtx));
-    addScreen('briefing', new BriefingScreen(this.screenCtx));
+    addScreen('loading', new LoadingScreen(this.screenCtx));
     // 接下来 modal screen 注册在所有 primary 之后，自然处于更高 z 序。
     addScreen('paused', new PausedScreen(this.screenCtx));
     addScreen('won', new WonScreen(this.screenCtx));

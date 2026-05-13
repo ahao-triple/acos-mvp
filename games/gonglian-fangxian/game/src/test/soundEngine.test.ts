@@ -11,13 +11,14 @@ import {
 describe('sound engine', () => {
   test('declares packaged wav assets for every cue within a conservative budget', () => {
     expect(Object.keys(SOUND_ASSETS).sort()).toEqual(['button', 'combo', 'invalid', 'lose', 'match', 'reward', 'select', 'win'].sort());
-    expect(Object.values(SOUND_ASSETS).every((asset) => asset.src.startsWith('/audio/') && asset.src.endsWith('.wav'))).toBe(true);
+    // 路径以 'audio/' 开头（**不带前导斜杠**）—— 见 docs/vivo-quirks.md "资源加载 - 前导斜杠"。
+    expect(Object.values(SOUND_ASSETS).every((asset) => asset.src.startsWith('audio/') && asset.src.endsWith('.wav'))).toBe(true);
     expect(INITIAL_SOUND_ASSET_TYPES).toEqual(['button', 'select', 'invalid', 'match']);
     expect(SOUND_ASSET_BUDGET_BYTES).toBeLessThanOrEqual(900_000);
   });
 
   test('declares a looped mp3 music asset', () => {
-    expect(MUSIC_ASSET.src).toBe('/audio/bgm.mp3');
+    expect(MUSIC_ASSET.src).toBe('audio/bgm.mp3');
     expect(MUSIC_ASSET.src.endsWith('.mp3')).toBe(true);
     expect(MUSIC_ASSET.loop).toBe(true);
     expect(MUSIC_ASSET.volume).toBeLessThan(0.4);
@@ -73,18 +74,18 @@ describe('sound engine', () => {
     expect(scheduled).not.toContain('start');
   });
 
-  test('starts and stops looped background music from the music setting', async () => {
+  test('syncMusic is a no-op until BGM resource is licensed', async () => {
+    // TODO(bgm): BGM 一律静音（见 soundEngine.syncMusic 注释 / docs/audio-audit.md）。
+    // 获得 CC0 或采购授权后恢复完整实现 + 把此测试改回 play/pause assertion。
     const events: string[] = [];
     const engine = new SoundEngine({
       createContext: () => fakeContext([]),
       createMusicPlayer: (asset) => fakeMusicPlayer(asset.src, events),
     });
 
-    await expect(engine.syncMusic(true)).resolves.toBe(true);
     await expect(engine.syncMusic(true)).resolves.toBe(false);
-    await expect(engine.syncMusic(false)).resolves.toBe(true);
-
-    expect(events).toEqual(['play:/audio/bgm.mp3:0.22', 'pause:/audio/bgm.mp3']);
+    await expect(engine.syncMusic(false)).resolves.toBe(false);
+    expect(events).toEqual([]);
   });
 });
 

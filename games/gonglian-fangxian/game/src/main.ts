@@ -4,10 +4,12 @@ import './platform/vivo/dom-polyfill';
 
 import { GameController } from './app/controller';
 import { SoundEngine } from './audio/soundEngine';
+import { setSfxEnabled, unlockSfx } from './audio/sfx';
 import { loginAndLoadRemoteConfig } from './app/remoteConfig';
 import { PixiRenderer } from './pixi/renderer';
 import { canUseDouyinAdapter, createDouyinPlatformAdapter } from './platform/douyin';
 import { createMiniPackPlatformAdapter, createMiniPackSoundOptions, type MiniPackGameApp, type MiniPackGameRuntime } from './platform/minipack';
+import { probeCanvas2DText } from './platform/vivo/canvas2d-text-probe';
 import { createVivoEventBridge } from './platform/vivo/event-bridge';
 import { createWebPlatformAdapter } from './platform/web';
 
@@ -15,6 +17,17 @@ export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
   const realCanvas = runtime?.canvas ?? document.querySelector<HTMLCanvasElement>('#game');
   if (!realCanvas) {
     throw new Error('Missing #game canvas');
+  }
+
+  // 一次性 vivo Canvas2D Text 渲染诊断：v1.0.37 真机 Pixi.Text 颜色失真，
+  // 通过 probe 直接验证 fillStyle / fillRect / fillText 各路径上的真实行为。
+  // 仅在 vivo runtime 跑（不影响浏览器、抖音、快手）；输出 4 条 log 看 vConsole。
+  if (runtime?.config?.platform === 'vivo') {
+    try {
+      probeCanvas2DText();
+    } catch (e) {
+      console.warn('[main] probeCanvas2DText threw:', (e as Error).message);
+    }
   }
 
   const platform = runtime
@@ -30,6 +43,7 @@ export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
 
   const unlockAudio = () => {
     void soundEngine.unlock();
+    void unlockSfx();
   };
   const resize = () => {
     if (!renderer) {
@@ -45,6 +59,8 @@ export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
   const startAudioTick = () => {
     audioTickHandle = globalThis.setInterval(() => {
       const view = controller.getViewState();
+      // sfx.ts 直调 API（PlayingScreen 用）的 enabled 开关与 view.save.soundEnabled 同步
+      setSfxEnabled(view.save.soundEnabled);
       if (view.audioCue && view.audioCue.id !== lastAudioCueId) {
         lastAudioCueId = view.audioCue.id;
         void soundEngine.play(view.audioCue, view.save.soundEnabled);
@@ -139,7 +155,7 @@ function prepareBrowserDocument(canvas: HTMLCanvasElement): void {
   document.body.style.width = '100%';
   document.body.style.height = '100%';
   document.body.style.overflow = 'hidden';
-  document.body.style.background = '#020617';
+  document.body.style.background = '#fafaf7';
   canvas.style.display = 'block';
 }
 

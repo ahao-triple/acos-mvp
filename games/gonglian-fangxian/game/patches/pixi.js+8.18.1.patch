@@ -37,6 +37,29 @@ diff --git a/lib/rendering/renderers/shared/geometry/utils/ensureIsBuffer.mjs b/
          usage = BufferUsage.INDEX | BufferUsage.COPY_DST;
        } else {
          buffer = new Float32Array(buffer);
+diff --git a/lib/filters/FilterSystem.mjs b/lib/filters/FilterSystem.mjs
+--- a/lib/filters/FilterSystem.mjs
++++ b/lib/filters/FilterSystem.mjs
+@@ -14,13 +14,17 @@
+ "use strict";
++const filterQuadIndices = [0, 1, 2, 0, 2, 3];
++if (filterQuadIndices.length > 60000) {
++  console.warn(`[pixi-patch:uint16] index buffer size ${filterQuadIndices.length} approaching 65535 limit at FilterSystem quadGeometry (gonglian-fangxian patched, see docs/phase0-changelog.md)`);
++}
+ const quadGeometry = new Geometry({
+   attributes: {
+     aPosition: {
+       buffer: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
+       format: "float32x2",
+       stride: 2 * 4,
+       offset: 0
+     }
+   },
+-  indexBuffer: new Uint32Array([0, 1, 2, 0, 2, 3])
++  indexBuffer: new Uint16Array(filterQuadIndices)
+ });
+ class FilterData {
+   constructor() {
 diff --git a/lib/scene/graphics/shared/utils/buildGeometryFromPath.mjs b/lib/scene/graphics/shared/utils/buildGeometryFromPath.mjs
 --- a/lib/scene/graphics/shared/utils/buildGeometryFromPath.mjs
 +++ b/lib/scene/graphics/shared/utils/buildGeometryFromPath.mjs

@@ -12,30 +12,33 @@
  *  - 图标：用 PieceKind 单字代替旧版的复杂 path 图标，避免大量 path 描边在 vivo 上的潜在风险，
  *    后续 Phase 1.5 再补回详细 icon（可换 SDF / texture atlas 实现）
  */
-import { Container, Graphics, Text } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import type { BoardCell, BlockerKind, PieceKind } from '../../core/types';
 import { pieceColors } from '../../render/theme';
 import type { VisualTile } from '../../render/visualBoard';
+import { createText, type AppText } from '../ui/text';
 import { type CachedKind, classifyCell, sameKind } from './pieceKind';
 
 const PIECE_LABELS: Record<PieceKind, string> = {
-  shield: '盾',
-  ammo: '弹',
-  radar: '雷',
-  medal: '勋',
-  wrench: '扳',
-  energy: '能',
+  shield: '笑',
+  ammo: '哭',
+  radar: '怒',
+  medal: '萌',
+  wrench: '燃',
+  energy: '酷',
 };
 
 const BLOCKER_LABELS: Record<BlockerKind, string> = {
-  sandbag: '沙',
-  brokenDefense: '损',
+  sandbag: '障',
+  brokenDefense: '裂',
 };
 
 const BLOCKER_COLORS: Record<BlockerKind, number> = {
-  sandbag: 0x9b6a3a,
-  brokenDefense: 0x6b7280,
+  sandbag: 0xe9c99b,
+  brokenDefense: 0xcbd5e1,
 };
+
+const PIECE_TEXT_COLOR = 0x1a2332;
 
 // 全局诊断计数（仅 log 限流用）。
 let redrawCount = 0;
@@ -44,7 +47,7 @@ let scaleWarnCount = 0;
 export class PieceSprite extends Container {
   private readonly bg = new Graphics();
   private readonly fg = new Graphics();
-  private readonly pieceLabel: Text;
+  private readonly pieceLabel: AppText;
   private cachedKind: CachedKind | null = null;
   private readonly cellSize: number;
   /** 排查 drawElements failed 用的 id 标记，由 playing.ts 池逻辑赋值。 */
@@ -55,17 +58,12 @@ export class PieceSprite extends Container {
     this.cellSize = cellSize;
     this.addChild(this.bg);
     this.addChild(this.fg);
-    this.pieceLabel = new Text({
+    // 走 createText 统一 BitmapText 路径（vivo Canvas2D fillText alpha bug 见 docs/vivo-quirks.md）
+    this.pieceLabel = createText({
       text: '',
-      style: {
-        fontFamily: 'system-ui, sans-serif',
-        fontSize: Math.floor(cellSize * 0.34),
-        fontWeight: '700',
-        fill: 0xffffff,
-        align: 'center',
-      },
+      size: Math.floor(cellSize * 0.34),
+      color: PIECE_TEXT_COLOR,
     });
-    this.pieceLabel.anchor.set(0.5, 0.5);
     this.pieceLabel.position.set(cellSize / 2, cellSize / 2 + 2);
     this.addChild(this.pieceLabel);
     // pivot 一次性固定在格子几何中心。position 也是中心（tile.x + cellSize/2），二者重合，
@@ -138,7 +136,7 @@ export class PieceSprite extends Container {
     const color = parseHexColor(colorHex);
     drawGlowBox(this.bg, 4, 4, size - 8, size - 8, color);
     // 内框
-    this.fg.roundRect(12, 12, size - 24, size - 24, 8).stroke({ color: 0xffffff, alpha: 0.52, width: 1.4 });
+    this.fg.roundRect(12, 12, size - 24, size - 24, 8).stroke({ color: 0xffffff, alpha: 0.7, width: 1.4 });
     // 中心圆 + 高光（special 略大）
     const r = size * (kind.type === 'special' ? 0.36 : 0.32);
     this.fg.circle(size / 2, size / 2, r).fill({ color });
@@ -169,7 +167,7 @@ function parseHexColor(hex: string): number {
 function drawGlowBox(g: Graphics, x: number, y: number, w: number, h: number, color: number): void {
   g.roundRect(x - 7, y - 7, w + 14, h + 14, 14).fill({ color, alpha: 0.1 });
   g.roundRect(x - 3, y - 3, w + 6, h + 6, 12).fill({ color, alpha: 0.18 });
-  g.roundRect(x, y, w, h, 10).fill({ color: 0x101827 });
+  g.roundRect(x, y, w, h, 10).fill({ color: 0xffffff, alpha: 0.88 });
   g.roundRect(x + 1.5, y + 1.5, w - 3, h - 3, 9).stroke({ color, width: 3 });
-  g.roundRect(x + 8, y + 9, w - 16, h * 0.34, 7).fill({ color: 0xffffff, alpha: 0.13 });
+  g.roundRect(x + 8, y + 9, w - 16, h * 0.34, 7).fill({ color: 0xffffff, alpha: 0.32 });
 }

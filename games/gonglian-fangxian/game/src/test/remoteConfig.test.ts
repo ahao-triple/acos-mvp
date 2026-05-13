@@ -61,12 +61,28 @@ describe('remote game config', () => {
     expect(request).not.toHaveBeenCalled();
   });
 
+  test('returns default config for vivo without platform login or session request', async () => {
+    const login = vi.fn(async () => ({ platform: 'vivo', code: 'platform-code' }));
+    const request = vi.fn();
+
+    const config = await loginAndLoadRemoteConfig(platformStub({ login, request }), {
+      serverBaseUrl: 'https://ks-games.xfyccm.cn/api',
+      gameId: 'gonglian-fangxian',
+      channel: 'vivo',
+    });
+
+    expect(config).toEqual(DEFAULT_REMOTE_CONFIG);
+    expect(login).not.toHaveBeenCalled();
+    expect(request).not.toHaveBeenCalled();
+  });
+
   test('sanitizes malformed ad policy data', () => {
     expect(parseRemoteGameConfig({ config: { adPolicy: { enabled: true, trigger: 'bad' } } })).toEqual(DEFAULT_REMOTE_CONFIG);
   });
 });
 
 function platformStub(options: {
+  login?: PlatformAdapter['login'];
   request?: PlatformAdapter['request'];
 } = {}): PlatformAdapter {
   return {
@@ -78,9 +94,7 @@ function platformStub(options: {
       setItem() {},
       removeItem() {},
     },
-    async login() {
-      return { platform: 'kuaishou', code: 'platform-code' };
-    },
+    login: options.login ?? (async () => ({ platform: 'kuaishou', code: 'platform-code' })),
     request: options.request ?? (async () => ({ status: 200, data: {} })),
     async showRewardedAd() {
       return { status: 'unsupported' };

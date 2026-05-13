@@ -1,9 +1,9 @@
 /**
  * Pixi 按钮：圆角矩形 + 中央 label，三种 variant：
- *   - primary：主操作（继续作战、开始作战）—— 金黄 #fbbf24，醒目
+ *   - primary：主操作（继续作战、开始作战）—— 金黄 #f59e0b，醒目
  *   - secondary：次操作（关卡选择、设置、补给等）—— 白色 #ffffff（默认）
  *   - ad：广告按钮（加桌领奖、奖励翻倍、跳过本关等）—— 橙色 #fb923c + 左侧广告图标
- * label 文字一律黑色 #111827，与所有 variant 的浅色 fill 形成高对比。
+ * label 文字一律深蓝黑 #1a2332，与所有 variant 的浅色 fill 形成高对比。
  *
  * 持久 Container：构造一次，container.eventMode='static'，pointerdown/up 自带 0.96 缩放反馈，
  * pointerup 触发 onTap。hitArea 用 Rectangle 类（不用 alpha=0 Graphics —— 真机上 hit-test
@@ -24,9 +24,9 @@ interface VariantStyle {
 }
 
 const VARIANT_STYLES: Record<ButtonVariant, VariantStyle> = {
-  primary: { fill: 0xfbbf24, stroke: 0x111827, label: 0x111827 },
-  secondary: { fill: 0xffffff, stroke: 0x111827, label: 0x111827 },
-  ad: { fill: 0xfb923c, stroke: 0x111827, label: 0x111827 },
+  primary: { fill: 0xf59e0b, stroke: 0xb45309, label: 0x1a2332 },
+  secondary: { fill: 0xffffff, stroke: 0xd7d1c5, label: 0x1a2332 },
+  ad: { fill: 0xfb923c, stroke: 0xc2410c, label: 0x1a2332 },
 };
 
 export interface CreateButtonOptions {

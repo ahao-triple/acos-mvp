@@ -1,5 +1,4 @@
 import { levels } from '../config/levels';
-import { POWER_UP_COIN_COSTS } from '../config/economy';
 import { applyMove, applyPowerUp, createSession } from '../core/session';
 import type { GameSession, LevelConfig, NodeReward, Position, PowerUpType } from '../core/types';
 import type { PlatformAdapter } from '../platform/types';
@@ -7,19 +6,19 @@ import type { AudioCue, AudioCueType } from '../audio/soundEngine';
 import { debugLog } from './debugLog';
 import type { RemoteGameConfig } from './remoteConfig';
 import { createDefaultSave, loadSave, type SaveData, writeSave } from './save';
-import { claimAdItemReward, claimDesktopReward, claimDoubleCoinsReward, claimFavoriteReward, claimSidebarReward, requestExtraMoves, type InventoryItem } from './rewards';
+import { claimAdItemReward, claimDesktopReward, claimFavoriteReward, claimSidebarReward, requestExtraMoves, type InventoryItem } from './rewards';
 import { chapterProgressForSave, levelById, type ChapterProgress } from './campaign';
 
-export type Screen = 'menu' | 'levels' | 'briefing' | 'playing' | 'paused' | 'won' | 'lost' | 'settings' | 'supplies';
+export type Screen = 'loading' | 'menu' | 'levels' | 'playing' | 'paused' | 'won' | 'lost' | 'settings' | 'supplies';
 
 export type RewardedAdRequest =
-  | { type: 'doubleWinReward' }
   | { type: 'extraMovesAd' }
   | { type: 'powerUpItem'; item: PowerUpType }
   | { type: 'skipLevel' }
   | { type: 'sponsor' };
 
 export type AppAction =
+  | { type: 'loadingDone' }
   | { type: 'start' }
   | { type: 'openLevels' }
   | { type: 'openSettings' }
@@ -27,7 +26,6 @@ export type AppAction =
   | { type: 'closeModal' }
   | { type: 'requestRewardedAd'; request: RewardedAdRequest }
   | { type: 'selectLevel'; levelId: number }
-  | { type: 'beginLevel' }
   | { type: 'tapCell'; position: Position }
   | { type: 'pause' }
   | { type: 'resume' }
@@ -40,7 +38,6 @@ export type AppAction =
   | { type: 'desktopReward' }
   | { type: 'favoriteReward' }
   | { type: 'sidebarReward' }
-  | { type: 'doubleWinReward' }
   | { type: 'shareReward' }
   | { type: 'toggleSound' }
   | { type: 'toggleMusic' };
@@ -48,10 +45,8 @@ export type AppAction =
 export interface WinSummary {
   levelId: number;
   chapterTitle: string;
-  baseCoins: number;
   nodeReward: NodeReward | null;
   nextLevelId: number | null;
-  doubled: boolean;
 }
 
 export interface AppViewState {
@@ -78,13 +73,13 @@ export type VisualCue =
 export class GameController {
   private save: SaveData;
   private session: GameSession | null = null;
-  private screen: Screen = 'menu';
+  // 冷启动展示 LoadingPage（规范 §三 P1）；LoadingScreen 进度条结束后 dispatch 'loadingDone' 切 menu
+  private screen: Screen = 'loading';
   private feedback: string | null = null;
   private visualCue: VisualCue | null = null;
   private audioCue: AudioCue | null = null;
   private pendingLevelId: number | null = null;
   private winSummary: WinSummary | null = null;
-  private doubleRewardPending = false;
   private activePowerUp: PowerUpType | null = null;
   private cueId = 0;
   private audioCueId = 0;
@@ -127,13 +122,17 @@ export class GameController {
     this.feedback = null;
     this.visualCue = null;
     this.audioCue = null;
-    if (action.type !== 'tapCell') {
+    // loadingDone 是 LoadingScreen 进度条结束后的自动切屏，不发"按钮"音
+    if (action.type !== 'tapCell' && action.type !== 'loadingDone') {
       this.emitAudio('button');
     }
 
     switch (action.type) {
+      case 'loadingDone':
+        if (this.screen === 'loading') this.screen = 'menu';
+        break;
       case 'start':
-        this.openBriefing(this.save.highestUnlockedLevel);
+        this.startLevelWithGuard(this.save.highestUnlockedLevel);
         break;
       case 'openLevels':
         this.screen = 'levels';
@@ -151,10 +150,7 @@ export class GameController {
         await this.executeRewardedAd(action.request);
         break;
       case 'selectLevel':
-        this.openBriefing(action.levelId);
-        break;
-      case 'beginLevel':
-        this.beginPendingLevel();
+        this.startLevelWithGuard(action.levelId);
         break;
       case 'tapCell':
         this.tapCell(action.position);
@@ -177,10 +173,10 @@ export class GameController {
         this.screen = 'menu';
         break;
       case 'retry':
-        this.openBriefing(this.session?.levelId ?? this.pendingLevelId ?? this.save.highestUnlockedLevel);
+        this.startLevelWithGuard(this.session?.levelId ?? this.pendingLevelId ?? this.save.highestUnlockedLevel);
         break;
       case 'nextLevel':
-        this.openBriefing(Math.min(levels.length, (this.session?.levelId ?? this.pendingLevelId ?? 1) + 1));
+        this.startLevelWithGuard(Math.min(levels.length, (this.session?.levelId ?? this.pendingLevelId ?? 1) + 1));
         break;
       case 'extraMovesAd':
         await this.requestExtraMoves();
@@ -200,9 +196,6 @@ export class GameController {
       case 'sidebarReward':
         await this.claimSidebarReward();
         break;
-      case 'doubleWinReward':
-        await this.doubleWinReward();
-        break;
       case 'shareReward':
         this.feedback = '分享功能由平台接管，请通过平台菜单分享。';
         break;
@@ -215,33 +208,30 @@ export class GameController {
     }
   }
 
-  private openBriefing(levelId: number): void {
+  private startLevelWithGuard(levelId: number): void {
     if (levelId > this.save.highestUnlockedLevel) {
       this.pendingLevelId = null;
       this.feedback = '该关卡尚未解锁。';
       this.screen = 'levels';
       return;
     }
-
-    const level = levelById(levelId);
-    this.pendingLevelId = level.id;
-    this.session = null;
-    this.activePowerUp = null;
-    this.winSummary = null;
-    this.screen = 'briefing';
-  }
-
-  private beginPendingLevel(): void {
-    this.startLevel(this.pendingLevelId ?? this.save.highestUnlockedLevel);
+    this.startLevel(levelId);
   }
 
   private startLevel(levelId: number): void {
     const level = levelById(levelId);
+    const prevChapterId = this.session ? levelById(this.session.levelId).chapterId : -1;
     this.seed += 1;
     this.pendingLevelId = level.id;
+    this.activePowerUp = null;
     this.winSummary = null;
     this.session = createSession(level, this.seed);
     this.screen = 'playing';
+    // 章节切换时提示一次章节标题。当前 toast 系统尚未接入（audit P0），先用 console.log 占位。
+    // TODO(toast): 接入 PlatformAdapter.showToast 后改为 toast 提示
+    if (level.chapterId !== prevChapterId) {
+      console.log('[chapter-enter] %s', level.chapterTitle);
+    }
     void this.maybeRunRemoteAd('level_start', level.id);
   }
 
@@ -266,11 +256,6 @@ export class GameController {
   }
 
   private async executeRewardedAd(request: RewardedAdRequest): Promise<void> {
-    if (request.type === 'doubleWinReward') {
-      await this.doubleWinReward();
-      return;
-    }
-
     if (request.type === 'skipLevel') {
       await this.skipLevelReward();
       return;
@@ -338,7 +323,6 @@ export class GameController {
 
   private handleWin(session: GameSession): void {
     const level = levelById(session.levelId);
-    const baseCoins = level.rewards.coins;
     const nextHighest = Math.min(levels.length, Math.max(this.save.highestUnlockedLevel, session.levelId + 1));
     const nextLevelId = session.levelId < levels.length ? session.levelId + 1 : null;
     const rewardSave = this.addNodeReward(
@@ -346,7 +330,6 @@ export class GameController {
         ...this.save,
         highestUnlockedLevel: nextHighest,
         completedLevelCount: Math.min(levels.length, Math.max(this.save.completedLevelCount, session.levelId)),
-        coins: this.save.coins + baseCoins,
       },
       level.nodeReward,
     );
@@ -355,10 +338,8 @@ export class GameController {
     this.winSummary = {
       levelId: session.levelId,
       chapterTitle: level.chapterTitle,
-      baseCoins,
       nodeReward: level.nodeReward ?? null,
       nextLevelId,
-      doubled: false,
     };
     this.screen = 'won';
   }
@@ -409,40 +390,11 @@ export class GameController {
     }
 
     if (this.save.items[item] <= 0) {
-      if (this.purchasePowerUpWithCoins(item)) {
-        this.activateOwnedPowerUp(item, false);
-        return;
-      }
-
       await this.claimPowerUpItemFromAd(item);
       return;
     }
 
     this.activateOwnedPowerUp(item, false);
-  }
-
-  private purchasePowerUpWithCoins(item: PowerUpType): boolean {
-    const cost = POWER_UP_COIN_COSTS[item];
-    if (this.save.coins < cost) {
-      return false;
-    }
-
-    this.updateSave({
-      ...this.save,
-      coins: this.save.coins - cost,
-      items: {
-        ...this.save.items,
-        [item]: this.save.items[item] + 1,
-      },
-    });
-    debugLog('power_up_coin_purchase', {
-      item,
-      cost,
-      coins: this.save.coins,
-      available: this.save.items[item],
-      levelId: this.session?.levelId ?? null,
-    });
-    return true;
   }
 
   private async claimPowerUpItemFromAd(item: PowerUpType): Promise<void> {
@@ -489,7 +441,7 @@ export class GameController {
           shuffle: this.save.items.shuffle - 1,
         },
       });
-      this.feedback = '已重排防线。';
+      this.feedback = '已重排梗池。';
       this.emitAudio('reward');
       debugLog('power_up_apply', {
         item,
@@ -503,7 +455,7 @@ export class GameController {
     this.activePowerUp = this.activePowerUp === item ? null : item;
     if (this.activePowerUp === item) {
       const prefix = watchedAd ? '广告已完成，' : '';
-      this.feedback = item === 'bomb' ? `${prefix}选择一个格子炸开周围区域。` : `${prefix}选择一个格子吸走同类资源。`;
+      this.feedback = item === 'bomb' ? `${prefix}选择一个格子炸开周围梗。` : `${prefix}选择一个格子吸走同类梗。`;
       debugLog('power_up_activate', {
         item,
         fromAd: watchedAd,
@@ -569,33 +521,6 @@ export class GameController {
     this.updateSave(outcome.save);
     this.feedback = outcome.feedback;
     this.emitAudio(outcome.granted ? 'reward' : 'invalid');
-  }
-
-  private async doubleWinReward(): Promise<void> {
-    if (!this.winSummary || this.screen !== 'won') {
-      this.feedback = '通关后才能领取翻倍奖励。';
-      this.emitAudio('invalid');
-      return;
-    }
-
-    if (this.winSummary.doubled || this.doubleRewardPending) {
-      this.feedback = this.doubleRewardPending ? '翻倍奖励领取中。' : '翻倍奖励已领取。';
-      this.emitAudio('invalid');
-      return;
-    }
-
-    this.doubleRewardPending = true;
-    try {
-      const outcome = await claimDoubleCoinsReward(this.save, this.winSummary.baseCoins, this.platform);
-      this.feedback = outcome.feedback;
-      this.emitAudio(outcome.granted ? 'reward' : 'invalid');
-      if (outcome.granted) {
-        this.updateSave(outcome.save);
-        this.winSummary = { ...this.winSummary, doubled: true };
-      }
-    } finally {
-      this.doubleRewardPending = false;
-    }
   }
 
   private async skipLevelReward(): Promise<void> {

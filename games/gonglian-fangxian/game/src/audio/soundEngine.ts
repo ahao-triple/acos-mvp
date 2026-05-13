@@ -173,37 +173,11 @@ export class SoundEngine {
     return true;
   }
 
-  async syncMusic(enabled: boolean): Promise<boolean> {
-    const player = this.musicPlayerFor();
-    if (!player) {
-      return false;
-    }
-
-    if (!enabled) {
-      if (!this.musicPlaying) {
-        this.musicPlayBlocked = false;
-        return false;
-      }
-
-      player.pause();
-      this.musicPlaying = false;
-      this.musicPlayBlocked = false;
-      return true;
-    }
-
-    if (this.musicPlaying || this.musicPlayBlocked) {
-      return false;
-    }
-
-    try {
-      await player.play(MUSIC_ASSET.volume);
-      this.musicPlaying = true;
-      return true;
-    } catch {
-      this.musicPlaying = false;
-      this.musicPlayBlocked = true;
-      return false;
-    }
+  async syncMusic(_enabled: boolean): Promise<boolean> {
+    // TODO(bgm): BGM 一律 no-op —— 真音乐文件涉及版权采购，需 CC0 授权或正式采购后再启用。
+    // 设置弹窗的"音乐开关" UI 保留（musicEnabled 仍写入 save），但实际不发声、不加载 mp3。
+    // 恢复路径：按 git history `git show 82af8d0:games/gonglian-fangxian/game/src/audio/soundEngine.ts` 取回旧 syncMusic 实现。
+    return false;
   }
 
   private ensureContext(): SynthAudioContext | null {

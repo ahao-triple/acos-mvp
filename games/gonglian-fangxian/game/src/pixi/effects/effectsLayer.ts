@@ -17,11 +17,12 @@
  * 注意：本层只负责把 EffectsModel 数据渲染出来，不做关卡逻辑判断。
  * burst/floatText/shake 的触发由 PlayingScreen 在 update 里调用。
  */
-import { Container, Graphics, Text } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import { EffectsModel } from '../../render/effects';
+import { createText, setText, type AppText } from '../ui/text';
 
-const FONT_FAMILY = 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
 const MAX_TEXT_POOL = 16;
+const FLOAT_TEXT_COLOR = 0x1a2332;
 
 interface ShakeState {
   startedMs: number;
@@ -36,7 +37,7 @@ export class EffectsLayer {
 
   private readonly bgParticlesGfx = new Graphics();
   private readonly particlesGfx = new Graphics();
-  private readonly textPool: Text[] = [];
+  private readonly textPool: AppText[] = [];
   private readonly textsContainer = new Container();
   private shake: ShakeState | null = null;
 
@@ -49,17 +50,8 @@ export class EffectsLayer {
     this.container.addChild(this.textsContainer);
 
     for (let i = 0; i < MAX_TEXT_POOL; i += 1) {
-      const t = new Text({
-        text: '',
-        style: {
-          fontFamily: FONT_FAMILY,
-          fontSize: 32,
-          fontWeight: '700',
-          fill: 0xffd166,
-          align: 'center',
-        },
-      });
-      t.anchor.set(0.5, 0.5);
+      // 走 createText 统一 BitmapText 路径，floatText 在 vivo 上避开 Canvas2D fillText alpha bug
+      const t = createText({ text: '', size: 32, color: FLOAT_TEXT_COLOR });
       t.visible = false;
       this.textPool.push(t);
       this.textsContainer.addChild(t);

@@ -141,8 +141,8 @@ export class EffectsModel {
         x,
         y,
         radius: 1.5 + seeded(index * 19 + 11) * 2.5,
-        color: index % 3 === 0 ? '#7ae8d8' : index % 3 === 1 ? '#70aaff' : '#ffd166',
-        alpha: 0.12 + seeded(index * 23 + 5) * 0.2,
+        color: index % 3 === 0 ? '#9fded5' : index % 3 === 1 ? '#b9d7ff' : '#f9d38a',
+        alpha: 0.16 + seeded(index * 23 + 5) * 0.18,
       });
     }
 

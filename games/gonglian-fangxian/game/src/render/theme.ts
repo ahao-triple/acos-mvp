@@ -1,24 +1,16 @@
-import type { BlockerKind, PieceKind, TargetConfig } from '../core/types';
+import type { PieceKind } from '../core/types';
 
 export const pieceColors: Record<PieceKind, string> = {
-  shield: '#2f80ed',
-  ammo: '#27ae60',
-  radar: '#9b51e0',
-  medal: '#f2c94c',
-  wrench: '#eb5757',
-  energy: '#06b6d4',
+  shield: '#93c5fd',
+  ammo: '#86efac',
+  radar: '#d8b4fe',
+  medal: '#fde68a',
+  wrench: '#fca5a5',
+  energy: '#67e8f9',
 };
 
-export const targetLabels: Record<PieceKind | BlockerKind, string> = {
-  shield: '护盾',
-  ammo: '弹药',
-  radar: '雷达',
-  medal: '勋章',
-  wrench: '扳手',
-  energy: '能量',
-  sandbag: '沙袋',
-  brokenDefense: '破损防线',
-};
+// target label / targetProgressText 单一定义在 src/app/campaign.ts。
+// 之前这里也有一份重复版本，导致主题适配时漏改、过关条件 UI 仍显示旧文案。
 
 export interface ChapterTheme {
   top: string;
@@ -28,18 +20,10 @@ export interface ChapterTheme {
 }
 
 export const chapterThemes: Record<number, ChapterTheme> = {
-  1: { top: '#123526', middle: '#2d4d4e', bottom: '#16243a', accent: '#d1fae5' },
-  2: { top: '#263947', middle: '#42566a', bottom: '#1d2a3d', accent: '#bfdbfe' },
-  3: { top: '#3a2434', middle: '#57405c', bottom: '#221827', accent: '#fde68a' },
+  1: { top: '#fafaf7', middle: '#f3f0e8', bottom: '#e9f1ee', accent: '#f59e0b' },
+  2: { top: '#fafaf7', middle: '#eef2f6', bottom: '#e3edf6', accent: '#f59e0b' },
+  3: { top: '#fafaf7', middle: '#f4edf3', bottom: '#efe6dd', accent: '#f59e0b' },
 };
-
-export function targetLabel(kind: PieceKind | BlockerKind): string {
-  return targetLabels[kind];
-}
-
-export function targetProgressText(target: TargetConfig, progress: Record<string, number>): string {
-  return `${targetLabel(target.kind)} ${progress[target.kind] ?? 0}/${target.count}`;
-}
 
 export function chapterTheme(chapterId: number | undefined): ChapterTheme {
   return chapterThemes[chapterId ?? 1] ?? chapterThemes[1];

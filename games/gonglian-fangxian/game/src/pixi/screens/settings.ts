@@ -2,16 +2,18 @@
  * 设置 modal（对应旧 drawSettings）。叠在底层 screen 上的半透明 modal。
  * 显示用户编号、音乐/音效切换、返回主页、赞助、（战斗中额外）重玩 + 跳关。
  */
-import { Container, Graphics, Text } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import type { AppViewState } from '../../app/controller';
 import { createButton, type ButtonHandle } from '../ui/button';
 import { createPanel } from '../ui/panel';
-import { createText, setText } from '../ui/text';
+import { createText, setText, type AppText } from '../ui/text';
 import type { PixiScreen, ScreenContext } from './base';
+
+const TEXT_COLOR = 0x1a2332;
 
 export class SettingsScreen implements PixiScreen {
   readonly container: Container;
-  private readonly userIdText: Text;
+  private readonly userIdText: AppText;
   private readonly musicButton: ButtonHandle;
   private readonly soundButton: ButtonHandle;
   private readonly retryButton: ButtonHandle;
@@ -23,13 +25,13 @@ export class SettingsScreen implements PixiScreen {
     this.container.label = 'settings';
 
     const overlay = new Graphics();
-    overlay.rect(0, 0, ctx.logicalWidth, ctx.logicalHeight).fill({ color: 0x000000, alpha: 0.55 });
+    overlay.rect(0, 0, ctx.logicalWidth, ctx.logicalHeight).fill({ color: 0xffffff, alpha: 0.68 });
     this.container.addChild(overlay);
 
     this.container.addChild(createPanel({ x: 80, y: 220, width: 590, height: 860 }));
-    this.container.addChild(createText({ text: '设置', size: 52, color: 0xffffff, x: 375, y: 282 }));
+    this.container.addChild(createText({ text: '设置', size: 52, color: TEXT_COLOR, x: 375, y: 282 }));
 
-    this.userIdText = createText({ text: '', size: 24, color: 0xd1fae5, x: 375, y: 340 });
+    this.userIdText = createText({ text: '', size: 24, color: TEXT_COLOR, x: 375, y: 340 });
     this.container.addChild(this.userIdText);
 
     this.container.addChild(

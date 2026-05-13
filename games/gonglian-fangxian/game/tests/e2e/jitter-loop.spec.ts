@@ -56,13 +56,12 @@ test('30 秒抖动：5 轮随机消除 + fps ≥ 50 + 0 fatal', async ({ page },
   // ?vivo-strict：与 core-loop 同样强制开启 vivo 兼容性 hook，确保抖动用例覆盖真机路径。
   await page.goto('/?vivo-strict', { waitUntil: 'domcontentloaded' });
   await page.locator('#game').waitFor({ state: 'visible' });
-  await page.waitForTimeout(1500);
+  // PixiJS init + 第一帧 + LoadingScreen 1.5s 自动切 menu 全部跑完。
+  await page.waitForTimeout(3000);
   await assertPatchApplied(page);
 
-  // 进战斗主屏（菜单 → 简报 → 战斗）
+  // 进战斗主屏：menu → 点"开整" → 直接 playing（briefing 已删）
   await clickLogical(page, 150 + 450 / 2, 430 + 82 / 2);
-  await page.waitForTimeout(400);
-  await clickLogical(page, 150 + 450 / 2, 1010 + 78 / 2);
   await page.waitForTimeout(1500);
 
   // 注入 fps sampler：requestAnimationFrame 计数，fps 报告时除以 elapsed 秒数。

@@ -6,7 +6,6 @@ export interface SaveData {
   version: 1;
   highestUnlockedLevel: number;
   completedLevelCount: number;
-  coins: number;
   items: {
     extraMoves: number;
     bomb: number;
@@ -31,7 +30,6 @@ export function createDefaultSave(): SaveData {
     version: 1,
     highestUnlockedLevel: 1,
     completedLevelCount: 0,
-    coins: 0,
     items: {
       extraMoves: 0,
       bomb: 0,
@@ -80,7 +78,6 @@ export function repairSaveData(input: unknown): SaveData {
     version: 1,
     highestUnlockedLevel,
     completedLevelCount,
-    coins: readNumber(input.coins, defaults.coins, 0),
     items: {
       extraMoves: readNumber(items.extraMoves, defaults.items.extraMoves, 0),
       bomb: readNumber(items.bomb, defaults.items.bomb, 0),

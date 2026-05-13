@@ -7,9 +7,9 @@ const MOVE_EXTENSION = 8;
 const COLLECT_TARGET_SCALE = 1.5;
 
 export const CHAPTERS = [
-  { id: 1, title: '前线集结', startLevel: 1, endLevel: 10 },
-  { id: 2, title: '阵地修复', startLevel: 11, endLevel: 20 },
-  { id: 3, title: '最终防线', startLevel: 21, endLevel: 30 },
+  { id: 1, title: '初出茅庐', startLevel: 1, endLevel: 10 },
+  { id: 2, title: '玩梗高手', startLevel: 11, endLevel: 20 },
+  { id: 3, title: '梗王登场', startLevel: 21, endLevel: 30 },
 ] as const;
 
 export const LEVEL_COUNT = 30;
@@ -49,7 +49,7 @@ export const levels: LevelConfig[] = [
     { row: 2, col: 5, blockerKind: 'sandbag', durability: 1 },
     { row: 4, col: 1, blockerKind: 'sandbag', durability: 1 },
     { row: 4, col: 5, blockerKind: 'sandbag', durability: 1 },
-  ], '边清路障边启动雷达，完成前线集结。'),
+  ], '边清路障边启动雷达，完成初出茅庐。'),
   level(10, 28, [
     { type: 'collect', kind: 'medal', count: 14 },
     { type: 'clearBlocker', kind: 'brokenDefense', count: 6 },
@@ -60,9 +60,9 @@ export const levels: LevelConfig[] = [
     { row: 3, col: 5, blockerKind: 'brokenDefense', durability: 1 },
     { row: 5, col: 1, blockerKind: 'brokenDefense', durability: 1 },
     { row: 5, col: 5, blockerKind: 'brokenDefense', durability: 1 },
-  ], '完成前线集结节点，修复两翼破损区域。', { bomb: 1 }),
+  ], '完成初出茅庐节点，修复两翼破损区域。', { bomb: 1 }),
 
-  level(11, 24, [{ type: 'collect', kind: 'wrench', count: 16 }], [], '进入阵地修复阶段，优先收集维修工具。'),
+  level(11, 24, [{ type: 'collect', kind: 'wrench', count: 16 }], [], '进入玩梗高手阶段，优先收集维修工具。'),
   level(12, 24, [
     { type: 'collect', kind: 'shield', count: 12 },
     { type: 'collect', kind: 'radar', count: 12 },
@@ -134,12 +134,12 @@ export const levels: LevelConfig[] = [
     { row: 4, col: 6, blockerKind: 'brokenDefense', durability: 1 },
     { row: 6, col: 2, blockerKind: 'brokenDefense', durability: 1 },
     { row: 6, col: 4, blockerKind: 'brokenDefense', durability: 1 },
-  ], '完成阵地修复节点，守住外围缺口。', { suck: 1 }),
+  ], '完成玩梗高手节点，守住外围缺口。', { suck: 1 }),
 
   level(21, 26, [
     { type: 'collect', kind: 'radar', count: 16 },
     { type: 'collect', kind: 'shield', count: 16 },
-  ], [], '最终防线启动，先恢复侦测和护盾。'),
+  ], [], '梗王登场启动，先恢复侦测和护盾。'),
   level(22, 27, [
     { type: 'collect', kind: 'ammo', count: 18 },
     { type: 'clearBlocker', kind: 'sandbag', count: 6 },
@@ -150,7 +150,7 @@ export const levels: LevelConfig[] = [
     { row: 2, col: 5, blockerKind: 'sandbag', durability: 1 },
     { row: 4, col: 2, blockerKind: 'sandbag', durability: 1 },
     { row: 4, col: 4, blockerKind: 'sandbag', durability: 1 },
-  ], '补充弹药并清出最终防线射界。'),
+  ], '补充弹药并清出梗王登场射界。'),
   level(23, 28, [
     { type: 'collect', kind: 'wrench', count: 18 },
     { type: 'clearBlocker', kind: 'brokenDefense', count: 6 },
@@ -195,7 +195,7 @@ export const levels: LevelConfig[] = [
     { row: 4, col: 3, blockerKind: 'brokenDefense', durability: 1 },
     { row: 5, col: 2, blockerKind: 'brokenDefense', durability: 1 },
     { row: 5, col: 4, blockerKind: 'brokenDefense', durability: 1 },
-  ], '集中修复最终防线的核心破口。'),
+  ], '集中修复梗王登场的核心破口。'),
   level(28, 30, [
     { type: 'collect', kind: 'radar', count: 18 },
     { type: 'clearBlocker', kind: 'sandbag', count: 8 },
@@ -234,7 +234,7 @@ export const levels: LevelConfig[] = [
     { row: 5, col: 3, blockerKind: 'brokenDefense', durability: 1 },
     { row: 6, col: 0, blockerKind: 'brokenDefense', durability: 1 },
     { row: 6, col: 6, blockerKind: 'brokenDefense', durability: 1 },
-  ], '完成最终防线，守住最后一波攻势。', { shuffle: 1 }),
+  ], '完成梗王登场，守住最后一波攻势。', { shuffle: 1 }),
 ];
 
 function level(
@@ -257,9 +257,6 @@ function level(
     piecePool: allPieces,
     targets: scaleTargets(targets),
     blockers,
-    rewards: {
-      coins: 50 + id * 5 + chapter.id * 15,
-    },
     nodeReward,
   };
 }

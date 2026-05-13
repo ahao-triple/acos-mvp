@@ -75,9 +75,6 @@ export interface LevelConfig {
   piecePool: PieceKind[];
   targets: TargetConfig[];
   blockers: Array<Position & { blockerKind: BlockerKind; durability: number }>;
-  rewards: {
-    coins: number;
-  };
   nodeReward?: NodeReward;
 }
 

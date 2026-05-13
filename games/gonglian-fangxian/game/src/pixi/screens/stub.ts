@@ -8,6 +8,8 @@ import { createButton } from '../ui/button';
 import { createText } from '../ui/text';
 import type { PixiScreen, ScreenContext } from './base';
 
+const TEXT_COLOR = 0x1a2332;
+
 export class StubScreen implements PixiScreen {
   readonly container: Container;
 
@@ -15,13 +17,13 @@ export class StubScreen implements PixiScreen {
     this.container = new Container();
     this.container.label = `stub:${title}`;
     this.container.addChild(
-      createText({ text: title, size: 56, color: 0xf8fafc, x: ctx.logicalWidth / 2, y: 280 }),
+      createText({ text: title, size: 56, color: TEXT_COLOR, x: ctx.logicalWidth / 2, y: 280 }),
     );
     this.container.addChild(
       createText({
         text: '（Phase 1 待实现）',
         size: 28,
-        color: 0xfef3c7,
+        color: TEXT_COLOR,
         x: ctx.logicalWidth / 2,
         y: 360,
       }),

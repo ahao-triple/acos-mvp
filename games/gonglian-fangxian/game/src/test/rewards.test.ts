@@ -1,6 +1,6 @@
-import { describe, expect, test, vi } from 'vitest';
+import { describe, expect, test } from 'vitest';
 import { createDefaultSave } from '../app/save';
-import { claimAdItemReward, claimDesktopReward, claimDoubleCoinsReward, claimFavoriteReward, claimSidebarReward, requestExtraMoves } from '../app/rewards';
+import { claimAdItemReward, claimDesktopReward, claimFavoriteReward, claimSidebarReward, requestExtraMoves } from '../app/rewards';
 import type { PlatformAdapter, PlatformResult } from '../platform/types';
 import type { GameSession } from '../core/types';
 
@@ -59,80 +59,15 @@ describe('reward flows', () => {
     expect(outcome.feedback).toContain('已直接发放');
   });
 
-  test('completed rewarded video doubles win coins', async () => {
-    const save = createDefaultSave();
-    save.coins = 100;
-
-    const outcome = await claimDoubleCoinsReward(save, 80, platform({ ad: { status: 'success' } }));
-
-    expect(outcome.granted).toBe(true);
-    expect(outcome.save.coins).toBe(180);
-    expect(outcome.feedback).toContain('奖励已翻倍');
-  });
-
-  test('double coin reward logs debug reason and ad result', async () => {
-    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
-
-    try {
-      await claimDoubleCoinsReward(createDefaultSave(), 80, platform({ ad: { status: 'success' } }));
-
-      expect(infoSpy).toHaveBeenCalledWith(
-        '[GLFX]',
-        'rewarded_ad_result',
-        expect.objectContaining({
-          reason: 'double_win_coins',
-          coins: 80,
-          status: 'success',
-        }),
-      );
-    } finally {
-      infoSpy.mockRestore();
-    }
-  });
-
-  test('cancelled double reward video does not add coins', async () => {
-    const save = createDefaultSave();
-    save.coins = 100;
-
-    const outcome = await claimDoubleCoinsReward(save, 80, platform({ ad: { status: 'cancelled' } }));
-
-    expect(outcome.granted).toBe(false);
-    expect(outcome.save.coins).toBe(100);
-    expect(outcome.feedback).toContain('未完整观看');
-  });
-
-  test('cancelled double reward video ignores custom message for incomplete feedback', async () => {
-    const save = createDefaultSave();
-    save.coins = 100;
-
-    const outcome = await claimDoubleCoinsReward(save, 80, platform({ ad: { status: 'cancelled', message: '用户关闭' } }));
-
-    expect(outcome.granted).toBe(false);
-    expect(outcome.save.coins).toBe(100);
-    expect(outcome.feedback).toContain('未完整观看');
-  });
-
-  test('failed double reward video grants fallback coins', async () => {
-    const save = createDefaultSave();
-    save.coins = 100;
-
-    const outcome = await claimDoubleCoinsReward(save, 80, platform({ ad: { status: 'failed' } }));
-
-    expect(outcome.granted).toBe(true);
-    expect(outcome.save.coins).toBe(180);
-    expect(outcome.feedback).toContain('已直接发放');
-  });
-
-  test('desktop reward is always callable and only grants once', async () => {
+  test('desktop reward is always callable and only marks once', async () => {
     const save = createDefaultSave();
     const first = await claimDesktopReward(save, platform({ desktop: { status: 'success' } }));
     const second = await claimDesktopReward(first.save, platform({ desktop: { status: 'success' } }));
 
     expect(first.granted).toBe(true);
     expect(first.save.desktopRewardClaimed).toBe(true);
-    expect(first.save.coins).toBe(100);
     expect(second.granted).toBe(false);
-    expect(second.feedback).toContain('已领取');
+    expect(second.feedback).toContain('已完成');
   });
 
   test('unsupported favorite reward gives feedback and no reward', async () => {
@@ -159,24 +94,20 @@ describe('reward flows', () => {
 
     expect(outcome.granted).toBe(false);
     expect(outcome.save.sidebarRewardClaimed).toBe(false);
-    expect(outcome.save.coins).toBe(0);
     expect(outcome.feedback).toContain('侧边栏');
-    expect(outcome.feedback).toContain('返回');
-    expect(outcome.feedback).toContain('从侧边栏卡片重新进入《共联防线软件》');
-    expect(outcome.feedback).toContain('80金币');
+    expect(outcome.feedback).toContain('从侧边栏卡片重新进入《全民爆梗游戏软件》');
     expect(calls).toEqual(['request']);
   });
 
-  test('sidebar reward grants after sidebar return and only grants once', async () => {
+  test('sidebar reward grants after sidebar return and only marks once', async () => {
     const save = createDefaultSave();
     const first = await claimSidebarReward(save, platform({ sidebarEntry: true }));
     const second = await claimSidebarReward(first.save, platform({ sidebarEntry: true }));
 
     expect(first.granted).toBe(true);
     expect(first.save.sidebarRewardClaimed).toBe(true);
-    expect(first.save.coins).toBe(80);
     expect(second.granted).toBe(false);
-    expect(second.feedback).toContain('已领取');
+    expect(second.feedback).toContain('已完成');
   });
 });
 

@@ -32,6 +32,9 @@ export async function loginAndLoadRemoteConfig(
   if (!options.serverBaseUrl.trim()) {
     return DEFAULT_REMOTE_CONFIG;
   }
+  if (options.channel === 'vivo') {
+    return DEFAULT_REMOTE_CONFIG;
+  }
 
   try {
     const login = await platform.login();
@@ -82,7 +85,6 @@ function parseAdRequest(input: unknown): RewardedAdRequest | null {
   const record = asRecord(input);
   if (!record) return null;
   if (record.type === 'extraMovesAd') return { type: 'extraMovesAd' };
-  if (record.type === 'doubleWinReward') return { type: 'doubleWinReward' };
   if (
     record.type === 'powerUpItem' &&
     (record.item === 'bomb' || record.item === 'suck' || record.item === 'shuffle')

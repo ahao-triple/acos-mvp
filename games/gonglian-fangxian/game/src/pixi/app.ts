@@ -22,6 +22,7 @@ import {
   HTMLTextPipe,
   HTMLTextSystem,
   EventSystem,
+  FilterSystem,
 } from 'pixi.js';
 import { setupVivoPixiDOMAdapter } from '../platform/vivo/pixi-adapter';
 import { patchEventSystemPrototype } from '../platform/vivo/listener-store';
@@ -37,12 +38,21 @@ import { isVivoStrictMode } from '../platform/vivo/strict-mode';
 // 失败的真机表现就是 drawElements failed / glType not correct 复发。
 {
   const src = (Batcher.prototype as unknown as { _resizeIndexBuffer?: () => unknown })._resizeIndexBuffer?.toString?.() ?? '';
-  const hasUint32 = src.includes('Uint32Array');
-  (globalThis as unknown as { __pixiPatchOk?: boolean }).__pixiPatchOk = !hasUint32;
-  if (hasUint32) {
+  const batcherHasUint32 = src.includes('Uint32Array');
+  const filterSysSrc = FilterSystem.toString();
+  const filterHasUint32 = filterSysSrc.includes('Uint32Array');
+  const patchOk = !batcherHasUint32 && !filterHasUint32;
+  (globalThis as unknown as { __pixiPatchOk?: boolean; __pixiFilterPatchOk?: boolean }).__pixiPatchOk = patchOk;
+  (globalThis as unknown as { __pixiFilterPatchOk?: boolean }).__pixiFilterPatchOk = !filterHasUint32;
+  if (batcherHasUint32) {
     console.error('[pixi-patch-check] FAILED: Batcher.prototype._resizeIndexBuffer still uses Uint32Array. patch not applied — drawElements failed will recur on vivo (run: sh scripts/apply-pixi-patch.sh)');
   } else {
     console.log('[pixi-patch-check] OK: Uint16Array index enforced');
+  }
+  if (filterHasUint32) {
+    console.error('[pixi-patch-check] FAILED: FilterSystem still has Uint32Array');
+  } else {
+    console.log('[pixi-patch-check] OK: FilterSystem class source has no Uint32Array');
   }
 }
 
@@ -80,7 +90,7 @@ export interface PixiAppHandle {
  * - setupVivoPixiDOMAdapter 把 Pixi 内部 DOM 调用路由到 vivo qg.*
  */
 export async function createPixiApp(options: CreatePixiAppOptions): Promise<PixiAppHandle> {
-  const { canvas, width, height, backgroundColor = 0x0f172a } = options;
+  const { canvas, width, height, backgroundColor = 0xfafaf7 } = options;
 
   // 1) 抢 WebGL 1 context（vivo 兼容最高）。
   let glRaw: WebGLRenderingContext | null = null;
