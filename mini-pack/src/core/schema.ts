@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+export const SUPPORTED_PLATFORMS = ['vivo'] as const;
+
 export const gameConfigSchema = z
   .object({
     title: z.string().trim().min(1, 'title must not be empty'),
@@ -45,7 +47,7 @@ export function defineVivoMaterials(materials: VivoMaterials): VivoMaterials {
 
 export const packConfigSchema = z
   .object({
-    platform: z.literal('vivo'),
+    platform: z.enum(SUPPORTED_PLATFORMS),
     serverBaseUrl: z.string().trim().optional(),
     output: z.string().trim().min(1, 'output must not be empty'),
   })

@@ -6,6 +6,7 @@ import { pathToFileURL } from 'node:url';
 import type { ZodType } from 'zod';
 
 import {
+  SUPPORTED_PLATFORMS,
   gameConfigSchema,
   vivoMaterialsSchema,
   type GameConfig,
@@ -21,7 +22,7 @@ import type {
 
 export interface LoadGameConfigOptions {
   projectRoot?: string;
-  platform: PlatformName;
+  platform: string;
   configFile?: string;
 }
 
@@ -49,7 +50,7 @@ export async function loadGameConfigFile(projectRoot: string, configFile = 'game
 export async function loadGameConfig(options: LoadGameConfigOptions): Promise<LoadedGameConfig> {
   const projectRoot = path.resolve(options.projectRoot ?? process.cwd());
   const configFileAbs = path.resolve(projectRoot, options.configFile ?? 'game.config.ts');
-  const platform = options.platform;
+  const platform = parsePlatformName(options.platform);
 
   await assertPathExists(
     configFileAbs,
@@ -105,6 +106,16 @@ export async function loadGameConfig(options: LoadGameConfigOptions): Promise<Lo
 
 function parseChannelMaterials(platform: PlatformName, raw: unknown): ChannelMaterials {
   return parseMaterials(vivoMaterialsSchema, raw, platform);
+}
+
+function parsePlatformName(platform: string): PlatformName {
+  if ((SUPPORTED_PLATFORMS as readonly string[]).includes(platform)) {
+    return platform as PlatformName;
+  }
+  throw new UserError(
+    `Unsupported platform: ${platform}`,
+    `Supported platforms: ${SUPPORTED_PLATFORMS.join(', ')}`,
+  );
 }
 
 function parseMaterials<T>(schema: ZodType<T>, raw: unknown, platform: string): T {

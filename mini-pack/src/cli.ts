@@ -56,7 +56,7 @@ export async function main(argv = process.argv): Promise<void> {
   program
     .command('pack')
     .description('Pack a mini game using a single JSON build config and output a single .rpk.')
-    .argument('<config>', 'path to the JSON build config (currently vivo only)')
+    .argument('<config>', 'path to the JSON build config')
     .action(async (configFile: string) => {
       await runPackCommand({ configFile });
     });

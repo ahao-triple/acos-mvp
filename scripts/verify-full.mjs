@@ -2,9 +2,11 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadSupportedPlatforms } from './platforms.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const gamesDir = path.join(repoRoot, 'games');
+const supportedPlatforms = await loadSupportedPlatforms(repoRoot);
 
 const matrix = collectMatrix(gamesDir);
 console.log(`[verify:full] 矩阵：${matrix.map((m) => `${m.gameName}×${m.platform}`).join(', ')}`);
@@ -32,7 +34,7 @@ function collectMatrix(rootDir) {
   for (const gameName of fs.readdirSync(rootDir).sort()) {
     const channelsDir = path.join(rootDir, gameName, 'channels');
     if (!fs.existsSync(channelsDir) || !fs.statSync(channelsDir).isDirectory()) continue;
-    for (const platform of fs.readdirSync(channelsDir).sort()) {
+    for (const platform of supportedPlatforms) {
       if (fs.existsSync(path.join(channelsDir, platform, 'materials.ts'))) {
         result.push({ gameName, platform });
       }

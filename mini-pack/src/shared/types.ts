@@ -1,9 +1,10 @@
 import type {
   GameConfig,
+  SUPPORTED_PLATFORMS,
   VivoMaterials,
 } from '../core/schema.js';
 
-export type PlatformName = 'vivo';
+export type PlatformName = (typeof SUPPORTED_PLATFORMS)[number];
 
 export type ChannelMaterials = VivoMaterials;
 

@@ -1,4 +1,5 @@
 import { vivoPlatformBuilder } from './vivo/index.js';
+import { SUPPORTED_PLATFORMS } from '../core/schema.js';
 import { UserError } from '../shared/errors.js';
 import type { BuildReport, LoadedGameConfig, PlatformName } from '../shared/types.js';
 
@@ -11,13 +12,16 @@ export interface PlatformBuilder {
   build(loaded: LoadedGameConfig, options?: PlatformBuildOptions): Promise<BuildReport>;
 }
 
-const supportedPlatforms = ['vivo'] as const;
+const platformBuilders: Partial<Record<PlatformName, PlatformBuilder>> = {
+  vivo: vivoPlatformBuilder,
+};
 
 export function getPlatformBuilder(platform: string): PlatformBuilder {
-  if (platform === 'vivo') return vivoPlatformBuilder;
+  const builder = platformBuilders[platform as PlatformName];
+  if (builder) return builder;
 
   throw new UserError(
     `Unsupported platform: ${platform}`,
-    `Supported platforms: ${supportedPlatforms.join(', ')}`,
+    `Supported platforms: ${SUPPORTED_PLATFORMS.join(', ')}`,
   );
 }

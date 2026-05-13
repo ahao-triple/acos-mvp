@@ -1,6 +1,7 @@
 export {
   defineGameConfig,
   defineVivoMaterials,
+  SUPPORTED_PLATFORMS,
 } from './core/schema.js';
 export type {
   GameConfig,

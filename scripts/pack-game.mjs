@@ -1,15 +1,49 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  loadSupportedPlatforms,
+  platformUsage,
+  validatePlatform,
+} from './platforms.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const configFile = 'games/gonglian-fangxian/build.vivo.json';
+const supportedPlatforms = await loadSupportedPlatforms(repoRoot);
+const defaultPlatform = 'vivo';
+const usage = `Usage: pnpm pack [--platform ${platformUsage(supportedPlatforms)}]`;
+const parsed = parseArgs(process.argv.slice(2));
 
-runLocalBin('tsc', ['-p', 'mini-pack/tsconfig.json']);
+if (!parsed.ok) {
+  console.error(parsed.message);
+  console.error(usage);
+  process.exit(1);
+}
+
+const configFile = `games/gonglian-fangxian/build.${parsed.platform}.json`;
+
 run(process.execPath, ['mini-pack/dist/cli.js', 'pack', configFile]);
 
-function runLocalBin(bin, args) {
-  run(path.join(repoRoot, 'node_modules', '.bin', process.platform === 'win32' ? `${bin}.cmd` : bin), args);
+function parseArgs(args) {
+  let platform = defaultPlatform;
+  for (let index = 0; index < args.length; index += 1) {
+    const arg = args[index];
+    if (arg === '--platform') {
+      const value = args[index + 1];
+      if (!value || value.startsWith('--')) return { ok: false, message: 'Missing value for --platform.' };
+      platform = value;
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith('--platform=')) {
+      platform = arg.slice('--platform='.length);
+      if (!platform) return { ok: false, message: 'Missing value for --platform.' };
+      continue;
+    }
+    return { ok: false, message: `Unexpected argument: ${arg}` };
+  }
+  const validation = validatePlatform(platform, supportedPlatforms);
+  if (!validation.ok) return validation;
+  return { ok: true, platform };
 }
 
 function run(command, args) {

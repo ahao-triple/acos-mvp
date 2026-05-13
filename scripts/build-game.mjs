@@ -2,12 +2,17 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  loadSupportedPlatforms,
+  platformUsage,
+  validatePlatform,
+} from './platforms.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const supportedPlatforms = new Set(['vivo']);
+const supportedPlatforms = await loadSupportedPlatforms(repoRoot);
 const defaultGamePath = 'games/gonglian-fangxian';
 const defaultPlatform = 'vivo';
-const usage = 'Usage: pnpm build [games/<game-project>] [--platform vivo]';
+const usage = `Usage: pnpm build [games/<game-project>] [--platform ${platformUsage(supportedPlatforms)}]`;
 const parsed = parseArgs(process.argv.slice(2));
 
 if (!parsed.ok) {
@@ -25,7 +30,6 @@ if (!fs.existsSync(configFile)) {
   process.exit(1);
 }
 
-runLocalBin('tsc', ['-p', 'mini-pack/tsconfig.json']);
 run(process.execPath, [
   'mini-pack/dist/cli.js',
   'build',
@@ -62,7 +66,8 @@ function parseArgs(args) {
   const usesDefaultGame = !gamePath;
   gamePath ??= defaultGamePath;
   platform ??= defaultPlatform;
-  if (!supportedPlatforms.has(platform)) return { ok: false, message: `Unsupported platform: ${platform}\nSupported platforms: ${[...supportedPlatforms].join(', ')}` };
+  const validation = validatePlatform(platform, supportedPlatforms);
+  if (!validation.ok) return validation;
   return { ok: true, gamePath, platform };
 }
 
@@ -70,10 +75,6 @@ function run(command, args) {
   const resolved = resolveCommand(command, args);
   const result = spawnSync(resolved.command, resolved.args, { cwd: repoRoot, stdio: 'inherit' });
   if (result.status !== 0) process.exit(result.status ?? 1);
-}
-
-function runLocalBin(bin, args) {
-  run(path.join(repoRoot, 'node_modules', '.bin', process.platform === 'win32' ? `${bin}.cmd` : bin), args);
 }
 
 function resolveCommand(command, args) {

@@ -30,12 +30,12 @@ export async function runPackCommand(options: PackCommandOptions): Promise<void>
   assertPlatformMatchesChannel(config, baseLoaded);
   const vivoMaterials = baseLoaded.vivoMaterials;
   if (!vivoMaterials?.packageName) {
-    throw new UserError('Missing vivo packageName in channels/vivo/materials.ts.');
+    throw new UserError(`Missing packageName in channels/${config.platform}/materials.ts.`);
   }
   const packageName = vivoMaterials.packageName;
 
   const outputDirAbs = path.isAbsolute(config.output) ? config.output : path.resolve(projectRoot, config.output);
-  const tempOutDir = path.join(projectRoot, '.mini-pack', `vivo-build-${packageName}`);
+  const tempOutDir = path.join(projectRoot, '.mini-pack', `${config.platform}-build-${packageName}`);
 
   await assertFileExists(
     baseLoaded.paths.entryAbs,
@@ -47,8 +47,8 @@ export async function runPackCommand(options: PackCommandOptions): Promise<void>
   );
   await assertFileExists(
     baseLoaded.paths.iconAbs,
-    `vivo icon not found: ${path.relative(projectRoot, baseLoaded.paths.iconAbs)}`,
-    `Place the vivo channel icon at ${path.relative(process.cwd(), baseLoaded.paths.iconAbs)} and run pack again.`,
+    `${config.platform} icon not found: ${path.relative(projectRoot, baseLoaded.paths.iconAbs)}`,
+    `Place the ${config.platform} channel icon at ${path.relative(process.cwd(), baseLoaded.paths.iconAbs)} and run pack again.`,
   );
 
   const loaded: LoadedGameConfig = {
@@ -63,7 +63,7 @@ export async function runPackCommand(options: PackCommandOptions): Promise<void>
     },
   };
 
-  const builder = getPlatformBuilder('vivo');
+  const builder = getPlatformBuilder(config.platform);
   const report = await builder.build(loaded);
 
   for (const warning of report.warnings) {
@@ -77,7 +77,7 @@ export async function runPackCommand(options: PackCommandOptions): Promise<void>
 
   const printable = path.relative(process.cwd(), finalRpk) || finalRpk;
   logger.success(
-    `Built vivo .rpk (v${vivoMaterials.versionName} / code ${vivoMaterials.versionCode}) -> ${printable}`,
+    `Built ${config.platform} .rpk (v${vivoMaterials.versionName} / code ${vivoMaterials.versionCode}) -> ${printable}`,
   );
 }
 
