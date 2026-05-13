@@ -1,6 +1,8 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig, mergeConfig } from 'vitest/config';
 
-export default defineConfig({
+import baseConfig from '../../../vitest.config.base';
+
+export default mergeConfig(baseConfig, defineConfig({
   publicDir: 'public-pack',
   server: {
     host: '127.0.0.1',
@@ -29,4 +31,4 @@ export default defineConfig({
       '**/tests/browser-verify/**',
     ],
   },
-});
+}));

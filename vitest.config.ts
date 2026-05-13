@@ -1,11 +1,12 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig, mergeConfig } from 'vitest/config';
 
-export default defineConfig({
+import baseConfig from './vitest.config.base';
+
+export default mergeConfig(baseConfig, defineConfig({
   test: {
     include: [
       'mini-pack/tests/**/*.test.ts',
       'games/gonglian-fangxian/game/src/test/**/*.test.ts',
     ],
-    restoreMocks: true,
   },
-});
+}));
