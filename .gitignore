@@ -32,6 +32,7 @@ games/*/.mini-pack/
 .env
 games/*/.env
 vivo-pem/
+oppo-pem/
 
 # Tool caches and temporary files
 .claude/

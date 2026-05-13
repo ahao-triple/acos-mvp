@@ -17,5 +17,8 @@
   ],
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "@oppo-minigame/cli": "^3.2.6"
   }
 }

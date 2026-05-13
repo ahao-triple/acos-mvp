@@ -68,6 +68,7 @@ export function createOppoCliCommand(packageRoot: string, platform = process.pla
     spawnOptions: {
       env: {
         ...process.env,
+        NO_UPDATE_NOTIFIER: '1',
         PATH: prependPath(path.join(packageRoot, 'node_modules/.bin'), process.env.PATH),
       },
       shell: platform === 'win32',

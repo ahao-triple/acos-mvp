@@ -26,27 +26,24 @@ export const oppoPlatformBuilder: PlatformBuilder = {
     }
 
     const outDir = loaded.paths.outDirAbs;
-    const srcDir = path.join(outDir, 'src');
     await fs.remove(outDir);
-    await fs.ensureDir(srcDir);
+    await fs.ensureDir(outDir);
 
     await fs.writeJson(path.join(outDir, 'package.json'), createOppoPackageJson(), { spaces: 2 });
 
-    // 先把 public-pack 平铺到 srcDir：让 game/public-pack/<sub>/<file> 直接落到
-    // srcDir/<sub>/<file>，从而 .rpk 根的相对路径与游戏代码资源路径一致
-    // （rpk 内 assets/find/... 命中 src/assets/find/...）。
+    // OPPO CLI 要求 manifest/main/game/logo 位于项目根，资源也平铺到项目根。
     // 重要顺序：copyAssets 必须在 manifest.json / logo.png / game.js 之前，
     // 否则 public-pack 内同名文件会覆盖渠道产物。
     const assetStats = await copyAssets({
       sourceDir: loaded.paths.publicDirAbs,
-      destinationDir: srcDir,
+      destinationDir: outDir,
     });
 
-    await fs.writeJson(path.join(srcDir, 'manifest.json'), createOppoManifest(loaded), { spaces: 2 });
+    await fs.writeJson(path.join(outDir, 'manifest.json'), createOppoManifest(loaded), { spaces: 2 });
     // 渠道图标在 public-pack/logo.png 之后写，确保 channels/oppo/icon.png 生效
-    await fs.copyFile(loaded.paths.iconAbs, path.join(srcDir, 'logo.png'));
-    await fs.writeFile(path.join(srcDir, 'main.js'), createOppoMainJs());
-    const runtimeAdapterDir = path.join(srcDir, 'runtime-adapter');
+    await fs.copyFile(loaded.paths.iconAbs, path.join(outDir, 'logo.png'));
+    await fs.writeFile(path.join(outDir, 'main.js'), createOppoMainJs());
+    const runtimeAdapterDir = path.join(outDir, 'runtime-adapter');
     await fs.ensureDir(runtimeAdapterDir);
     await fs.writeFile(path.join(runtimeAdapterDir, 'ral.js'), createOppoRuntimeRalJs());
     await fs.writeFile(path.join(runtimeAdapterDir, 'web-adapter.js'), createOppoRuntimeWebAdapterJs());
@@ -60,7 +57,7 @@ export const oppoPlatformBuilder: PlatformBuilder = {
 
     const bundleCode = await fs.readFile(tempBundle, 'utf8');
     const finalGameJs = renderOppoGameJs(bundleCode, loaded);
-    const gameJsPath = path.join(srcDir, 'game.js');
+    const gameJsPath = path.join(outDir, 'game.js');
     await fs.writeFile(gameJsPath, finalGameJs);
     await fs.remove(tempDir);
 
