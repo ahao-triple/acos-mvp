@@ -69,3 +69,25 @@ export type VivoMaterials = z.infer<typeof vivoMaterialsSchema>;
 export function defineVivoMaterials(materials: VivoMaterials): VivoMaterials {
   return materials;
 }
+
+const packVivoSchema = z
+  .object({
+    packageName: z
+      .string()
+      .trim()
+      .regex(PACKAGE_NAME_PATTERN, 'packageName must be a reverse domain (e.g. com.example.app)'),
+    iconPath: z.string().trim().min(1, 'iconPath must not be empty'),
+  })
+  .strict();
+
+export const packConfigSchema = z
+  .object({
+    platform: z.literal('vivo'),
+    serverBaseUrl: z.string().trim().optional(),
+    vivo: packVivoSchema,
+    output: z.string().trim().min(1, 'output must not be empty'),
+  })
+  .strict();
+
+export type PackConfig = z.infer<typeof packConfigSchema>;
+export type PackVivoConfig = z.infer<typeof packVivoSchema>;

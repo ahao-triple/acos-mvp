@@ -1,14 +1,19 @@
+// vivo runtime BOM/DOM polyfill 总入口（Intl / navigator / document / window / 构造器 等）。
+// 必须在任何拉 pixi.js 的 import 之前求值，所以放在第一行。详见 platform/vivo/dom-polyfill.ts。
+import './platform/vivo/dom-polyfill';
+
 import { GameController } from './app/controller';
 import { SoundEngine } from './audio/soundEngine';
 import { loginAndLoadRemoteConfig } from './app/remoteConfig';
-import { CanvasRenderer } from './render/canvasRenderer';
+import { PixiRenderer } from './pixi/renderer';
 import { canUseDouyinAdapter, createDouyinPlatformAdapter } from './platform/douyin';
 import { createMiniPackPlatformAdapter, createMiniPackSoundOptions, type MiniPackGameApp, type MiniPackGameRuntime } from './platform/minipack';
+import { createVivoEventBridge } from './platform/vivo/event-bridge';
 import { createWebPlatformAdapter } from './platform/web';
 
 export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
-  const canvas = runtime?.canvas ?? document.querySelector<HTMLCanvasElement>('#game');
-  if (!canvas) {
+  const realCanvas = runtime?.canvas ?? document.querySelector<HTMLCanvasElement>('#game');
+  if (!realCanvas) {
     throw new Error('Missing #game canvas');
   }
 
@@ -19,10 +24,9 @@ export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
       : createWebPlatformAdapter();
   const controller = new GameController(platform);
   const soundEngine = new SoundEngine(runtime ? createMiniPackSoundOptions(runtime) : {});
-  let renderer: CanvasRenderer | null = null;
-  let frameHandle: number | null = null;
+  let renderer: PixiRenderer | null = null;
   let running = false;
-  let paused = false;
+  let lastAudioCueId = 0;
 
   const unlockAudio = () => {
     void soundEngine.unlock();
@@ -31,30 +35,28 @@ export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
     if (!renderer) {
       return;
     }
-
-    const size = runtime ? resolveRuntimeCanvasSize(canvas) : browserViewportSize();
-    renderer.resize(size.width, size.height, size.dpr);
+    const size = runtime ? resolveRuntimeCanvasSize(realCanvas) : browserViewportSize();
+    renderer.resize(size.width, size.height);
   };
-  const frame = () => {
-    if (!renderer || !running) {
-      return;
-    }
-
-    if (!paused) {
-      renderer.render();
+  // 音频/震动副作用 —— 旧 CanvasRenderer 每帧调 view.audioCue + impactCue，Pixi 版搬到 main 这边
+  // 用 setInterval 监听 viewState.audioCue.id 变化，触发 soundEngine.play。
+  // （impact cue / haptic 后续接入 visualBoard.lastEvents → controller，本期先不接，避免引入战斗实现。）
+  let audioTickHandle: number | null = null;
+  const startAudioTick = () => {
+    audioTickHandle = globalThis.setInterval(() => {
       const view = controller.getViewState();
-      const impact = renderer.consumeImpactCue();
-      void soundEngine.play(view.audioCue, view.save.soundEnabled);
-      if (impact) {
-        void soundEngine.play({ type: impact.sound, id: impact.id, intensity: impact.level }, view.save.soundEnabled);
-        if (impact.haptic !== 'none') {
-          platform.triggerHaptic(impact.haptic);
-        }
-        renderer.applyImpact(impact);
+      if (view.audioCue && view.audioCue.id !== lastAudioCueId) {
+        lastAudioCueId = view.audioCue.id;
+        void soundEngine.play(view.audioCue, view.save.soundEnabled);
       }
       void soundEngine.syncMusic(view.save.musicEnabled);
+    }, 50) as unknown as number;
+  };
+  const stopAudioTick = () => {
+    if (audioTickHandle !== null) {
+      globalThis.clearInterval(audioTickHandle);
+      audioTickHandle = null;
     }
-    frameHandle = requestFrame(frame);
   };
 
   return {
@@ -62,16 +64,38 @@ export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
       if (running) {
         return;
       }
-
       running = true;
-      paused = false;
+
       if (!runtime) {
-        prepareBrowserDocument(canvas);
+        prepareBrowserDocument(realCanvas);
         window.addEventListener('resize', resize);
         window.addEventListener('pointerdown', unlockAudio, { passive: true });
       }
       soundEngine.preloadInitialAssets();
-      renderer = new CanvasRenderer(canvas, controller);
+
+      const size = runtime ? resolveRuntimeCanvasSize(realCanvas) : browserViewportSize();
+
+      // 事件 target：
+      //  - vivo 路径：mainCanvas 不一定支持标准 addEventListener，且只派发 touch* 事件。
+      //    用 createVivoEventBridge 包一层 wrapperCanvas，把 pointer* 自动注册为 touch*。
+      //  - 其他平台：直接用 realCanvas，浏览器原生支持 pointer events。
+      const eventCanvas = runtime?.config?.platform === 'vivo'
+        ? createVivoEventBridge(realCanvas)
+        : realCanvas;
+
+      renderer = new PixiRenderer({
+        canvas: realCanvas,
+        controller,
+        viewportWidth: size.width,
+        viewportHeight: size.height,
+        eventCanvas,
+      });
+      void renderer.init().then(() => {
+        if (!running) return;
+        renderer?.start();
+        startAudioTick();
+      });
+
       void loginAndLoadRemoteConfig(platform, {
         serverBaseUrl: runtime?.config?.serverBaseUrl ?? '',
         gameId: 'gonglian-fangxian',
@@ -79,30 +103,31 @@ export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
       }).then((config) => {
         controller.applyRemoteConfig(config);
       });
-      resize();
-      frame();
     },
     pause() {
-      paused = true;
+      renderer?.pause();
     },
     resume() {
-      paused = false;
+      renderer?.resume();
     },
     destroy() {
       running = false;
-      if (frameHandle !== null) {
-        cancelFrame(frameHandle);
-        frameHandle = null;
-      }
+      stopAudioTick();
       if (!runtime) {
         window.removeEventListener('resize', resize);
         window.removeEventListener('pointerdown', unlockAudio);
       }
+      renderer?.destroy();
+      renderer = null;
     },
   };
 }
 
-if (typeof document !== 'undefined' && document.querySelector<HTMLCanvasElement>('#game')) {
+if (
+  typeof document !== 'undefined' &&
+  typeof document.querySelector === 'function' &&
+  document.querySelector<HTMLCanvasElement>('#game')
+) {
   createGame().start();
 }
 
@@ -149,9 +174,14 @@ function readMiniGameWindowInfo(): { width: number; height: number; dpr: number 
       getWindowInfo?: () => unknown;
       getSystemInfoSync?: () => unknown;
     };
+    qg?: {
+      getSystemInfoSync?: () => unknown;
+    };
   };
-  const bridge = miniGameGlobal.ks ?? miniGameGlobal.tt;
-  const info = asRecord(bridge?.getWindowInfo?.()) ?? asRecord(bridge?.getSystemInfoSync?.());
+  const ksInfo = asRecord(miniGameGlobal.ks?.getWindowInfo?.()) ?? asRecord(miniGameGlobal.ks?.getSystemInfoSync?.());
+  const ttInfo = asRecord(miniGameGlobal.tt?.getWindowInfo?.()) ?? asRecord(miniGameGlobal.tt?.getSystemInfoSync?.());
+  const qgInfo = asRecord(miniGameGlobal.qg?.getSystemInfoSync?.());
+  const info = ksInfo ?? ttInfo ?? qgInfo;
   if (!info) {
     return null;
   }
@@ -160,6 +190,11 @@ function readMiniGameWindowInfo(): { width: number; height: number; dpr: number 
   const height = readPositiveNumber(info.windowHeight) ?? readPositiveNumber(info.screenHeight);
   if (!width || !height) {
     return null;
+  }
+
+  // vivo（qg）：dpr 强制 1。
+  if (qgInfo && info === qgInfo) {
+    return { width, height, dpr: 1 };
   }
 
   return {
@@ -175,21 +210,4 @@ function readPositiveNumber(value: unknown): number | null {
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return typeof value === 'object' && value !== null ? value as Record<string, unknown> : null;
-}
-
-function requestFrame(callback: FrameRequestCallback): number {
-  if (typeof requestAnimationFrame === 'function') {
-    return requestAnimationFrame(callback);
-  }
-
-  return globalThis.setTimeout(() => callback(Date.now()), 16);
-}
-
-function cancelFrame(handle: number): void {
-  if (typeof cancelAnimationFrame === 'function') {
-    cancelAnimationFrame(handle);
-    return;
-  }
-
-  clearTimeout(handle);
 }

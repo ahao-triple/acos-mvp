@@ -29,6 +29,27 @@ export interface LoadGameConfigOptions {
   configFile?: string;
 }
 
+export async function loadGameConfigFile(projectRoot: string, configFile = 'game.config.ts'): Promise<GameConfig> {
+  const root = path.resolve(projectRoot);
+  const configFileAbs = path.resolve(root, configFile);
+
+  await assertPathExists(
+    configFileAbs,
+    'Config file not found',
+    'Create game.config.ts in the project root.',
+  );
+
+  const raw = await withProjectEnv(root, () => importDefault(configFileAbs));
+  const parsed = gameConfigSchema.safeParse(raw);
+  if (!parsed.success) {
+    throw new UserError(
+      'Invalid game.config.ts.',
+      parsed.error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('\n'),
+    );
+  }
+  return parsed.data;
+}
+
 export async function loadGameConfig(options: LoadGameConfigOptions): Promise<LoadedGameConfig> {
   const projectRoot = path.resolve(options.projectRoot ?? process.cwd());
   const configFileAbs = path.resolve(projectRoot, options.configFile ?? 'game.config.ts');

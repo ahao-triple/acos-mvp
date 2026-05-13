@@ -1,0 +1,141 @@
+diff --git a/lib/rendering/batcher/shared/Batcher.mjs b/lib/rendering/batcher/shared/Batcher.mjs
+--- a/lib/rendering/batcher/shared/Batcher.mjs
++++ b/lib/rendering/batcher/shared/Batcher.mjs
+@@ -313,7 +313,10 @@
+     const indexBuffer = this.indexBuffer;
+     let newSize = Math.max(size, indexBuffer.length * 1.5);
+     newSize += newSize % 2;
+-    const newIndexBuffer = newSize > 65535 ? new Uint32Array(newSize) : new Uint16Array(newSize);
++    if (newSize > 60000) {
++      console.warn(`[pixi-patch:uint16] index buffer size ${newSize} approaching 65535 limit at Batcher._resizeIndexBuffer (gonglian-fangxian patched, see docs/phase0-changelog.md)`);
++    }
++    const newIndexBuffer = new Uint16Array(newSize);
+     if (newIndexBuffer.BYTES_PER_ELEMENT !== indexBuffer.BYTES_PER_ELEMENT) {
+       for (let i = 0; i < indexBuffer.length; i++) {
+         newIndexBuffer[i] = indexBuffer[i];
+diff --git a/lib/rendering/batcher/shared/BatchGeometry.mjs b/lib/rendering/batcher/shared/BatchGeometry.mjs
+--- a/lib/rendering/batcher/shared/BatchGeometry.mjs
++++ b/lib/rendering/batcher/shared/BatchGeometry.mjs
+@@ -4,7 +4,7 @@
+
+ "use strict";
+ const placeHolderBufferData = new Float32Array(1);
+-const placeHolderIndexData = new Uint32Array(1);
++const placeHolderIndexData = new Uint16Array(1);
+ class BatchGeometry extends Geometry {
+   constructor() {
+     const vertexSize = 6;
+diff --git a/lib/rendering/renderers/shared/geometry/utils/ensureIsBuffer.mjs b/lib/rendering/renderers/shared/geometry/utils/ensureIsBuffer.mjs
+--- a/lib/rendering/renderers/shared/geometry/utils/ensureIsBuffer.mjs
++++ b/lib/rendering/renderers/shared/geometry/utils/ensureIsBuffer.mjs
+@@ -7,7 +7,7 @@
+     let usage = index ? BufferUsage.INDEX : BufferUsage.VERTEX;
+     if (buffer instanceof Array) {
+       if (index) {
+-        buffer = new Uint32Array(buffer);
++        buffer = new Uint16Array(buffer);
+         usage = BufferUsage.INDEX | BufferUsage.COPY_DST;
+       } else {
+         buffer = new Float32Array(buffer);
+diff --git a/lib/scene/graphics/shared/utils/buildGeometryFromPath.mjs b/lib/scene/graphics/shared/utils/buildGeometryFromPath.mjs
+--- a/lib/scene/graphics/shared/utils/buildGeometryFromPath.mjs
++++ b/lib/scene/graphics/shared/utils/buildGeometryFromPath.mjs
+@@ -38,17 +38,20 @@
+       buildSimpleUvs(uvs, uvsOffset, 2, vertices.length / 2 - vertOffset);
+     }
+   });
++  if (indices.length > 60000) {
++    console.warn(`[pixi-patch:uint16] index buffer size ${indices.length} approaching 65535 limit at buildGeometryFromPath (gonglian-fangxian patched, see docs/phase0-changelog.md)`);
++  }
+   const out = options.out;
+   if (out) {
+     out.positions = new Float32Array(vertices);
+     out.uvs = new Float32Array(uvs);
+-    out.indices = new Uint32Array(indices);
++    out.indices = new Uint16Array(indices);
+     return out;
+   }
+   const geometry = new MeshGeometry({
+     positions: new Float32Array(vertices),
+     uvs: new Float32Array(uvs),
+-    indices: new Uint32Array(indices)
++    indices: new Uint16Array(indices)
+   });
+   return geometry;
+ }
+diff --git a/lib/scene/mesh-plane/PlaneGeometry.mjs b/lib/scene/mesh-plane/PlaneGeometry.mjs
+--- a/lib/scene/mesh-plane/PlaneGeometry.mjs
++++ b/lib/scene/mesh-plane/PlaneGeometry.mjs
+@@ -60,7 +60,10 @@
+     }
+     this.buffers[0].data = new Float32Array(verts);
+     this.buffers[1].data = new Float32Array(uvs);
+-    this.indexBuffer.data = new Uint32Array(indices);
++    if (indices.length > 60000) {
++      console.warn(`[pixi-patch:uint16] index buffer size ${indices.length} approaching 65535 limit at PlaneGeometry (gonglian-fangxian patched, see docs/phase0-changelog.md)`);
++    }
++    this.indexBuffer.data = new Uint16Array(indices);
+     this.buffers[0].update();
+     this.buffers[1].update();
+     this.indexBuffer.update();
+diff --git a/lib/scene/mesh-simple/RopeGeometry.mjs b/lib/scene/mesh-simple/RopeGeometry.mjs
+--- a/lib/scene/mesh-simple/RopeGeometry.mjs
++++ b/lib/scene/mesh-simple/RopeGeometry.mjs
+@@ -7,10 +7,14 @@
+    */
+   constructor(options) {
+     const { width, points, textureScale } = { ..._RopeGeometry.defaultOptions, ...options };
++    const indexSize = (points.length - 1) * 6;
++    if (indexSize > 60000) {
++      console.warn(`[pixi-patch:uint16] index buffer size ${indexSize} approaching 65535 limit at RopeGeometry (gonglian-fangxian patched, see docs/phase0-changelog.md)`);
++    }
+     super({
+       positions: new Float32Array(points.length * 4),
+       uvs: new Float32Array(points.length * 4),
+-      indices: new Uint32Array((points.length - 1) * 6)
++      indices: new Uint16Array(indexSize)
+     });
+     this.points = points;
+     this._width = width;
+diff --git a/lib/scene/mesh/shared/MeshGeometry.mjs b/lib/scene/mesh/shared/MeshGeometry.mjs
+--- a/lib/scene/mesh/shared/MeshGeometry.mjs
++++ b/lib/scene/mesh/shared/MeshGeometry.mjs
+@@ -25,7 +25,7 @@
+         uvs = new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]);
+       }
+     }
+-    const indices = options.indices || new Uint32Array([0, 1, 2, 0, 2, 3]);
++    const indices = options.indices || new Uint16Array([0, 1, 2, 0, 2, 3]);
+     const shrinkToFit = options.shrinkBuffersToFit;
+     const positionBuffer = new Buffer({
+       data: positions,
+diff --git a/lib/scene/particle-container/shared/utils/createIndicesForQuads.mjs b/lib/scene/particle-container/shared/utils/createIndicesForQuads.mjs
+--- a/lib/scene/particle-container/shared/utils/createIndicesForQuads.mjs
++++ b/lib/scene/particle-container/shared/utils/createIndicesForQuads.mjs
+@@ -1,11 +1,10 @@
+ "use strict";
+ function createIndicesForQuads(size, outBuffer = null) {
+   const totalIndices = size * 6;
+-  if (totalIndices > 65535) {
+-    outBuffer || (outBuffer = new Uint32Array(totalIndices));
+-  } else {
+-    outBuffer || (outBuffer = new Uint16Array(totalIndices));
++  if (totalIndices > 60000) {
++    console.warn(`[pixi-patch:uint16] index buffer size ${totalIndices} approaching 65535 limit at createIndicesForQuads (gonglian-fangxian patched, see docs/phase0-changelog.md)`);
+   }
++  outBuffer || (outBuffer = new Uint16Array(totalIndices));
+   if (outBuffer.length !== totalIndices) {
+     throw new Error(`Out buffer length is incorrect, got ${outBuffer.length} and expected ${totalIndices}`);
+   }
+diff --git a/lib/scene/sprite-tiling/utils/QuadGeometry.mjs b/lib/scene/sprite-tiling/utils/QuadGeometry.mjs
+--- a/lib/scene/sprite-tiling/utils/QuadGeometry.mjs
++++ b/lib/scene/sprite-tiling/utils/QuadGeometry.mjs
+@@ -6,7 +6,7 @@
+     super({
+       positions: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
+       uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
+-      indices: new Uint32Array([0, 1, 2, 0, 2, 3])
++      indices: new Uint16Array([0, 1, 2, 0, 2, 3])
+     });
+   }
+ }

@@ -12,6 +12,7 @@ export interface MiniPackGameApp {
 
 export interface MiniPackGameRuntime {
   canvas: HTMLCanvasElement;
+  renderMode?: 'canvas' | 'webgl';
   config?: {
     platform: string;
     serverBaseUrl: string;

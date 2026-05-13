@@ -2,6 +2,7 @@
 import { Command } from 'commander';
 
 import { runBuildCommand } from './commands/build.js';
+import { runPackCommand } from './commands/pack.js';
 import { reportPreflightIssues, runPreflight } from './commands/preflight.js';
 import { isUserError } from './shared/errors.js';
 import { logger } from './shared/logger.js';
@@ -50,6 +51,14 @@ export async function main(argv = process.argv): Promise<void> {
         projectRoot: options.projectRoot,
         skipVivoRpk: options.skipVivoRpk,
       });
+    });
+
+  program
+    .command('pack')
+    .description('Pack a mini game using a single JSON build config and output a single .rpk.')
+    .argument('<config>', 'path to the JSON build config (currently vivo only)')
+    .action(async (configFile: string) => {
+      await runPackCommand({ configFile });
     });
 
   await program.parseAsync(argv);

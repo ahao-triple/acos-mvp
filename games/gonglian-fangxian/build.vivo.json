@@ -1,0 +1,9 @@
+{
+  "platform": "vivo",
+  "serverBaseUrl": "https://ks-games.xfyccm.cn/api",
+  "vivo": {
+    "packageName": "com.jnsy.gonglianfangxian.vivominigame",
+    "iconPath": "channels/vivo/icon.png"
+  },
+  "output": "dist"
+}
