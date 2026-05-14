@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   createOppoMainJs,
   createOppoManifest,
@@ -7,6 +7,10 @@ import {
   renderOppoGameJs,
 } from '../../src/platforms/oppo/template.js';
 import type { LoadedGameConfig } from '../../src/shared/types.js';
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 function makeLoaded(): LoadedGameConfig {
   return {
@@ -20,6 +24,7 @@ function makeLoaded(): LoadedGameConfig {
     platform: 'oppo',
     materials: {
       packageName: 'com.example.app',
+      displayName: '测试游戏',
       iconPath: 'icon.png',
       versionName: '2.5.0',
       versionCode: 7,
@@ -39,6 +44,7 @@ function makeLoaded(): LoadedGameConfig {
     },
     oppoMaterials: {
       packageName: 'com.example.app',
+      displayName: '测试游戏',
       iconPath: 'icon.png',
       versionName: '2.5.0',
       versionCode: 7,
@@ -53,14 +59,14 @@ describe('createOppoManifest', () => {
   it('uses materials.packageName / versionName / versionCode and game.title / orientation', () => {
     const manifest = createOppoManifest(makeLoaded());
     expect(manifest.package).toBe('com.example.app');
-    expect(manifest.name).toBe('就你眼神好');
+    expect(manifest.name).toBe('测试游戏');
     expect(manifest.versionName).toBe('2.5.0');
     expect(manifest.versionCode).toBe(7);
-    expect(manifest.deviceOrientation).toBe('portrait');
+    expect(manifest.orientation).toBe('portrait');
     expect(manifest.icon).toBe('/logo.png');
-    expect(manifest.homePage).toBe('/logo.png');
+    expect(manifest).not.toHaveProperty('homePage');
     expect(manifest.type).toBe('game');
-    expect(manifest.minPlatformVersion).toBe(1060);
+    expect(manifest.minPlatformVersion).toBe(1063);
   });
 
   it('keeps rewardedAdUnitId in the same manifest config as package metadata', () => {
@@ -69,6 +75,19 @@ describe('createOppoManifest', () => {
       logLevel: 'debug',
       rewardedAdUnitId: 'oppo-rwd-001',
     });
+  });
+
+  it('truncates displayName longer than 6 code points and warns once', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const loaded = makeLoaded();
+    loaded.oppoMaterials!.displayName = '😀abcdef';
+    (loaded.materials as { displayName?: string }).displayName = '😀abcdef';
+
+    const manifest = createOppoManifest(loaded);
+
+    expect(manifest.name).toBe('😀abcde');
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith('OPPO manifest name exceeds 6 chars, truncated to: 😀abcde');
   });
 });
 

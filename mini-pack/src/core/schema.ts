@@ -30,6 +30,7 @@ export const vivoMaterialsSchema = z
       .string()
       .trim()
       .regex(PACKAGE_NAME_PATTERN, 'packageName must be a reverse domain (e.g. com.example.app)'),
+    displayName: z.string().trim().min(1).max(20).optional(),
     iconPath: z.string().trim().min(1).default('icon.png'),
     versionName: z.string().trim().min(1).default('1.0.0'),
     versionCode: z.number().int().positive().default(1),

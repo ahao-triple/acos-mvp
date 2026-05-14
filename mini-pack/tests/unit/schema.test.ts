@@ -58,6 +58,18 @@ describe('vivoMaterialsSchema', () => {
     }
   });
 
+  it('accepts optional displayName for vivo materials', () => {
+    const result = vivoMaterialsSchema.safeParse({
+      packageName: 'com.example.app',
+      displayName: '全民爆梗',
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.displayName).toBe('全民爆梗');
+    }
+  });
+
   it('accepts optional rewardedAdUnitId for vivo ad placement configuration', () => {
     const result = vivoMaterialsSchema.safeParse({
       packageName: 'com.example.app',
@@ -115,6 +127,18 @@ describe('oppoMaterialsSchema', () => {
       expect(result.data.iconPath).toBe('icon.png');
       expect(result.data.versionName).toBe('1.0.0');
       expect(result.data.versionCode).toBe(1);
+    }
+  });
+
+  it('accepts optional displayName for oppo materials', () => {
+    const result = oppoMaterialsSchema.safeParse({
+      packageName: 'com.example.oppo',
+      displayName: '测试游戏',
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.displayName).toBe('测试游戏');
     }
   });
 

@@ -2,6 +2,7 @@ import { defineOppoMaterials } from "../../../../mini-pack/src/index";
 
 export default defineOppoMaterials({
   packageName: "com.jnsy.qmbg.oppominigame",
+  displayName: "全民爆梗",
   iconPath: "icon.png",
   versionName: "1.0.0",
   versionCode: 1,

@@ -28,6 +28,7 @@ export function createOppoManifest(loaded: LoadedGameConfig): Record<string, unk
     throw new Error('createOppoManifest requires a loaded oppo config');
   }
   const { oppoMaterials, game } = loaded;
+  const name = createOppoManifestName(oppoMaterials.displayName ?? game.title);
   const config: Record<string, unknown> = {
     logLevel: 'debug',
   };
@@ -36,17 +37,26 @@ export function createOppoManifest(loaded: LoadedGameConfig): Record<string, unk
   }
   return {
     package: oppoMaterials.packageName,
-    name: game.title,
+    name,
     versionName: oppoMaterials.versionName,
     versionCode: oppoMaterials.versionCode,
-    minPlatformVersion: 1060,
-    deviceOrientation: game.orientation,
+    minPlatformVersion: 1063,
+    orientation: game.orientation,
     type: 'game',
-    // TODO(oppo): verify manifest compatibility on device.
     icon: '/logo.png',
-    homePage: oppoMaterials.homePage ?? '/logo.png',
     config,
   };
+}
+
+function createOppoManifestName(value: string): string {
+  const chars = Array.from(value);
+  if (chars.length <= 6) {
+    return value;
+  }
+
+  const truncated = chars.slice(0, 6).join('');
+  console.warn(`OPPO manifest name exceeds 6 chars, truncated to: ${truncated}`);
+  return truncated;
 }
 
 export function createOppoPackageName(projectRoot: string): string {
