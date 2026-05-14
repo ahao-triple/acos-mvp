@@ -4,16 +4,11 @@ import { fileURLToPath } from 'node:url';
 import { runPreflight } from '../../src/commands/preflight.js';
 
 const fixturesDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../fixtures');
-const validGame = path.join(fixturesDir, 'valid-douyin-game');
+const validGame = path.join(fixturesDir, 'valid-vivo-game');
 
 describe('runPreflight (fixture)', () => {
-  it('passes for the douyin fixture', async () => {
-    const result = await runPreflight({ projectRoot: validGame, platform: 'douyin' });
-    expect(result.issues).toEqual([]);
-  });
-
-  it('reports missing materials for vivo on the douyin-only fixture', async () => {
+  it('passes for the vivo fixture', async () => {
     const result = await runPreflight({ projectRoot: validGame, platform: 'vivo' });
-    expect(result.issues.some((i) => i.code === 'MISSING_MATERIALS')).toBe(true);
+    expect(result.issues).toEqual([]);
   });
 });

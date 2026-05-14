@@ -2,29 +2,5 @@
   "name": "gonglian-fangxian-game",
   "version": "0.1.0",
   "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "vite --host 127.0.0.1",
-    "build": "tsc --noEmit && vite build",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "test:e2e": "playwright test",
-    "verify:browser": "playwright test --config tests/browser-verify/playwright.config.ts",
-    "check": "pnpm typecheck && pnpm test && pnpm build",
-    "check:full": "pnpm check && pnpm test:e2e && pnpm verify:browser",
-    "postinstall": "sh scripts/apply-pixi-patch.sh"
-  },
-  "dependencies": {
-    "pixi.js": "^8.18.1"
-  },
-  "devDependencies": {
-    "@playwright/test": "^1.60.0",
-    "@vitest/browser": "^4.0.8",
-    "jsdom": "^27.2.0",
-    "patch-package": "^8.0.1",
-    "typescript": "^5.9.3",
-    "vite": "^7.2.6",
-    "vitest": "^4.0.8"
-  }
+  "type": "module"
 }

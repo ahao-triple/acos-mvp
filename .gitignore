@@ -27,16 +27,12 @@ games/*/game/dist/
 games/*/channels/*/build/
 games/*/.mini-pack/
 .mini-pack/
-games/difference-hunt/levels/library/
-games/difference-hunt/levels/temp/
-games/difference-hunt/levels/local/
-games/difference-hunt/levels/out/
-games/difference-hunt/levels/node_modules/
 
 # Local environment
 .env
 games/*/.env
 vivo-pem/
+oppo-pem/
 
 # Tool caches and temporary files
 .claude/

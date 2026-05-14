@@ -21,8 +21,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadSupportedPlatforms } from './platforms.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const supportedPlatforms = await loadSupportedPlatforms(repoRoot);
 
 // ─── 扫描目标 ───
 const includes = [
@@ -66,7 +68,7 @@ for (const inc of includes) {
 const scannedFiles = targetFiles.filter(shouldScan);
 
 // 也扫 channels/<platform>/build/src/manifest.json（产物 manifest 的 name 字段也可能含字）
-for (const platform of ['douyin', 'kuaishou', 'vivo']) {
+for (const platform of supportedPlatforms) {
   const candidate = path.join(repoRoot, `games/gonglian-fangxian/channels/${platform}/build/src/manifest.json`);
   if (fs.existsSync(candidate)) scannedFiles.push(candidate);
 }

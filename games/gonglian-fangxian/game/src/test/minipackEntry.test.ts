@@ -13,13 +13,12 @@ describe('mini-pack entry contract', () => {
     expect(typeof entry.createGame).toBe('function');
   });
 
-  test('uses mini game system pixel ratio for runtime canvas sizing', () => {
-    vi.stubGlobal('tt', {
+  test('uses vivo system size for runtime canvas sizing', () => {
+    vi.stubGlobal('qg', {
       getSystemInfoSync() {
         return {
           windowWidth: 393,
           windowHeight: 852,
-          pixelRatio: 3,
         };
       },
     });
@@ -27,7 +26,7 @@ describe('mini-pack entry contract', () => {
     expect(resolveRuntimeCanvasSize({ width: 0, height: 0 } as HTMLCanvasElement)).toEqual({
       width: 393,
       height: 852,
-      dpr: 3,
+      dpr: 1,
     });
   });
 });

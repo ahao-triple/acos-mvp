@@ -1,7 +1,7 @@
 import fs from 'fs-extra';
 import path from 'node:path';
 
-import { loadGameConfigFile } from '../core/config.js';
+import { loadGameConfig } from '../core/config.js';
 import { packConfigSchema, type PackConfig } from '../core/schema.js';
 import { getPlatformBuilder } from '../platforms/index.js';
 import { UserError } from '../shared/errors.js';
@@ -11,13 +11,6 @@ import type { LoadedGameConfig } from '../shared/types.js';
 export interface PackCommandOptions {
   configFile: string;
 }
-
-interface VivoVersionState {
-  lastVersionCode: number;
-}
-
-const VERSION_STATE_DIR = '.mini-pack';
-const VERSION_STATE_FILE = 'vivo-version.json';
 
 export async function runPackCommand(options: PackCommandOptions): Promise<void> {
   const configFileAbs = path.resolve(options.configFile);
@@ -33,104 +26,65 @@ export async function runPackCommand(options: PackCommandOptions): Promise<void>
   }
   const config: PackConfig = parsed.data;
 
-  const game = await loadGameConfigFile(projectRoot);
+  const baseLoaded = await loadGameConfig({ projectRoot, platform: config.platform });
+  assertPlatformMatchesChannel(config, baseLoaded);
+  const platformMaterials = getPlatformMaterials(baseLoaded);
+  if (!platformMaterials?.packageName) {
+    throw new UserError(`Missing packageName in channels/${config.platform}/materials.ts.`);
+  }
+  const packageName = platformMaterials.packageName;
 
-  const entryAbs = resolveInside(projectRoot, game.entry, 'game.config.ts entry');
-  const publicDirAbs = resolveInside(projectRoot, game.publicDir, 'game.config.ts publicDir');
-  const iconAbs = resolveInside(projectRoot, config.vivo.iconPath, 'vivo.iconPath');
   const outputDirAbs = path.isAbsolute(config.output) ? config.output : path.resolve(projectRoot, config.output);
-  const tempOutDir = path.join(projectRoot, '.mini-pack', `vivo-build-${config.vivo.packageName}`);
+  const tempOutDir = path.join(projectRoot, '.mini-pack', `${config.platform}-build-${packageName}`);
 
-  await assertFileExists(entryAbs, `Game entry file not found: ${path.relative(projectRoot, entryAbs)}`);
-  await assertDirExists(publicDirAbs, `publicDir is not a directory: ${path.relative(projectRoot, publicDirAbs)}`);
   await assertFileExists(
-    iconAbs,
-    `vivo icon not found: ${path.relative(projectRoot, iconAbs)}`,
-    `Place the vivo channel icon at ${path.relative(process.cwd(), iconAbs)} and run pack again.`,
+    baseLoaded.paths.entryAbs,
+    `Game entry file not found: ${path.relative(projectRoot, baseLoaded.paths.entryAbs)}`,
+  );
+  await assertDirExists(
+    baseLoaded.paths.publicDirAbs,
+    `publicDir is not a directory: ${path.relative(projectRoot, baseLoaded.paths.publicDirAbs)}`,
+  );
+  await assertFileExists(
+    baseLoaded.paths.iconAbs,
+    `${config.platform} icon not found: ${path.relative(projectRoot, baseLoaded.paths.iconAbs)}`,
+    `Place the ${config.platform} channel icon at ${path.relative(process.cwd(), baseLoaded.paths.iconAbs)} and run pack again.`,
   );
 
-  const { versionCode, versionName } = await nextVivoVersion(projectRoot);
-
   const loaded: LoadedGameConfig = {
-    platform: 'vivo',
-    projectRoot,
+    ...baseLoaded,
     game: {
-      title: game.title,
-      entry: game.entry,
-      publicDir: game.publicDir,
-      orientation: game.orientation,
-      canvas: game.canvas,
-      serverBaseUrl: config.serverBaseUrl ?? game.serverBaseUrl,
-    },
-    materials: {
-      packageName: config.vivo.packageName,
-      iconPath: config.vivo.iconPath,
-      versionName,
-      versionCode,
-    },
-    vivoMaterials: {
-      packageName: config.vivo.packageName,
-      iconPath: config.vivo.iconPath,
-      versionName,
-      versionCode,
+      ...baseLoaded.game,
+      serverBaseUrl: config.serverBaseUrl ?? baseLoaded.game.serverBaseUrl,
     },
     paths: {
-      configFileAbs,
-      entryAbs,
-      publicDirAbs,
-      channelRoot: projectRoot,
-      materialsAbs: configFileAbs,
-      iconAbs,
+      ...baseLoaded.paths,
       outDirAbs: tempOutDir,
     },
   };
 
-  const builder = getPlatformBuilder('vivo');
+  const builder = getPlatformBuilder(config.platform);
   const report = await builder.build(loaded);
 
   for (const warning of report.warnings) {
     logger.warn(warning);
   }
 
-  const rpkSource = await findRpkFile(tempOutDir, config.vivo.packageName);
+  const rpkSource = await findRpkFile(tempOutDir, packageName);
   await fs.ensureDir(outputDirAbs);
-  const finalRpk = path.join(outputDirAbs, `${config.vivo.packageName}.rpk`);
+  const finalRpk = path.join(outputDirAbs, `${packageName}.rpk`);
   await fs.copyFile(rpkSource, finalRpk);
 
-  await commitVivoVersion(projectRoot, versionCode);
-
   const printable = path.relative(process.cwd(), finalRpk) || finalRpk;
-  logger.success(`Built vivo .rpk (v${versionName} / code ${versionCode}) -> ${printable}`);
+  logger.success(
+    `Built ${config.platform} .rpk (v${platformMaterials.versionName} / code ${platformMaterials.versionCode}) -> ${printable}`,
+  );
 }
 
-async function nextVivoVersion(projectRoot: string): Promise<{ versionCode: number; versionName: string }> {
-  const stateFile = path.join(projectRoot, VERSION_STATE_DIR, VERSION_STATE_FILE);
-  let last = 0;
-  try {
-    const text = await fs.readFile(stateFile, 'utf8');
-    const parsed = JSON.parse(text) as Partial<VivoVersionState>;
-    if (typeof parsed.lastVersionCode === 'number' && parsed.lastVersionCode > 0) {
-      last = Math.floor(parsed.lastVersionCode);
-    }
-  } catch (error) {
-    if (!isNodeError(error) || error.code !== 'ENOENT') {
-      throw new UserError(
-        `Failed to read vivo version state: ${stateFile}`,
-        error instanceof Error ? error.message : String(error),
-      );
-    }
-  }
-  const versionCode = last + 1;
-  const versionName = `1.0.${versionCode - 1}`;
-  return { versionCode, versionName };
-}
-
-async function commitVivoVersion(projectRoot: string, versionCode: number): Promise<void> {
-  const stateDir = path.join(projectRoot, VERSION_STATE_DIR);
-  const stateFile = path.join(stateDir, VERSION_STATE_FILE);
-  await fs.ensureDir(stateDir);
-  const payload: VivoVersionState = { lastVersionCode: versionCode };
-  await fs.writeFile(stateFile, `${JSON.stringify(payload, null, 2)}\n`);
+function getPlatformMaterials(loaded: LoadedGameConfig) {
+  if (loaded.platform === 'vivo') return loaded.vivoMaterials;
+  if (loaded.platform === 'oppo') return loaded.oppoMaterials;
+  return undefined;
 }
 
 async function readConfigJson(file: string): Promise<unknown> {
@@ -151,22 +105,14 @@ async function readConfigJson(file: string): Promise<unknown> {
   }
 }
 
-function resolveInside(projectRoot: string, value: string, fieldName: string): string {
-  if (path.isAbsolute(value)) {
+function assertPlatformMatchesChannel(config: PackConfig, loaded: LoadedGameConfig): void {
+  const channelName = path.basename(loaded.paths.channelRoot);
+  if (channelName !== config.platform) {
     throw new UserError(
-      `${fieldName} must be a path relative to the project root: ${value}`,
-      `Use a relative path inside ${path.relative(process.cwd(), projectRoot) || '.'}.`,
+      `Build config platform "${config.platform}" does not match channel directory "${channelName}".`,
+      `Use channels/${config.platform}/materials.ts for this build config.`,
     );
   }
-  const resolved = path.resolve(projectRoot, value);
-  const rel = path.relative(projectRoot, resolved);
-  if (rel.startsWith('..') || path.isAbsolute(rel)) {
-    throw new UserError(
-      `${fieldName} escapes the project root: ${value}`,
-      `Keep ${fieldName} inside ${path.relative(process.cwd(), projectRoot) || '.'}.`,
-    );
-  }
-  return resolved;
 }
 
 async function assertFileExists(file: string, message: string, suggestion?: string): Promise<void> {

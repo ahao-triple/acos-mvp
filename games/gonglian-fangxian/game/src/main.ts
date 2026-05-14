@@ -1,16 +1,18 @@
 // vivo runtime BOM/DOM polyfill 总入口（Intl / navigator / document / window / 构造器 等）。
 // 必须在任何拉 pixi.js 的 import 之前求值，所以放在第一行。详见 platform/vivo/dom-polyfill.ts。
 import './platform/vivo/dom-polyfill';
+// SPECULATIVE PORT: oppo 也用 qg.* runtime，polyfill 结构通用。两份 polyfill 均为条件式，
+// 幂等，可共存。真机校准如有差异再分离。
+import './platform/oppo/dom-polyfill';
 
 import { GameController } from './app/controller';
 import { SoundEngine } from './audio/soundEngine';
 import { setSfxEnabled, unlockSfx } from './audio/sfx';
-import { loginAndLoadRemoteConfig } from './app/remoteConfig';
 import { PixiRenderer } from './pixi/renderer';
-import { canUseDouyinAdapter, createDouyinPlatformAdapter } from './platform/douyin';
 import { createMiniPackPlatformAdapter, createMiniPackSoundOptions, type MiniPackGameApp, type MiniPackGameRuntime } from './platform/minipack';
 import { probeCanvas2DText } from './platform/vivo/canvas2d-text-probe';
 import { createVivoEventBridge } from './platform/vivo/event-bridge';
+import { createOppoEventBridge } from './platform/oppo/event-bridge';
 import { createWebPlatformAdapter } from './platform/web';
 
 export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
@@ -21,7 +23,7 @@ export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
 
   // 一次性 vivo Canvas2D Text 渲染诊断：v1.0.37 真机 Pixi.Text 颜色失真，
   // 通过 probe 直接验证 fillStyle / fillRect / fillText 各路径上的真实行为。
-  // 仅在 vivo runtime 跑（不影响浏览器、抖音、快手）；输出 4 条 log 看 vConsole。
+  // 仅在 vivo runtime 跑（不影响浏览器）；输出 4 条 log 看 vConsole。
   if (runtime?.config?.platform === 'vivo') {
     try {
       probeCanvas2DText();
@@ -32,9 +34,7 @@ export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
 
   const platform = runtime
     ? createMiniPackPlatformAdapter(runtime)
-    : canUseDouyinAdapter()
-      ? createDouyinPlatformAdapter('')
-      : createWebPlatformAdapter();
+    : createWebPlatformAdapter();
   const controller = new GameController(platform);
   const soundEngine = new SoundEngine(runtime ? createMiniPackSoundOptions(runtime) : {});
   let renderer: PixiRenderer | null = null;
@@ -94,9 +94,12 @@ export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
       // 事件 target：
       //  - vivo 路径：mainCanvas 不一定支持标准 addEventListener，且只派发 touch* 事件。
       //    用 createVivoEventBridge 包一层 wrapperCanvas，把 pointer* 自动注册为 touch*。
+      //  - oppo 路径：SPECULATIVE PORT，同样用 qg.* touch 事件，走 createOppoEventBridge。
       //  - 其他平台：直接用 realCanvas，浏览器原生支持 pointer events。
       const eventCanvas = runtime?.config?.platform === 'vivo'
         ? createVivoEventBridge(realCanvas)
+        : __GAME_PLATFORM__ === 'oppo'
+        ? createOppoEventBridge(realCanvas)
         : realCanvas;
 
       renderer = new PixiRenderer({
@@ -110,14 +113,6 @@ export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
         if (!running) return;
         renderer?.start();
         startAudioTick();
-      });
-
-      void loginAndLoadRemoteConfig(platform, {
-        serverBaseUrl: runtime?.config?.serverBaseUrl ?? '',
-        gameId: 'gonglian-fangxian',
-        channel: runtime?.config?.platform ?? platform.name,
-      }).then((config) => {
-        controller.applyRemoteConfig(config);
       });
     },
     pause() {
@@ -182,22 +177,12 @@ export function resolveRuntimeCanvasSize(canvas: HTMLCanvasElement): { width: nu
 
 function readMiniGameWindowInfo(): { width: number; height: number; dpr: number } | null {
   const miniGameGlobal = globalThis as typeof globalThis & {
-    ks?: {
-      getWindowInfo?: () => unknown;
-      getSystemInfoSync?: () => unknown;
-    };
-    tt?: {
-      getWindowInfo?: () => unknown;
-      getSystemInfoSync?: () => unknown;
-    };
     qg?: {
       getSystemInfoSync?: () => unknown;
     };
   };
-  const ksInfo = asRecord(miniGameGlobal.ks?.getWindowInfo?.()) ?? asRecord(miniGameGlobal.ks?.getSystemInfoSync?.());
-  const ttInfo = asRecord(miniGameGlobal.tt?.getWindowInfo?.()) ?? asRecord(miniGameGlobal.tt?.getSystemInfoSync?.());
   const qgInfo = asRecord(miniGameGlobal.qg?.getSystemInfoSync?.());
-  const info = ksInfo ?? ttInfo ?? qgInfo;
+  const info = qgInfo;
   if (!info) {
     return null;
   }

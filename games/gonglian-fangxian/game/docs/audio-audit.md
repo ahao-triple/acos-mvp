@@ -1,7 +1,6 @@
 # 共联防线 · 音效诊断与修复审计
 
 > 扫描对象：`games/gonglian-fangxian/game/src/`
-> 现状基线：**浏览器静音概率高、vivo 严格模式完全静音、抖音 wav 路径正常**
 > 撰写日期：2026-05-13
 > 当前依赖：仅 `pixi.js ^8.18.1`，未引入任何音频库
 > 当前音频资源：`game/public-pack/audio/` 含 `bgm.mp3 + button/select/invalid/match/combo/reward/win/lose .wav`（**历史遗留，本次不引入新文件、不删除**）
@@ -28,7 +27,6 @@ controller.emitAudio(type) → viewState.audioCue { type, id }
 
 ## 2. 事件 → 应有音效 → 当前是否有 对照表
 
-| # | 事件 | 应有 SFX | 浏览器 | 抖音 mini-pack | vivo mini-pack | 备注 |
 |---|------|---------|--------|----------------|----------------|------|
 | 1 | 按钮点击（任何 dispatch action） | `button` | ✅ | ✅ | ❌ 静音 | controller.ts:124 `emitAudio('button')` |
 | 2 | piece 选中 | `select` | ✅ | ✅ | ❌ 静音 | controller.ts:283 |
@@ -106,7 +104,6 @@ setSfxEnabled(bool)    // 静音开关
 - **补 combo 事件**：`PlayingScreen.handleVisualCue` 在 cue.type='combo' 时 `sfx.playCombo(cue.combo)`
 - 其他事件（button / select / invalid / win / lose / reward）保留现有 `controller.emitAudio` + soundEngine 链路（已工作）
 
-为什么不重写整套音频：现有 soundEngine 链路在浏览器和抖音上是工作的（缺的只是 match / combo），删了反而损失"已工作的抖音音效"。sfx.ts 作为 **新接口** 补缺，跟旧链路并存：
 - 旧链路（cue 驱动）：button/select/invalid/win/lose/reward — 已工作
 - 新链路（函数直调）：match/combo — 任务 5.2 新增
 
@@ -131,7 +128,6 @@ setSfxEnabled(bool)    // 静音开关
 - **不引入** 任何新音频文件
 - **不接入** AI 生成 / freesound / zapsplat 等
 - **不做** vivo 端的 wav 文件播放路径（即便能用 `qg.createInnerAudioContext`），保持 vivo 静音
-- **不重写** 现有 `soundEngine.ts` cue 链路（向后兼容已工作的浏览器和抖音）
 
 ---
 

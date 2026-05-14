@@ -56,6 +56,7 @@ export const vivoPlatformBuilder: PlatformBuilder = {
     await bundleGameEntry({
       entryAbs: loaded.paths.entryAbs,
       outfile: tempBundle,
+      platform: 'vivo',
     });
 
     const bundleCode = await fs.readFile(tempBundle, 'utf8');
@@ -81,7 +82,7 @@ export const vivoPlatformBuilder: PlatformBuilder = {
 
     await writeBuildReport(path.join(outDir, 'build-report.json'), report);
 
-    if (!options.skipVivoRpk) {
+    if (!options.skipRpk && !options.skipVivoRpk) {
       await copyVivoReleaseSigningFiles(loaded);
       await buildVivoRpk(outDir, loaded);
     }

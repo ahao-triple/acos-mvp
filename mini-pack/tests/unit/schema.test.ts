@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  oppoMaterialsSchema,
   gameConfigSchema,
-  douyinMaterialsSchema,
-  kuaishouMaterialsSchema,
   vivoMaterialsSchema,
   defineGameConfig,
-  defineDouyinMaterials,
-  defineKuaishouMaterials,
+  defineOppoMaterials,
   defineVivoMaterials,
 } from '../../src/core/schema.js';
 
@@ -29,7 +27,7 @@ describe('gameConfigSchema', () => {
       publicDir: 'p',
       orientation: 'portrait',
       canvas: { width: 1, height: 1 },
-      douyin: { appid: '' },
+      platform: 'unexpected',
     });
     expect(result.success).toBe(false);
   });
@@ -46,77 +44,6 @@ describe('gameConfigSchema', () => {
   });
 });
 
-describe('douyinMaterialsSchema', () => {
-  it('accepts valid douyin materials with default iconPath', () => {
-    const result = douyinMaterialsSchema.safeParse({
-      appid: 'tt12345',
-      projectName: 'difference-hunt',
-    });
-    expect(result.success).toBe(true);
-    expect(result.success && result.data.iconPath).toBe('icon.png');
-  });
-
-  it('allows empty appid (preflight strictness, not schema)', () => {
-    const result = douyinMaterialsSchema.safeParse({
-      appid: '',
-      projectName: 'difference-hunt',
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it('rejects empty projectName', () => {
-    const result = douyinMaterialsSchema.safeParse({
-      appid: 'tt12345',
-      projectName: '',
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it('rejects extra keys', () => {
-    const result = douyinMaterialsSchema.safeParse({
-      appid: 'tt12345',
-      projectName: 'difference-hunt',
-      packageName: 'com.x.y',
-    });
-    expect(result.success).toBe(false);
-  });
-});
-
-describe('kuaishouMaterialsSchema', () => {
-  it('accepts valid kuaishou materials with default iconPath', () => {
-    const result = kuaishouMaterialsSchema.safeParse({
-      appid: 'kwai_game_test_appid',
-      projectName: 'difference-hunt',
-    });
-    expect(result.success).toBe(true);
-    expect(result.success && result.data.iconPath).toBe('icon.png');
-  });
-
-  it('allows empty appid (preflight strictness, not schema)', () => {
-    const result = kuaishouMaterialsSchema.safeParse({
-      appid: '',
-      projectName: 'difference-hunt',
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it('rejects empty projectName', () => {
-    const result = kuaishouMaterialsSchema.safeParse({
-      appid: 'kwai_game_test_appid',
-      projectName: '',
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it('rejects extra keys', () => {
-    const result = kuaishouMaterialsSchema.safeParse({
-      appid: 'kwai_game_test_appid',
-      projectName: 'difference-hunt',
-      packageName: 'com.x.y',
-    });
-    expect(result.success).toBe(false);
-  });
-});
 
 describe('vivoMaterialsSchema', () => {
   it('accepts valid vivo materials and applies defaults', () => {
@@ -128,6 +55,18 @@ describe('vivoMaterialsSchema', () => {
       expect(result.data.iconPath).toBe('icon.png');
       expect(result.data.versionName).toBe('1.0.0');
       expect(result.data.versionCode).toBe(1);
+    }
+  });
+
+  it('accepts optional displayName for vivo materials', () => {
+    const result = vivoMaterialsSchema.safeParse({
+      packageName: 'com.example.app',
+      displayName: '全民爆梗',
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.displayName).toBe('全民爆梗');
     }
   });
 
@@ -178,6 +117,53 @@ describe('vivoMaterialsSchema', () => {
   });
 });
 
+describe('oppoMaterialsSchema', () => {
+  it('accepts valid oppo materials and applies defaults', () => {
+    const result = oppoMaterialsSchema.safeParse({
+      packageName: 'com.example.oppo',
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.iconPath).toBe('icon.png');
+      expect(result.data.versionName).toBe('1.0.0');
+      expect(result.data.versionCode).toBe(1);
+    }
+  });
+
+  it('accepts optional displayName for oppo materials', () => {
+    const result = oppoMaterialsSchema.safeParse({
+      packageName: 'com.example.oppo',
+      displayName: '测试游戏',
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.displayName).toBe('测试游戏');
+    }
+  });
+
+  it('accepts the same optional fields as vivo materials', () => {
+    const result = oppoMaterialsSchema.safeParse({
+      packageName: 'com.example.oppo',
+      rewardedAdUnitId: 'oppo-rwd-001',
+      releaseSignDir: '../../oppo-pem',
+      homePage: '/logo.png',
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.rewardedAdUnitId).toBe('oppo-rwd-001');
+      expect(result.data.releaseSignDir).toBe('../../oppo-pem');
+      expect(result.data.homePage).toBe('/logo.png');
+    }
+  });
+
+  it('rejects invalid oppo package names', () => {
+    const result = oppoMaterialsSchema.safeParse({ packageName: 'bad-name' });
+    expect(result.success).toBe(false);
+  });
+});
+
 describe('define*', () => {
   it('defineGameConfig returns its input', () => {
     const config = {
@@ -190,18 +176,13 @@ describe('define*', () => {
     expect(defineGameConfig(config)).toBe(config);
   });
 
-  it('defineDouyinMaterials returns its input', () => {
-    const m = { appid: 'a', projectName: 'p', iconPath: 'icon.png' };
-    expect(defineDouyinMaterials(m)).toBe(m);
-  });
-
-  it('defineKuaishouMaterials returns its input', () => {
-    const m = { appid: 'a', projectName: 'p', iconPath: 'icon.png' };
-    expect(defineKuaishouMaterials(m)).toBe(m);
-  });
-
   it('defineVivoMaterials returns its input', () => {
     const m = { packageName: 'com.x.y', iconPath: 'icon.png', versionName: '1.0.0', versionCode: 1 };
     expect(defineVivoMaterials(m)).toBe(m);
+  });
+
+  it('defineOppoMaterials returns its input', () => {
+    const m = { packageName: 'com.x.y', iconPath: 'icon.png', versionName: '1.0.0', versionCode: 1 };
+    expect(defineOppoMaterials(m)).toBe(m);
   });
 });

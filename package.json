@@ -4,18 +4,49 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "bootstrap": "pnpm install",
+    "dev": "node scripts/dev-game.mjs",
     "build": "node scripts/build-game.mjs",
+    "pack": "node scripts/pack-game.mjs",
+    "pack:vivo": "node scripts/pack-game.mjs --platform vivo",
+    "pack:oppo": "node scripts/pack-game.mjs --platform oppo",
+    "prepack": "node scripts/pack-game.mjs",
+    "postpack": "node scripts/remove-pack-tarball.mjs",
     "preflight": "node scripts/preflight.mjs",
-    "smoke": "node scripts/smoke-douyin.mjs",
-    "test:game": "pnpm --dir games/gonglian-fangxian/game test",
-    "test:pack": "pnpm --dir mini-pack test",
-    "verify": "pnpm test:game && pnpm test:pack && pnpm build games/gonglian-fangxian",
-    "verify:full": "node scripts/verify-full.mjs"
+    "test": "vitest --run",
+    "test:game": "vitest --run games/gonglian-fangxian",
+    "test:cli": "vitest --run mini-pack",
+    "typecheck": "tsc -p mini-pack/tsconfig.json --noEmit && tsc -p mini-pack/tsconfig.test.json --noEmit && tsc -p games/gonglian-fangxian/game/tsconfig.json --noEmit",
+    "verify": "pnpm install && pnpm build && pnpm test && pnpm pack",
+    "clean": "node scripts/clean.mjs",
+    "verify:full": "node scripts/verify-full.mjs",
+    "postinstall": "sh games/gonglian-fangxian/game/scripts/apply-pixi-patch.sh"
   },
   "pnpm": {
     "overrides": {
       "@vivo-minigame/cli-packager": "1.27.23"
     }
+  },
+  "dependencies": {
+    "commander": "^14.0.2",
+    "esbuild": "^0.27.1",
+    "fast-glob": "^3.3.3",
+    "fs-extra": "^11.3.2",
+    "picocolors": "^1.1.1",
+    "pixi.js": "^8.18.1",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0",
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^24.10.1",
+    "@vivo-minigame/cli": "1.27.23",
+    "@vitest/browser": "^4.0.8",
+    "jsdom": "^27.2.0",
+    "patch-package": "^8.0.1",
+    "puppeteer": "file:mini-pack/stubs/puppeteer",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.6",
+    "vitest": "^4.0.14"
   }
 }

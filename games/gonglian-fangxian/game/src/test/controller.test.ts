@@ -83,7 +83,7 @@ describe('game controller visual cues', () => {
     expect(controller.getViewState().audioCue).toMatchObject({ type: 'reward' });
   });
 
-  test('remote config triggers level-start rewarded ad directly', async () => {
+  test('local ad config triggers level-start rewarded ad directly', async () => {
     let adCalls = 0;
     const platform = mockPlatform({ ad: { status: 'success' } });
     platform.showRewardedAd = async () => {
@@ -91,7 +91,7 @@ describe('game controller visual cues', () => {
       return { status: 'success' };
     };
     const controller = new GameController(platform, {
-      remoteConfig: {
+      adConfig: {
         adPolicy: {
           enabled: true,
           trigger: 'level_start',

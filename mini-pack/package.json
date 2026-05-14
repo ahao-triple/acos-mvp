@@ -15,29 +15,10 @@
   "files": [
     "dist"
   ],
-  "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.test.json --noEmit"
-  },
-  "dependencies": {
-    "commander": "^14.0.2",
-    "esbuild": "^0.27.1",
-    "fast-glob": "^3.3.3",
-    "fs-extra": "^11.3.2",
-    "picocolors": "^1.1.1",
-    "tsx": "^4.21.0",
-    "zod": "^4.1.13"
-  },
-  "devDependencies": {
-    "@types/fs-extra": "^11.0.4",
-    "@types/node": "^24.10.1",
-    "@vivo-minigame/cli": "1.27.23",
-    "puppeteer": "file:stubs/puppeteer",
-    "typescript": "^5.9.3",
-    "vitest": "^4.0.14"
-  },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "@oppo-minigame/cli": "^3.2.6"
   }
 }

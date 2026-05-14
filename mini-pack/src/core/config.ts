@@ -6,13 +6,12 @@ import { pathToFileURL } from 'node:url';
 import type { ZodType } from 'zod';
 
 import {
-  douyinMaterialsSchema,
+  SUPPORTED_PLATFORMS,
   gameConfigSchema,
-  kuaishouMaterialsSchema,
+  oppoMaterialsSchema,
   vivoMaterialsSchema,
-  type DouyinMaterials,
   type GameConfig,
-  type KuaishouMaterials,
+  type OppoMaterials,
   type VivoMaterials,
 } from './schema.js';
 import { resolveProjectPath } from './paths.js';
@@ -25,7 +24,7 @@ import type {
 
 export interface LoadGameConfigOptions {
   projectRoot?: string;
-  platform: PlatformName;
+  platform: string;
   configFile?: string;
 }
 
@@ -53,7 +52,7 @@ export async function loadGameConfigFile(projectRoot: string, configFile = 'game
 export async function loadGameConfig(options: LoadGameConfigOptions): Promise<LoadedGameConfig> {
   const projectRoot = path.resolve(options.projectRoot ?? process.cwd());
   const configFileAbs = path.resolve(projectRoot, options.configFile ?? 'game.config.ts');
-  const platform = options.platform;
+  const platform = parsePlatformName(options.platform);
 
   await assertPathExists(
     configFileAbs,
@@ -89,7 +88,7 @@ export async function loadGameConfig(options: LoadGameConfigOptions): Promise<Lo
   const iconAbs = path.resolve(channelRoot, materials.iconPath);
   const outDirAbs = path.join(channelRoot, 'build');
 
-  return {
+  const loaded: LoadedGameConfig = {
     game,
     platform,
     materials,
@@ -103,20 +102,34 @@ export async function loadGameConfig(options: LoadGameConfigOptions): Promise<Lo
       iconAbs,
       outDirAbs,
     },
-    douyinMaterials: platform === 'douyin' ? (materials as DouyinMaterials) : undefined,
-    kuaishouMaterials: platform === 'kuaishou' ? (materials as KuaishouMaterials) : undefined,
-    vivoMaterials: platform === 'vivo' ? (materials as VivoMaterials) : undefined,
   };
+  if (platform === 'vivo') {
+    loaded.vivoMaterials = materials as VivoMaterials;
+  }
+  if (platform === 'oppo') {
+    loaded.oppoMaterials = materials as OppoMaterials;
+  }
+  return loaded;
 }
 
 function parseChannelMaterials(platform: PlatformName, raw: unknown): ChannelMaterials {
-  if (platform === 'douyin') {
-    return parseMaterials(douyinMaterialsSchema, raw, 'douyin');
+  if (platform === 'vivo') {
+    return parseMaterials(vivoMaterialsSchema, raw, platform);
   }
-  if (platform === 'kuaishou') {
-    return parseMaterials(kuaishouMaterialsSchema, raw, 'kuaishou');
+  if (platform === 'oppo') {
+    return parseMaterials(oppoMaterialsSchema, raw, platform);
   }
-  return parseMaterials(vivoMaterialsSchema, raw, 'vivo');
+  throw new UserError(`Unsupported platform: ${platform}`);
+}
+
+function parsePlatformName(platform: string): PlatformName {
+  if ((SUPPORTED_PLATFORMS as readonly string[]).includes(platform)) {
+    return platform as PlatformName;
+  }
+  throw new UserError(
+    `Unsupported platform: ${platform}`,
+    `Supported platforms: ${SUPPORTED_PLATFORMS.join(', ')}`,
+  );
 }
 
 function parseMaterials<T>(schema: ZodType<T>, raw: unknown, platform: string): T {

@@ -1,0 +1,226 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  createOppoMainJs,
+  createOppoManifest,
+  createOppoRuntimeRalJs,
+  createOppoRuntimeWebAdapterJs,
+  renderOppoGameJs,
+} from '../../src/platforms/oppo/template.js';
+import type { LoadedGameConfig } from '../../src/shared/types.js';
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+function makeLoaded(): LoadedGameConfig {
+  return {
+    game: {
+      title: '就你眼神好',
+      entry: 'game/src/main.ts',
+      publicDir: 'game/public-pack',
+      orientation: 'portrait',
+      canvas: { width: 750, height: 1334 },
+    },
+    platform: 'oppo',
+    materials: {
+      packageName: 'com.example.app',
+      displayName: '测试游戏',
+      iconPath: 'icon.png',
+      versionName: '2.5.0',
+      versionCode: 7,
+      rewardedAdUnitId: 'oppo-rwd-001',
+      homePage: '/logo.png',
+      releaseSignDir: '../../oppo-pem',
+    },
+    projectRoot: '/tmp/x',
+    paths: {
+      configFileAbs: '/tmp/x/game.config.ts',
+      entryAbs: '/tmp/x/game/src/main.ts',
+      publicDirAbs: '/tmp/x/game/public-pack',
+      channelRoot: '/tmp/x/channels/oppo',
+      materialsAbs: '/tmp/x/channels/oppo/materials.ts',
+      iconAbs: '/tmp/x/channels/oppo/icon.png',
+      outDirAbs: '/tmp/x/channels/oppo/build',
+    },
+    oppoMaterials: {
+      packageName: 'com.example.app',
+      displayName: '测试游戏',
+      iconPath: 'icon.png',
+      versionName: '2.5.0',
+      versionCode: 7,
+      rewardedAdUnitId: 'oppo-rwd-001',
+      homePage: '/logo.png',
+      releaseSignDir: '../../oppo-pem',
+    },
+  };
+}
+
+describe('createOppoManifest', () => {
+  it('uses materials.packageName / versionName / versionCode and game.title / orientation', () => {
+    const manifest = createOppoManifest(makeLoaded());
+    expect(manifest.package).toBe('com.example.app');
+    expect(manifest.name).toBe('测试游戏');
+    expect(manifest.versionName).toBe('2.5.0');
+    expect(manifest.versionCode).toBe(7);
+    expect(manifest.orientation).toBe('portrait');
+    expect(manifest.icon).toBe('/logo.png');
+    expect(manifest).not.toHaveProperty('homePage');
+    expect(manifest.type).toBe('game');
+    expect(manifest.minPlatformVersion).toBe(1063);
+  });
+
+  it('keeps rewardedAdUnitId in the same manifest config as package metadata', () => {
+    const manifest = createOppoManifest(makeLoaded());
+    expect(manifest.config).toMatchObject({
+      logLevel: 'debug',
+      rewardedAdUnitId: 'oppo-rwd-001',
+    });
+  });
+
+  it('truncates displayName longer than 6 code points and warns once', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const loaded = makeLoaded();
+    loaded.oppoMaterials!.displayName = '😀abcdef';
+    (loaded.materials as { displayName?: string }).displayName = '😀abcdef';
+
+    const manifest = createOppoManifest(loaded);
+
+    expect(manifest.name).toBe('😀abcde');
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith('OPPO manifest name exceeds 6 chars, truncated to: 😀abcde');
+  });
+});
+
+describe('renderOppoGameJs (touch event shim removed)', () => {
+  // 真机回归：旧 shim 把 canvas.addEventListener 翻译成 qg.onTouchStart，
+  // 与 oppo runtime 内部的 W3C 兼容层互调导致栈溢出。修复后游戏 JS 不应
+  // 再含 shim 痕迹，让 canvas 事件直接由 oppo runtime 原生处理。
+  const js = renderOppoGameJs('var __MiniPackGameBundle = { createGame: () => ({ start(){} }) };');
+
+  it('does not install a canvas.addEventListener shim', () => {
+    expect(js).not.toContain('installTouchEventShim');
+    expect(js).not.toContain('__miniPackOppoTouchShimInstalled');
+  });
+
+  it('does not redirect canvas events to qg.onTouchStart in game JS', () => {
+    // 仅禁 "qg.onTouchStart(" 调用形式；类型探测 typeof qg.onTouchStart 是允许的（诊断用）
+    expect(js).not.toMatch(/qg\.onTouchStart\s*\(/);
+    expect(js).not.toMatch(/qg\[onName\]/);
+  });
+
+  it('keeps createCanvas thin (qg.createCanvas + return; no event override)', () => {
+    expect(js).toContain('qg.createCanvas()');
+    expect(js).not.toContain('canvas.addEventListener =');
+    expect(js).not.toContain('canvas.removeEventListener =');
+  });
+
+  it('injects Image polyfill bridging to qg.createImage when host lacks Image', () => {
+    // oppo runtime 不提供 web 标准 Image；桥接到 qg.createImage 让 imageCache 等代码可用
+    expect(js).toContain("typeof ExistingImage === 'undefined'");
+    expect(js).toContain('qg.createImage()');
+    expect(js).toContain("defineGlobalValue(root, 'Image'");
+    expect(js).toContain("defineGlobalValue(windowTarget, 'Image'");
+  });
+
+  it('exports the visible canvas globals on window as well as globalThis', () => {
+    expect(js).toContain("defineGlobalValue(root, 'mainCanvas', canvas)");
+    expect(js).toContain("defineGlobalValue(windowTarget, 'mainCanvas', canvas)");
+    expect(js).toContain("defineGlobalValue(root, 'HTMLCanvasElement', canvas.constructor)");
+    expect(js).toContain("defineGlobalValue(windowTarget, 'HTMLCanvasElement', canvas.constructor)");
+    expect(js).toContain("defineGlobalValue(root, 'CanvasRenderingContext2D', Context2D)");
+    expect(js).toContain("defineGlobalValue(windowTarget, 'CanvasRenderingContext2D', Context2D)");
+  });
+
+  it('attaches the oppo canvas to document.body when a DOM is available', () => {
+    expect(js).toContain('function attachCanvasToDocument(canvas)');
+    expect(js).toContain('document.body.appendChild(canvas)');
+    expect(js).toContain('attachCanvasToDocument(__miniPackCanvas);');
+  });
+
+  it('creates and exposes the oppo canvas before executing the game bundle', () => {
+    const orderedJs = renderOppoGameJs(
+      'var __MiniPackGameBundle = { createGame: () => ({ start(){} }) };',
+    );
+
+    expect(orderedJs.indexOf('var __miniPackCanvas = createCanvas();')).toBeLessThan(
+      orderedJs.indexOf('var __MiniPackGameBundle ='),
+    );
+    expect(orderedJs.indexOf('installCanvasGlobals(__miniPackCanvas);')).toBeLessThan(
+      orderedJs.indexOf('var __MiniPackGameBundle ='),
+    );
+  });
+
+  it('requests direct WebGL game rendering instead of a 2D canvas presenter', () => {
+    expect(js).not.toContain('function createWebglPresenter');
+    expect(js).not.toContain('sourceCanvas');
+    expect(js).toContain("createCanvas: qg && typeof qg.createCanvas === 'function' ? qg.createCanvas.bind(qg) : undefined");
+    expect(js).toContain("renderMode: 'webgl'");
+  });
+
+  it('injects oppoMaterials.packageName into runtimeConfig.pkgName for /oppo/sessions', () => {
+    const loaded = makeLoaded();
+    const withPkg = renderOppoGameJs(
+      'var __MiniPackGameBundle = { createGame: () => ({ start(){} }) };',
+      loaded,
+    );
+    expect(withPkg).toMatch(/pkgName:\s*"com\.example\.app"/);
+    expect(withPkg).toContain("platform: 'oppo'");
+  });
+
+  it('embeds materials.rewardedAdUnitId into oppo rewarded video creation', () => {
+    const withRewardedAd = renderOppoGameJs(
+      'var __MiniPackGameBundle = { createGame: () => ({ start(){} }) };',
+      makeLoaded(),
+    );
+
+    expect(withRewardedAd).toContain('var rewardedAdUnitId = "oppo-rwd-001";');
+    expect(withRewardedAd).toContain('qg.createRewardedVideoAd({ adUnitId: rewardedAdUnitId })');
+    expect(withRewardedAd).toContain("Boolean(rewardedAdUnitId && typeof qg.createRewardedVideoAd === 'function')");
+  });
+
+  it('omits pkgName when no oppoMaterials are loaded (build script callable)', () => {
+    expect(js).not.toContain('pkgName');
+  });
+
+  it('does not call oppo qg.login from the generated runtime auth bridge', () => {
+    expect(js).not.toContain('qg.login');
+    expect(js).toContain("resolve({ platform: 'oppo', code: '' });");
+  });
+
+  it('does not include temporary oppo diagnostics', () => {
+    expect(js).not.toContain('MINI-PACK OPPO DIAGNOSTICS');
+    expect(js).not.toContain('miniPackDiag');
+    expect(js).not.toContain('sanity paint');
+    expect(js).not.toContain('paint stats');
+    expect(js).not.toContain('final paint');
+    expect(js).not.toContain('debug paint');
+    expect(js).not.toContain('heartbeat 2s');
+    expect(js).not.toContain('raf tick');
+  });
+});
+
+describe('oppo runtime adapter', () => {
+  it('loads runtime adapters before game.js from main.js', () => {
+    expect(createOppoMainJs()).toBe(`require("runtime-adapter/ral.js");
+require("runtime-adapter/web-adapter.js");
+require("game.js");
+`);
+  });
+
+  it('creates a mainCanvas before game.js can run', () => {
+    const ralJs = createOppoRuntimeRalJs();
+
+    expect(ralJs).toContain("qg.createCanvas()");
+    expect(ralJs).toContain("define(windowTarget, 'devicePixelRatio', 1)");
+    expect(ralJs).toContain("define(root, 'mainCanvas', mainCanvas)");
+    expect(ralJs).toContain("define(windowTarget, 'mainCanvas', mainCanvas)");
+    expect(ralJs).not.toContain('[mini-pack:oppo:adapter] ');
+  });
+
+  it('provides a minimal document.body fallback', () => {
+    const webAdapterJs = createOppoRuntimeWebAdapterJs();
+
+    expect(webAdapterJs).toContain('if (!documentRef.body)');
+    expect(webAdapterJs).toContain("documentRef.body = createElementFallback('body')");
+  });
+});

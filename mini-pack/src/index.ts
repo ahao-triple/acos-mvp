@@ -1,13 +1,12 @@
 export {
+  defineOppoMaterials,
   defineGameConfig,
-  defineDouyinMaterials,
-  defineKuaishouMaterials,
   defineVivoMaterials,
+  SUPPORTED_PLATFORMS,
 } from './core/schema.js';
 export type {
   GameConfig,
-  DouyinMaterials,
-  KuaishouMaterials,
+  OppoMaterials,
   VivoMaterials,
 } from './core/schema.js';
 export type {

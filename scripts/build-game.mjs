@@ -2,10 +2,17 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  loadSupportedPlatforms,
+  platformUsage,
+  validatePlatform,
+} from './platforms.mjs';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const supportedPlatforms = new Set(['douyin', 'kuaishou', 'vivo']);
-const usage = 'Usage: pnpm build games/<game-project> [--platform douyin|kuaishou|vivo]';
+const supportedPlatforms = await loadSupportedPlatforms(repoRoot);
+const defaultGamePath = 'games/gonglian-fangxian';
+const defaultPlatform = 'vivo';
+const usage = `Usage: pnpm build [games/<game-project>] [--platform ${platformUsage(supportedPlatforms)}]`;
 const parsed = parseArgs(process.argv.slice(2));
 
 if (!parsed.ok) {
@@ -23,7 +30,6 @@ if (!fs.existsSync(configFile)) {
   process.exit(1);
 }
 
-run('pnpm', ['--dir', 'mini-pack', 'build']);
 run(process.execPath, [
   'mini-pack/dist/cli.js',
   'build',
@@ -31,14 +37,12 @@ run(process.execPath, [
   platform,
   '--project-root',
   gamePath,
+  '--skip-vivo-rpk',
 ]);
-if (platform === 'douyin') {
-  run(process.execPath, ['scripts/smoke-douyin.mjs', gamePath]);
-}
 
 function parseArgs(args) {
   let gamePath;
-  let platform = 'douyin';
+  let platform;
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
@@ -59,8 +63,11 @@ function parseArgs(args) {
     gamePath = arg;
   }
 
-  if (!gamePath) return { ok: false, message: 'Missing game project path.' };
-  if (!supportedPlatforms.has(platform)) return { ok: false, message: `Unsupported platform: ${platform}\nSupported platforms: ${[...supportedPlatforms].join(', ')}` };
+  const usesDefaultGame = !gamePath;
+  gamePath ??= defaultGamePath;
+  platform ??= defaultPlatform;
+  const validation = validatePlatform(platform, supportedPlatforms);
+  if (!validation.ok) return validation;
   return { ok: true, gamePath, platform };
 }
 
@@ -71,8 +78,8 @@ function run(command, args) {
 }
 
 function resolveCommand(command, args) {
-  if (process.platform === 'win32' && command === 'pnpm') {
-    return { command: 'cmd.exe', args: ['/d', '/s', '/c', 'pnpm', ...args] };
+  if (process.platform === 'win32' && command.endsWith('.cmd')) {
+    return { command: 'cmd.exe', args: ['/d', '/s', '/c', command, ...args] };
   }
   return { command, args };
 }

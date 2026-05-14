@@ -4,7 +4,6 @@ import type { GameSession, LevelConfig, NodeReward, Position, PowerUpType } from
 import type { PlatformAdapter } from '../platform/types';
 import type { AudioCue, AudioCueType } from '../audio/soundEngine';
 import { debugLog } from './debugLog';
-import type { RemoteGameConfig } from './remoteConfig';
 import { createDefaultSave, loadSave, type SaveData, writeSave } from './save';
 import { claimAdItemReward, claimDesktopReward, claimFavoriteReward, claimSidebarReward, requestExtraMoves, type InventoryItem } from './rewards';
 import { chapterProgressForSave, levelById, type ChapterProgress } from './campaign';
@@ -16,6 +15,19 @@ export type RewardedAdRequest =
   | { type: 'powerUpItem'; item: PowerUpType }
   | { type: 'skipLevel' }
   | { type: 'sponsor' };
+
+export interface ControllerAdConfig {
+  adPolicy: ControllerAdPolicy;
+}
+
+export interface ControllerAdPolicy {
+  enabled: boolean;
+  trigger: 'level_start';
+  minLevel: number;
+  cooldownSeconds: number;
+  maxPerSession: number;
+  request: RewardedAdRequest;
+}
 
 export type AppAction =
   | { type: 'loadingDone' }
@@ -84,19 +96,24 @@ export class GameController {
   private cueId = 0;
   private audioCueId = 0;
   private seed = 1000;
-  private remoteConfig: RemoteGameConfig | null = null;
+  private adConfig: ControllerAdConfig = {
+    adPolicy: {
+      enabled: false,
+      trigger: 'level_start',
+      minLevel: 1,
+      cooldownSeconds: 0,
+      maxPerSession: 0,
+      request: { type: 'extraMovesAd' },
+    },
+  };
   private remoteAdCount = 0;
   private lastRemoteAdAtMs = 0;
   private readonly userId: string;
 
-  constructor(private readonly platform: PlatformAdapter, options: { remoteConfig?: RemoteGameConfig } = {}) {
+  constructor(private readonly platform: PlatformAdapter, options: { adConfig?: ControllerAdConfig } = {}) {
     this.save = loadSave(platform.storage);
-    this.remoteConfig = options.remoteConfig ?? null;
+    this.adConfig = options.adConfig ?? this.adConfig;
     this.userId = String(Math.abs(this.seed * 971 + 2077) % 10_000_000).padStart(7, '0');
-  }
-
-  applyRemoteConfig(config: RemoteGameConfig): void {
-    this.remoteConfig = config;
   }
 
   getViewState(): AppViewState {
@@ -236,8 +253,8 @@ export class GameController {
   }
 
   private async maybeRunRemoteAd(trigger: 'level_start', levelId: number): Promise<void> {
-    const policy = this.remoteConfig?.adPolicy;
-    if (!policy?.enabled || policy.trigger !== trigger) {
+    const policy = this.adConfig.adPolicy;
+    if (!policy.enabled || policy.trigger !== trigger) {
       return;
     }
     if (levelId < policy.minLevel) {

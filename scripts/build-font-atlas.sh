@@ -3,7 +3,7 @@
 #
 # 前置：
 #   1. assets/fonts/source/SourceHanSansCN-Bold.otf 已下载（见 LICENSE.md）
-#   2. docs/font-charset.txt 已生成（node scripts/scan-charset.mjs）
+#   2. games/gonglian-fangxian/game/docs/font-charset.txt 已生成（node scripts/scan-charset.mjs）
 #   3. msdf-bmfont-xml 可用（首次跑会自动 npx --yes 拉）
 #
 # 产物：
@@ -19,7 +19,7 @@ FONT_SRC="$REPO_ROOT/assets/fonts/source/SourceHanSansCN-Bold.otf"
 if [ ! -f "$FONT_SRC" ]; then
   FONT_SRC="$REPO_ROOT/games/gonglian-fangxian/assets/raw/fonts/SourceHanSansSC-Bold.otf"
 fi
-CHARSET="$REPO_ROOT/docs/font-charset.txt"
+CHARSET="$REPO_ROOT/games/gonglian-fangxian/game/docs/font-charset.txt"
 OUT_DIR="$REPO_ROOT/games/gonglian-fangxian/game/public-pack/fonts"
 OUT_PREFIX="$OUT_DIR/main"
 

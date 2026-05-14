@@ -1,130 +1,113 @@
 # 项目大纲
 
-## 1. 基本情况
+> 本文按当前 `games/`、`mini-pack/`、`assets/` 和根脚本的实际状态整理；不沿用旧 phase 文档结论。
 
-| 项 | 现状 |
+## 项目目标
+
+| 项 | 当前状态 |
 |---|---|
-| 项目类型 | pnpm workspace；小游戏全栈式前端项目 + 本地打包 CLI。包含 `mini-pack` 打包工具、`gonglian-fangxian` 主游戏、`difference-hunt` 第二个游戏。 |
-| 语言/运行时 | TypeScript / JavaScript ESM；Node `>=20`（`mini-pack` 声明）。 |
-| 前端/构建 | Vite `7.2.x`、TypeScript `5.9.3`、Vitest `4.x`、Playwright `1.60.0`。 |
-| 主要运行依赖 | `pixi.js ^8.18.1`（主游戏渲染）；`mini-pack` 用 `commander`、`esbuild`、`fast-glob`、`fs-extra`、`picocolors`、`zod`。 |
-| 小游戏平台 | 抖音、快手、vivo 渠道配置和模板；vivo 还有 RPK 打包、polyfill、adapter、证书目录。 |
-| 代码量 | 扫描到约 306 个文件、92709 行（含资源/生成物）；排除常见构建产物和二进制后，文本代码文档约 36407 行，其中 `pnpm-lock.yaml` 8805 行。 |
-| 测试 | 42 个 `*.test.ts` / `*.spec.ts`；Vitest 单测/集成测试 + Playwright e2e/browser verify。未发现覆盖率配置或 coverage 产物，覆盖率水平不确定。 |
-| 工作区状态 | 当前已有多处未提交改动和新增目录；本文件按当前工作区现状扫描。 |
+| 项目类型 | pnpm workspace，包含一个小游戏项目和一个内部打包 CLI。 |
+| 游戏 | `gonglian-fangxian`，展示标题为 `全民爆梗游戏软件`，竖屏画布 `750x1334`。 |
+| 打包工具 | `mini-pack`，从 `game.config.ts`、`build.<platform>.json` 和渠道物料生成小游戏工程，并可进一步打 `.rpk`。 |
+| 发布目标 | vivo 小游戏为现有真实打包链路；OPPO 小游戏骨架已接入，可生成工程和 fake `.rpk`；浏览器/Vite 仅用于本地开发和自动化验证。 |
+| 主要技术 | TypeScript ESM、PixiJS 8、Vite、Vitest、Playwright、esbuild、Zod、@vivo-minigame/cli；OPPO CLI 预留为 `@oppo-minigame/cli` / `quickgame`，当前未安装。 |
+| 依赖管理 | 所有依赖和用户命令都集中在根 `package.json`。 |
 
-## 2. 目录结构（最多 4 层）
+## 目录布局
 
 ```text
 .
-├── .github/workflows/ci.yml
-├── assets/fonts/source/...
-├── debug/...
-├── docs/...
-├── games/
-│   ├── difference-hunt/
-│   │   ├── channels/{douyin,kuaishou,vivo}/
-│   │   ├── game/{src,public-pack,index.html,package.json,vite.config.ts}
-│   │   └── game.config.ts
-│   └── gonglian-fangxian/
-│       ├── assets/{raw,processed,generated,manifest.json}
-│       ├── channels/{douyin,kuaishou,vivo}/
-│       ├── docs/
-│       ├── game/{src,tests,docs,public-pack,levels,config,patches,scripts}
-│       └── game.config.ts
-├── mini-pack/
-│   ├── src/{cli.ts,commands,core,platforms,shared}
-│   ├── tests/{unit,integration,fixtures}
-│   └── package.json
-├── scripts/*.mjs / *.sh
-├── vivo-pem/*.pem
-├── package.json
-├── pnpm-workspace.yaml
-└── 小游戏页面规范.md / vivo-client-api.zh-CN.md
+├── package.json                    # 根依赖、根命令、postinstall Pixi patch
+├── pnpm-workspace.yaml             # workspace: mini-pack + gonglian-fangxian/game
+├── tsconfig.base.json              # 共享 TypeScript 基础配置
+├── vitest.config.base.ts           # 共享 Vitest 基础配置
+├── vitest.config.ts                # 根测试入口，覆盖 game + mini-pack
+├── scripts/                        # 根命令封装和字体/字符集工具
+├── assets/fonts/source/            # 字体源文件授权说明和本地字体源
+├── mini-pack/                      # 内部 CLI 工具
+│   ├── src/cli.ts                  # CLI 入口: preflight / build / pack
+│   ├── src/commands/               # 命令实现
+│   ├── src/core/                   # 配置加载、schema、bundle、assets、report
+│   ├── src/platforms/vivo/         # vivo 工程模板、runtime adapter、RPK 调用
+│   ├── src/platforms/oppo/         # OPPO 工程模板、runtime adapter、fake/真实 RPK 调用入口
+│   ├── tests/                      # CLI 单测、集成测试、fixture
+│   └── stubs/puppeteer/            # 让 vivo CLI 依赖可安装的本地 stub
+└── games/gonglian-fangxian/
+    ├── game.config.ts              # mini-pack 读取的游戏声明
+    ├── build.vivo.json             # vivo 打包配置
+    ├── build.oppo.json             # OPPO 打包配置
+    ├── channels/vivo/              # vivo 图标和 materials.ts
+    ├── channels/oppo/              # OPPO 图标和 materials.ts
+    ├── assets/                     # 原始/处理后/生成素材目录和 manifest
+    └── game/                       # PixiJS 游戏本体
+        ├── src/main.ts             # 游戏入口，安装 vivo hooks 并启动 Pixi renderer
+        ├── src/app/                # controller、campaign、save、rewards
+        ├── src/core/               # 棋盘和 session 纯逻辑
+        ├── src/pixi/               # Pixi app、stage、screens、pieces、ui、effects
+        ├── src/platform/           # web dev adapter + vivo/minipack adapter
+        ├── src/audio/              # SFX / sound engine
+        ├── src/render/             # 渲染无关的动画、主题、visual board 工具
+        ├── src/test/               # Vitest 游戏测试
+        ├── tests/e2e/              # Playwright e2e
+        ├── tests/browser-verify/   # 浏览器验证用例
+        ├── public-pack/            # 打包进 vivo 工程的运行时静态资源
+        ├── patches/                # PixiJS vivo 兼容 patch
+        └── docs/                   # 游戏侧当前文档索引和专题文档
 ```
 
-| 一级/重要目录 | 作用 |
+## 当前支持的平台
+
+| 平台 | 用途 | 入口/配置 | 产物 |
+|---|---|---|---|
+| vivo | 现有真实发布平台 | `channels/vivo/materials.ts`、`build.vivo.json`、`mini-pack/src/platforms/vivo/` | `channels/vivo/build/` 工程、`dist/com.jnsy.qmbg.vivominigame.rpk` |
+| oppo | 新增骨架平台，当前用于工程生成和 fake RPK 验证；真实 CLI 待 Phase 4 | `channels/oppo/materials.ts`、`build.oppo.json`、`mini-pack/src/platforms/oppo/` | `channels/oppo/build/` 工程、fake `dist/com.jnsy.qmbg.oppominigame.rpk` |
+| web | 本地开发/测试 | `games/gonglian-fangxian/game/src/platform/web.ts`、Vite dev server | 不作为发布产物 |
+
+当前代码中没有抖音、快手、微信等平台实现；`mini-pack` 的 platform builder 当前注册 vivo 和 oppo。
+
+## 构建与运行命令
+
+所有命令从仓库根目录执行。
+
+| 命令 | 作用 |
 |---|---|
-| `mini-pack` | 本地打包 CLI；读取游戏配置、校验素材、bundle、生成平台模板和报告。 |
-| `games/gonglian-fangxian` | 主游戏项目；包含源代码、渠道素材、原始/处理后资源、打包配置和文档。 |
-| `games/difference-hunt` | 另一个小游戏项目；结构较轻，偏 Canvas/WebGL 渲染和关卡数据。 |
-| `scripts` | 仓库级构建、预检、全量验证、字符集/字体工具脚本。 |
-| `docs` | 仓库级审计、视觉升级、音频、字体字符集、vivo quirks 文档；部分内容与主游戏 `game/docs` 重复。 |
-| `assets` | 字体源文件与许可。 |
-| `vivo-pem` | vivo 打包证书/私钥，属于敏感构建材料。 |
+| `pnpm install` | 安装依赖，并通过 postinstall 应用 PixiJS vivo 兼容 patch。 |
+| `pnpm dev` | 启动 `gonglian-fangxian/game` 的 Vite dev server。 |
+| `pnpm build` | 默认生成 vivo 工程；可用 `pnpm build --platform oppo` 生成 OPPO 工程。 |
+| `pnpm pack` | 默认走 vivo 打包；保留但会和 pnpm 内置 pack 语义混淆，建议用显式平台命令。 |
+| `pnpm pack:vivo` | 按 `build.vivo.json` 打真实 vivo `.rpk`。 |
+| `MINI_PACK_OPPO_FAKE_RPK=1 pnpm pack:oppo` | 按 `build.oppo.json` 打 OPPO fake `.rpk`；未安装 OPPO CLI 时真实打包会清晰报错。 |
+| `pnpm preflight` | 校验默认游戏的渠道配置和物料；可用 `--platform vivo|oppo` 指定平台。 |
+| `pnpm test` | 跑全部 Vitest 测试。 |
+| `pnpm test:game` | 只跑游戏侧测试。 |
+| `pnpm test:cli` | 只跑 `mini-pack` 测试。 |
+| `pnpm typecheck` | 对 `mini-pack` 和游戏执行 TypeScript 类型检查。 |
+| `pnpm verify` | 顺序执行 install、build、test、pack。 |
+| `pnpm clean` | 清理构建、测试和打包产物。 |
 
-## 3. 入口和主要流程
+## 主要流程
 
-| 入口/流程 | 经过的主要文件 |
+| 流程 | 经过的关键文件 |
 |---|---|
-| 根构建/验证 | `package.json` scripts -> `scripts/build-game.mjs` / `scripts/preflight.mjs` / `scripts/verify-full.mjs` -> `mini-pack` 或具体游戏脚本。 |
-| `mini-pack` CLI | `mini-pack/src/cli.ts` -> `commands/{build,pack,preflight}.ts` -> `core/{config,schema,assets,bundle,report,paths}.ts` -> `platforms/{douyin,kuaishou,vivo}`。 |
-| 主游戏启动 | `games/gonglian-fangxian/game/index.html` -> `src/main.ts` -> `platform/{web,minipack,douyin,vivo/*}` -> `pixi/app.ts` / `app/controller.ts`。 |
-| 主游戏核心循环 | `app/controller.ts` -> `core/{board,session,types}.ts` -> `config/levels.ts` -> `pixi/screens/playing.ts` / `pixi/playing/presentation.ts` -> `audio` / `feedback` / `render`。 |
-| 主游戏平台适配 | `platform/douyin.ts`、`platform/minipack.ts`、`platform/vivo/{dom-polyfill,event-bridge,pixi-adapter,strict-mode}` -> `mini-pack/src/platforms/*/template.ts`。 |
-| `difference-hunt` 启动 | `games/difference-hunt/game/index.html` -> `src/main.ts` -> `app/controller.ts` -> `render/{canvasRenderer,webglRenderer}` -> `assets/levels.ts`。 |
+| 本地开发 | `scripts/dev-game.mjs` → `games/gonglian-fangxian/game/vite.config.ts` → `src/main.ts` |
+| vivo 工程构建 | `scripts/build-game.mjs --platform vivo` → `mini-pack/dist/cli.js build` → `mini-pack/src/commands/build.ts` → `mini-pack/src/platforms/vivo/index.ts` |
+| OPPO 工程构建 | `scripts/build-game.mjs --platform oppo` → `mini-pack/dist/cli.js build` → `mini-pack/src/commands/build.ts` → `mini-pack/src/platforms/oppo/index.ts` |
+| vivo RPK 打包 | `scripts/pack-game.mjs --platform vivo` → `mini-pack/dist/cli.js pack` → `mini-pack/src/commands/pack.ts` → `mini-pack/src/platforms/vivo/rpk.ts` |
+| OPPO RPK 打包 | `scripts/pack-game.mjs --platform oppo` → `mini-pack/dist/cli.js pack` → `mini-pack/src/commands/pack.ts` → `mini-pack/src/platforms/oppo/rpk.ts` |
+| 游戏启动 | `src/main.ts` → `src/platform/vivo/*` hooks → `src/pixi/app.ts` / `src/pixi/renderer.ts` → `src/app/controller.ts` |
+| 测试 | 根 `vitest.config.ts` → `game/src/test/*.test.ts` + `mini-pack/tests/**/*.test.ts`；Playwright 用 `game/tests/` 下配置。 |
+| 字体维护 | `scripts/scan-charset.mjs`、`scripts/build-font-atlas.sh`、`game/docs/font-charset.txt`、`game/public-pack/fonts/` |
 
-## 4. 体检数据
+## 还在 WIP 的部分
 
-### 最大的 10 个文件（排除常见构建产物和二进制）
-
-| 行数 | 路径 |
-|---:|---|
-| 8805 | `pnpm-lock.yaml` |
-| 1952 | `games/gonglian-fangxian/game/public-pack/fonts/main.fnt` |
-| 949 | `games/difference-hunt/game/src/assets/levels.ts` |
-| 853 | `mini-pack/src/platforms/vivo/template.ts` |
-| 697 | `mini-pack/src/platforms/douyin/template.ts` |
-| 679 | `games/difference-hunt/game/src/render/webglRenderer.ts` |
-| 668 | `mini-pack/src/platforms/kuaishou/template.ts` |
-| 620 | `games/difference-hunt/game/src/render/canvasRenderer.ts` |
-| 565 | `games/gonglian-fangxian/game/src/app/controller.ts` |
-| 507 | `games/gonglian-fangxian/game/src/platform/vivo/dom-polyfill.ts` |
-
-### 最长的 10 个函数/方法（静态粗略扫描，排除构建产物）
-
-| 行数 | 位置 | 名称 |
-|---:|---|---|
-| 134 | `games/gonglian-fangxian/game/src/pixi/screens/loading.ts:41` | `constructor` |
-| 103 | `games/gonglian-fangxian/game/src/pixi/screens/menu.ts:22` | `constructor` |
-| 71 | `mini-pack/src/platforms/douyin/template.ts:144` | `installTouchEventShim` |
-| 71 | `mini-pack/src/platforms/kuaishou/template.ts:84` | `installTouchEventShim` |
-| 64 | `games/gonglian-fangxian/game/src/pixi/screens/settings.ts:21` | `constructor` |
-| 63 | `games/gonglian-fangxian/game/src/pixi/screens/playing.ts:107` | `constructor` |
-| 60 | `mini-pack/src/platforms/douyin/template.ts:375` | `showRewardedVideoAd` |
-| 52 | `mini-pack/src/platforms/vivo/template.ts:464` | `attachCanvasToDocument` |
-| 49 | `games/gonglian-fangxian/game/src/pixi/screens/levels.ts:19` | `constructor` |
-| 49 | `mini-pack/src/platforms/vivo/template.ts:379` | `createCanvas` |
-
-### 依赖使用概况
-
-| 依赖 | 使用情况 |
+| 区域 | 现状 |
 |---|---|
-| `vitest` | 约 39 处导入，测试主体。 |
-| `pixi.js` | 约 19 处导入，主游戏渲染核心。 |
-| `@playwright/test` | 约 6 处导入，e2e/browser verify。 |
-| `fs-extra` | 约 5 处导入，`mini-pack` 文件操作。 |
-| `esbuild`、`zod` | 各约 2 处导入，bundle/schema。 |
-| `commander`、`fast-glob`、`picocolors` | 各约 1 处导入，CLI/文件扫描/日志输出。 |
-| `vite`、`typescript`、`jsdom`、`patch-package`、`tsx` | 主要作为脚本/构建/测试工具使用，源码导入少或没有。 |
-| `@vivo-minigame/cli` | package/override 中存在，源码未直接导入；可能由打包脚本或 CLI 运行期调用，是否闲置不确定。 |
-
-### 重复或可疑命名
-
-| 类型 | 现状 |
-|---|---|
-| `template.ts` | `mini-pack/src/platforms/{douyin,kuaishou,vivo}/template.ts` 三个大文件，职责相近但平台分叉明显。 |
-| `types.ts` | 多处存在：游戏 core/platform、`mini-pack/shared`、`difference-hunt/assets/platform`；命名通用，需结合目录判断职责。 |
-| `config.ts` / `game.config.ts` | 仓库、游戏、fixture、Vite/Playwright 多种 config 并存，正常但认知负担偏高。 |
-| 文档重复 | 根 `docs/*` 与 `games/gonglian-fangxian/game/docs/*` 有同名审计/升级/quirks 文档，来源和权威版本不确定。 |
-| `.DS_Store` / 构建产物 | 多处存在 `.DS_Store`、`dist`、`.mini-pack`、`test-results` 等，部分被扫描到但不应算业务代码。 |
-
-## 5. 直觉（只描述现状）
-
-- 项目不是单一应用，而是“打包工具 + 多个小游戏 + 多平台适配”的组合，边界比普通 Vite 项目复杂。
-- 主游戏 `gonglian-fangxian` 模块分层较清楚：`app/core/platform/pixi/render/audio/feedback` 都有独立目录；但 UI screen 构造函数偏长，`app/controller.ts` 也是明显中心文件。
-- `mini-pack` 的平台模板文件体积大，尤其 vivo/douyin/kuaishou 三个平台有相似 shim/adapter 逻辑，看起来有重复风险，但是否能合并取决于平台差异，不确定。
-- `difference-hunt` 的 `levels.ts`、`canvasRenderer.ts`、`webglRenderer.ts` 较大，像是数据和渲染细节集中在少数文件里。
-- 文档和产物混在仓库中较多：根 docs 与 game docs 重复、`.mini-pack`/`dist`/`test-results`/`.DS_Store` 可见，现状上会干扰扫描和新人理解。
-- 测试数量不少，覆盖 CLI、核心逻辑、平台、e2e；但没有覆盖率报告，不能判断实际覆盖率高低。
-- 我拿不准的点：`difference-hunt` 是否仍是活跃产品、根 `docs` 与游戏内 `docs` 哪个是权威、`@vivo-minigame/cli` 是运行期必需还是遗留依赖、当前未提交改动是否代表最新设计方向。
+| BGM | `soundEngine.ts` 明确把 BGM 保持 no-op；音频文件存在，但真音乐启用等待版权/素材决策。 |
+| 法务/上架文案 | `loading.ts` 里仍有著作权人和软著号 placeholder，上线前需要替换并重打字体 atlas。 |
+| 部分屏幕 | `src/pixi/screens/stub.ts` 仍是占位屏实现，界面完整度需要按实际产品范围继续补。 |
+| 视觉素材 | `pieceSprite.ts` 注释显示棋子详细 icon 仍是后续阶段；当前更偏几何/文字化表达。 |
+| 平台能力奖励 | `rewards.ts` / `platform/minipack.ts` 对添加桌面、常用、侧边栏等能力有失败/未完成反馈，依赖 vivo 能力和真机验证。 |
+| vivo 字体/渲染兼容 | `src/platform/vivo/` 保留大量 runtime workaround；OPPO 运行时 game adapter 尚未进入游戏代码。 |
+| OPPO 真机接入 | `mini-pack/src/platforms/oppo/` 已能生成工程和 fake RPK；尚未安装/验证 `@oppo-minigame/cli`，也未新增 `game/src/platform/oppo/`。 |
+| 测试打包 | `mini-pack` 中保留 `MINI_PACK_VIVO_FAKE_RPK=1` 和 `MINI_PACK_OPPO_FAKE_RPK=1` 的 fake RPK 路径，只用于测试，不代表真实打包。 |
+| 文档 | 游戏侧 docs 仍包含历史总结/方案类材料，是否继续保留需要按当前维护价值再筛。 |

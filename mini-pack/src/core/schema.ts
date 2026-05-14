@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+export const SUPPORTED_PLATFORMS = ['vivo', 'oppo'] as const;
+
 export const gameConfigSchema = z
   .object({
     title: z.string().trim().min(1, 'title must not be empty'),
@@ -20,36 +22,6 @@ export function defineGameConfig(config: GameConfig): GameConfig {
   return config;
 }
 
-export const douyinMaterialsSchema = z
-  .object({
-    appid: z.string(),
-    projectName: z.string().trim().min(1, 'douyin.projectName must not be empty'),
-    rewardedAdUnitId: z.string().optional(),
-    iconPath: z.string().trim().min(1).default('icon.png'),
-  })
-  .strict();
-
-export type DouyinMaterials = z.infer<typeof douyinMaterialsSchema>;
-
-export function defineDouyinMaterials(materials: DouyinMaterials): DouyinMaterials {
-  return materials;
-}
-
-export const kuaishouMaterialsSchema = z
-  .object({
-    appid: z.string(),
-    projectName: z.string().trim().min(1, 'kuaishou.projectName must not be empty'),
-    rewardedAdUnitId: z.string().optional(),
-    iconPath: z.string().trim().min(1).default('icon.png'),
-  })
-  .strict();
-
-export type KuaishouMaterials = z.infer<typeof kuaishouMaterialsSchema>;
-
-export function defineKuaishouMaterials(materials: KuaishouMaterials): KuaishouMaterials {
-  return materials;
-}
-
 const PACKAGE_NAME_PATTERN = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/;
 
 export const vivoMaterialsSchema = z
@@ -58,6 +30,7 @@ export const vivoMaterialsSchema = z
       .string()
       .trim()
       .regex(PACKAGE_NAME_PATTERN, 'packageName must be a reverse domain (e.g. com.example.app)'),
+    displayName: z.string().trim().min(1).max(20).optional(),
     iconPath: z.string().trim().min(1).default('icon.png'),
     versionName: z.string().trim().min(1).default('1.0.0'),
     versionCode: z.number().int().positive().default(1),
@@ -73,24 +46,20 @@ export function defineVivoMaterials(materials: VivoMaterials): VivoMaterials {
   return materials;
 }
 
-const packVivoSchema = z
-  .object({
-    packageName: z
-      .string()
-      .trim()
-      .regex(PACKAGE_NAME_PATTERN, 'packageName must be a reverse domain (e.g. com.example.app)'),
-    iconPath: z.string().trim().min(1, 'iconPath must not be empty'),
-  })
-  .strict();
+export const oppoMaterialsSchema = vivoMaterialsSchema;
+
+export type OppoMaterials = z.infer<typeof oppoMaterialsSchema>;
+
+export function defineOppoMaterials(materials: OppoMaterials): OppoMaterials {
+  return materials;
+}
 
 export const packConfigSchema = z
   .object({
-    platform: z.literal('vivo'),
+    platform: z.enum(SUPPORTED_PLATFORMS),
     serverBaseUrl: z.string().trim().optional(),
-    vivo: packVivoSchema,
     output: z.string().trim().min(1, 'output must not be empty'),
   })
   .strict();
 
 export type PackConfig = z.infer<typeof packConfigSchema>;
-export type PackVivoConfig = z.infer<typeof packVivoSchema>;

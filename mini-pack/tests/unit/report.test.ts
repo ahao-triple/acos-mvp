@@ -5,11 +5,11 @@ import { createBuildReport } from '../../src/core/report.js';
 describe('createBuildReport', () => {
   test('creates the documented report shape', () => {
     const report = createBuildReport({
-      platform: 'douyin',
+      platform: 'vivo',
       title: '全民爆梗游戏软件',
       entry: 'game/src/main.ts',
       publicDir: 'game/public',
-      outDir: 'builds/douyin',
+      outDir: 'builds/vivo',
       bundleBytes: 42,
       assetCount: 2,
       assetBytes: 18,
@@ -17,11 +17,11 @@ describe('createBuildReport', () => {
 
     expect(report).toEqual({
       tool: 'mini-pack',
-      platform: 'douyin',
+      platform: 'vivo',
       title: '全民爆梗游戏软件',
       entry: 'game/src/main.ts',
       publicDir: 'game/public',
-      outDir: 'builds/douyin',
+      outDir: 'builds/vivo',
       bundle: {
         file: 'game.js',
         bytes: 42,
@@ -36,11 +36,11 @@ describe('createBuildReport', () => {
 
   test('adds non-blocking warnings for large outputs', () => {
     const report = createBuildReport({
-      platform: 'douyin',
+      platform: 'vivo',
       title: '全民爆梗游戏软件',
       entry: 'game/src/main.ts',
       publicDir: 'game/public',
-      outDir: 'builds/douyin',
+      outDir: 'builds/vivo',
       bundleBytes: 2 * 1024 * 1024 + 1,
       assetCount: 2,
       assetBytes: 13 * 1024 * 1024,

@@ -30,8 +30,7 @@ export interface PreflightResult {
 }
 
 const PLATFORM_LABEL: Record<PlatformName, string> = {
-  douyin: '抖音',
-  kuaishou: '快手',
+  oppo: 'oppo',
   vivo: 'vivo',
 };
 
@@ -59,7 +58,6 @@ export async function runPreflight(options: PreflightOptions): Promise<Preflight
     throw error;
   }
 
-  // icon 文件存在
   try {
     await fs.access(loaded.paths.iconAbs);
   } catch {
@@ -70,42 +68,14 @@ export async function runPreflight(options: PreflightOptions): Promise<Preflight
     });
   }
 
-  // 字段非空（按平台）
-  if (platform === 'douyin' && loaded.douyinMaterials) {
-    if (!loaded.douyinMaterials.appid.trim()) {
-      issues.push({
-        code: 'EMPTY_FIELD',
-        path: relPath(projectRoot, loaded.paths.materialsAbs),
-        message: 'materials.ts 中 appid 为空（请填入抖音小游戏 appid，或设置 DOUYIN_APPID 环境变量）',
-      });
-    }
-    if (loaded.douyinMaterials.rewardedAdUnitId !== undefined && !loaded.douyinMaterials.rewardedAdUnitId.trim()) {
-      issues.push({
-        code: 'EMPTY_FIELD',
-        path: relPath(projectRoot, loaded.paths.materialsAbs),
-        message: 'materials.ts 中 rewardedAdUnitId 设置但为空（请填入激励视频广告位 id，或删除该字段）',
-      });
-    }
+  if (loaded.materials.rewardedAdUnitId !== undefined && !loaded.materials.rewardedAdUnitId.trim()) {
+    issues.push({
+      code: 'EMPTY_FIELD',
+      path: relPath(projectRoot, loaded.paths.materialsAbs),
+      message: `materials.ts 中 rewardedAdUnitId 设置但为空（请填入 ${PLATFORM_LABEL[platform]} 激励视频广告位 id，或删除该字段）`,
+    });
   }
 
-  if (platform === 'kuaishou' && loaded.kuaishouMaterials) {
-    if (!loaded.kuaishouMaterials.appid.trim()) {
-      issues.push({
-        code: 'EMPTY_FIELD',
-        path: relPath(projectRoot, loaded.paths.materialsAbs),
-        message: 'materials.ts 中 appid 为空（请填入快手小游戏 appid；测试可用 kwai_game_test_appid）',
-      });
-    }
-    if (loaded.kuaishouMaterials.rewardedAdUnitId !== undefined && !loaded.kuaishouMaterials.rewardedAdUnitId.trim()) {
-      issues.push({
-        code: 'EMPTY_FIELD',
-        path: relPath(projectRoot, loaded.paths.materialsAbs),
-        message: 'materials.ts 中 rewardedAdUnitId 设置但为空（请填入快手激励视频广告位 id，或删除该字段）',
-      });
-    }
-  }
-
-  // entry / publicDir 物理存在
   try {
     await fs.access(loaded.paths.entryAbs);
   } catch {

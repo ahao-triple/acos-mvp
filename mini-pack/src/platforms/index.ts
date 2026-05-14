@@ -1,10 +1,11 @@
-import { douyinPlatformBuilder } from './douyin/index.js';
-import { kuaishouPlatformBuilder } from './kuaishou/index.js';
+import { oppoPlatformBuilder } from './oppo/index.js';
 import { vivoPlatformBuilder } from './vivo/index.js';
+import { SUPPORTED_PLATFORMS } from '../core/schema.js';
 import { UserError } from '../shared/errors.js';
 import type { BuildReport, LoadedGameConfig, PlatformName } from '../shared/types.js';
 
 export interface PlatformBuildOptions {
+  skipRpk?: boolean;
   skipVivoRpk?: boolean;
 }
 
@@ -13,15 +14,17 @@ export interface PlatformBuilder {
   build(loaded: LoadedGameConfig, options?: PlatformBuildOptions): Promise<BuildReport>;
 }
 
-const supportedPlatforms = ['douyin', 'kuaishou', 'vivo'] as const;
+const platformBuilders: Partial<Record<PlatformName, PlatformBuilder>> = {
+  oppo: oppoPlatformBuilder,
+  vivo: vivoPlatformBuilder,
+};
 
 export function getPlatformBuilder(platform: string): PlatformBuilder {
-  if (platform === 'douyin') return douyinPlatformBuilder;
-  if (platform === 'kuaishou') return kuaishouPlatformBuilder;
-  if (platform === 'vivo') return vivoPlatformBuilder;
+  const builder = platformBuilders[platform as PlatformName];
+  if (builder) return builder;
 
   throw new UserError(
     `Unsupported platform: ${platform}`,
-    `Supported platforms: ${supportedPlatforms.join(', ')}`,
+    `Supported platforms: ${SUPPORTED_PLATFORMS.join(', ')}`,
   );
 }

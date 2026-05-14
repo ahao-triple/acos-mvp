@@ -16,6 +16,7 @@ export async function runBuildCommand(options: BuildCommandOptions): Promise<voi
     platform: options.platform as PlatformName,
   });
   const report = await builder.build(loaded, {
+    skipRpk: options.skipVivoRpk === true,
     skipVivoRpk: options.skipVivoRpk === true,
   });
 
