@@ -53,6 +53,7 @@ export const oppoPlatformBuilder: PlatformBuilder = {
     await bundleGameEntry({
       entryAbs: loaded.paths.entryAbs,
       outfile: tempBundle,
+      platform: 'oppo',
     });
 
     const bundleCode = await fs.readFile(tempBundle, 'utf8');

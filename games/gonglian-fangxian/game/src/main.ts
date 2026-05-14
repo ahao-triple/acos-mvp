@@ -1,6 +1,9 @@
 // vivo runtime BOM/DOM polyfill 总入口（Intl / navigator / document / window / 构造器 等）。
 // 必须在任何拉 pixi.js 的 import 之前求值，所以放在第一行。详见 platform/vivo/dom-polyfill.ts。
 import './platform/vivo/dom-polyfill';
+// SPECULATIVE PORT: oppo 也用 qg.* runtime，polyfill 结构通用。两份 polyfill 均为条件式，
+// 幂等，可共存。真机校准如有差异再分离。
+import './platform/oppo/dom-polyfill';
 
 import { GameController } from './app/controller';
 import { SoundEngine } from './audio/soundEngine';
@@ -9,6 +12,7 @@ import { PixiRenderer } from './pixi/renderer';
 import { createMiniPackPlatformAdapter, createMiniPackSoundOptions, type MiniPackGameApp, type MiniPackGameRuntime } from './platform/minipack';
 import { probeCanvas2DText } from './platform/vivo/canvas2d-text-probe';
 import { createVivoEventBridge } from './platform/vivo/event-bridge';
+import { createOppoEventBridge } from './platform/oppo/event-bridge';
 import { createWebPlatformAdapter } from './platform/web';
 
 export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
@@ -90,9 +94,12 @@ export function createGame(runtime?: MiniPackGameRuntime): MiniPackGameApp {
       // 事件 target：
       //  - vivo 路径：mainCanvas 不一定支持标准 addEventListener，且只派发 touch* 事件。
       //    用 createVivoEventBridge 包一层 wrapperCanvas，把 pointer* 自动注册为 touch*。
+      //  - oppo 路径：SPECULATIVE PORT，同样用 qg.* touch 事件，走 createOppoEventBridge。
       //  - 其他平台：直接用 realCanvas，浏览器原生支持 pointer events。
       const eventCanvas = runtime?.config?.platform === 'vivo'
         ? createVivoEventBridge(realCanvas)
+        : __GAME_PLATFORM__ === 'oppo'
+        ? createOppoEventBridge(realCanvas)
         : realCanvas;
 
       renderer = new PixiRenderer({

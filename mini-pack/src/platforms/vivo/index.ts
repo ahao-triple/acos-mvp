@@ -56,6 +56,7 @@ export const vivoPlatformBuilder: PlatformBuilder = {
     await bundleGameEntry({
       entryAbs: loaded.paths.entryAbs,
       outfile: tempBundle,
+      platform: 'vivo',
     });
 
     const bundleCode = await fs.readFile(tempBundle, 'utf8');

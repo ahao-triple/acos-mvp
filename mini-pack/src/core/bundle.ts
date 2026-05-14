@@ -7,6 +7,7 @@ import { UserError } from '../shared/errors.js';
 export interface BundleGameEntryOptions {
   entryAbs: string;
   outfile: string;
+  platform: string;
 }
 
 export async function bundleGameEntry(options: BundleGameEntryOptions): Promise<{ bytes: number }> {
@@ -22,6 +23,7 @@ export async function bundleGameEntry(options: BundleGameEntryOptions): Promise<
       target: 'es2015',
       logLevel: 'silent',
       sourcemap: false,
+      define: { __GAME_PLATFORM__: JSON.stringify(options.platform) },
     });
 
     const stats = await fs.stat(options.outfile);

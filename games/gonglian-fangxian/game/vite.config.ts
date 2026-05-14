@@ -4,6 +4,9 @@ import baseConfig from '../../../vitest.config.base';
 
 export default mergeConfig(baseConfig, defineConfig({
   publicDir: 'public-pack',
+  define: {
+    __GAME_PLATFORM__: JSON.stringify('web'),
+  },
   server: {
     host: '127.0.0.1',
     port: 5173,

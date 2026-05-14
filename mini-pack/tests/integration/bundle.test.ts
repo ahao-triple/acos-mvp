@@ -18,6 +18,7 @@ describe('bundleGameEntry', () => {
     const result = await bundleGameEntry({
       entryAbs: path.join(fixturePath('valid-vivo-game'), 'game/main.ts'),
       outfile,
+      platform: 'vivo',
     });
 
     const output = await fs.readFile(outfile, 'utf8');
@@ -47,7 +48,7 @@ export function createGame(runtime: any) {
 `,
     );
 
-    await bundleGameEntry({ entryAbs: entry, outfile });
+    await bundleGameEntry({ entryAbs: entry, outfile, platform: 'vivo' });
 
     const output = await fs.readFile(outfile, 'utf8');
     expect(output).not.toMatch(/\?\.(?!\d)|\?\?/);
